@@ -2,10 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.model;
 
 import com.proyecto.proyecto_techlab_springboot.model.enums.Category;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
@@ -14,7 +11,7 @@ import java.util.UUID;
 
 @Setter
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SuperBuilder
 @Entity
 @Table(name = "product")

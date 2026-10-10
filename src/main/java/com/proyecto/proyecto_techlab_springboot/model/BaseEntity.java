@@ -2,10 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.model;
 
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.SQLRestriction;
@@ -16,8 +13,7 @@ import java.time.LocalDateTime;
 
 @Setter
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SuperBuilder
 @MappedSuperclass
 @SQLRestriction("row_status <> 'DELETED'") // <- MAGIA NEGRA DE HIBERNATE - Esto es para que nunca traiga registros con RowStatus.DELETED
