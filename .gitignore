@@ -1,0 +1,86 @@
+### Compiled Java Class Files ###
+*.class
+
+### Build & Target Tooling (Maven) ###
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+# Asegurar que el jar del wrapper viaje al repo:
+!.mvn/wrapper/maven-wrapper.jar
+.kotlin
+
+### Gradle (por si se usa en el repo o wrappers) ###
+.gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### Package Files ###
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+# Excepción explícita para el wrapper:
+!.mvn/wrapper/maven-wrapper.jar
+
+### Logs & Runtime Storage ###
+*.log
+log/
+logs/
+
+### Environment & Secrets ###
+.env
+.env.*
+!.env.template
+!.env.example
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+/shelf/
+/workspace.xml
+/httpRequests/
+/queries/
+/dataSources/
+/dataSources.local.xml
+
+### Eclipse / STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Operating System Files ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Documentation / Defaults ###
+HELP.md
