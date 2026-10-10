@@ -93,7 +93,7 @@ public class ColorService {
         return mapToResponse(color);
     }
 
-    private Color findColorByIdOrThrow(Integer id) {
+    public Color findColorByIdOrThrow(Integer id) {
         return iColorRepository.findById(id)
                 .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(id)));
     }

@@ -27,13 +27,12 @@ import java.util.UUID;
 public class VariantService {
 
     private final IVariantRepository    iVariantRepository;
-    private final IProductRepository    iProductRepository;
-    private final IColorRepository      iColorRepository;
+    private final ProductService        productService;
+    private final ColorService          colorService;
 
     @Transactional(readOnly = true)
     public List<VariantResponse> getVariantsByProduct(UUID productId, boolean includeInactive) {
-        if (!iProductRepository.existsById(productId))
-            throw new ProductNotFoundException("{ ID: %s }".formatted(productId));
+        this.productService.findProductByIdOrThrow(productId);
 
         List<Variant> variants = includeInactive
                 ? iVariantRepository.findAllByProduct_ProductId(productId)
@@ -63,11 +62,9 @@ public class VariantService {
         ) throw new VariantAlreadyExistsException("{ product_id: %s,  color_id: %s, size: %s }".formatted(request.productId(), request.colorId(), request.size()));
 
         // Referencias
-        Product product = iProductRepository.findById(request.productId())
-                .orElseThrow(() -> new ProductNotFoundException("{ ID: %s }".formatted(request.productId())));
+        Product product = this.productService.findProductByIdOrThrow(request.productId());
 
-        Color color = iColorRepository.findById(request.colorId())
-                .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(request.productId())));
+        Color color = this.colorService.findColorByIdOrThrow(request.colorId());
 
         Variant variant = Variant.builder()
                 .product(product)
@@ -98,12 +95,7 @@ public class VariantService {
         boolean sizeHasChanged  = !variant.getVariantSize().equals(request.size());
 
         if (colorHasChanged || sizeHasChanged) {
-            if (colorHasChanged) {
-                Color newColor = iColorRepository.findById(request.colorId())
-                        .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(request.colorId())));
-
-                variant.setColor(newColor);
-            }
+            if (colorHasChanged) variant.setColor(this.colorService.findColorByIdOrThrow(request.colorId()));
 
             if (iVariantRepository.existsByProduct_ProductIdAndColor_ColorIdAndVariantSizeAndVariantIdNot(
                     variant.getProduct().getProductId(),

@@ -87,7 +87,7 @@ public class ProductService {
         );
     }
 
-    private Product findProductByIdOrThrow(UUID id) {
+    public Product findProductByIdOrThrow(UUID id) {
         return iProductRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("{ ID: %s }".formatted(id)));
     }
