@@ -1,14 +1,165 @@
 package com.proyecto.proyecto_techlab_springboot.service;
 
+import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantResponse;
+import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.exception.ColorNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.ProductNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.VariantAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.exception.VariantNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.model.Color;
+import com.proyecto.proyecto_techlab_springboot.model.Product;
+import com.proyecto.proyecto_techlab_springboot.model.Variant;
+import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
+import com.proyecto.proyecto_techlab_springboot.repository.IColorRepository;
+import com.proyecto.proyecto_techlab_springboot.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class VariantService {
 
-    private final IVariantRepository iVariantRepository;
+    private final IVariantRepository    iVariantRepository;
+    private final IProductRepository    iProductRepository;
+    private final IColorRepository      iColorRepository;
 
+    @Transactional(readOnly = true)
+    public List<VariantResponse> getVariantsByProduct(UUID productId, boolean includeInactive) {
+        if (!iProductRepository.existsById(productId))
+            throw new ProductNotFoundException("{ ID: %s }".formatted(productId));
 
+        List<Variant> variants = includeInactive
+                ? iVariantRepository.findAllByProduct_ProductId(productId)
+                : iVariantRepository.findAllByProduct_ProductIdAndRowStatus(productId, RowStatus.ACTIVE);
+
+        return variants.stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public VariantResponse getVariantById(UUID id) {
+        return mapToResponse(findVariantByIdOrThrow(id));
+    }
+
+    @Transactional
+    public VariantResponse createVariant(VariantCreateRequest request) {
+        String newSku = request.sku().toUpperCase().trim();
+
+        // Chequeo de SKU único
+        if (iVariantRepository.existsByVariantSkuIgnoreCase(newSku))
+            throw new VariantAlreadyExistsException("{ SKU: %s }".formatted(newSku));
+
+        // Chequeo de combinación única (producto + color + talle)
+        if (iVariantRepository.existsByProduct_ProductIdAndColor_ColorIdAndVariantSize(
+                request.productId(),
+                request.colorId(),
+                request.size())
+        ) throw new VariantAlreadyExistsException("{ product_id: %s,  color_id: %s, size: %s }".formatted(request.productId(), request.colorId(), request.size()));
+
+        // Referencias
+        Product product = iProductRepository.findById(request.productId())
+                .orElseThrow(() -> new ProductNotFoundException("{ ID: %s }".formatted(request.productId())));
+
+        Color color = iColorRepository.findById(request.colorId())
+                .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(request.productId())));
+
+        Variant variant = Variant.builder()
+                .product(product)
+                .color(color)
+                .variantSize(request.size())
+                .targetGender(request.targetGender())
+                .variantDesc(request.desc().trim())
+                .variantSku(newSku)
+                .variantPrice(request.price())
+                .variantStock(request.stock())
+                .rowStatus(RowStatus.ACTIVE)
+                .build();
+
+        return mapToResponse(iVariantRepository.save(variant));
+    }
+
+    @Transactional
+    public VariantResponse updateVariant(UUID id, VariantUpdateRequest request) {
+        Variant variant = findVariantByIdOrThrow(id);
+        String  newSku  = request.sku().toUpperCase().trim();
+
+        // Si cambió el SKU, validar que no exista en otra variante
+        if (iVariantRepository.existsByVariantSkuIgnoreCaseAndVariantIdNot(newSku, id))
+            throw new VariantAlreadyExistsException("{ SKU: %s }".formatted(newSku));
+
+        // Si cambió el color o el talle, validar la combinación compuesta
+        boolean colorHasChanged = !variant.getColor().getColorId().equals(request.colorId());
+        boolean sizeHasChanged  = !variant.getVariantSize().equals(request.size());
+
+        if (colorHasChanged || sizeHasChanged) {
+            if (colorHasChanged) {
+                Color newColor = iColorRepository.findById(request.colorId())
+                        .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(request.colorId())));
+
+                variant.setColor(newColor);
+            }
+
+            if (iVariantRepository.existsByProduct_ProductIdAndColor_ColorIdAndVariantSizeAndVariantIdNot(
+                    variant.getProduct().getProductId(),
+                    request.colorId(),
+                    request.size(),
+                    id
+            )) {
+                throw new VariantAlreadyExistsException(
+                        "{ product_id: %s,  color_id: %s, size: %s }".formatted(
+                                variant.getProduct().getProductId(),
+                                request.colorId(),
+                                request.size()
+                        )
+                );
+            }
+        }
+
+        variant.setVariantSize(request.size());
+        variant.setTargetGender(request.targetGender());
+        variant.setVariantDesc(request.desc().trim());
+        variant.setVariantSku(newSku);
+        variant.setVariantPrice(request.price());
+        variant.setVariantStock(request.stock());
+
+        return mapToResponse(variant);
+    }
+
+    @Transactional
+    public VariantResponse updateVariantStatus(UUID id, StatusUpdateRequest request) {
+        Variant variant = findVariantByIdOrThrow(id);
+        variant.setRowStatus(request.rowStatus());
+        return mapToResponse(variant);
+    }
+
+    private Variant findVariantByIdOrThrow(UUID id) {
+        return iVariantRepository.findById(id)
+                .orElseThrow(() -> new VariantNotFoundException("{ ID: %s }".formatted(id)));
+    }
+
+    private VariantResponse mapToResponse(Variant v) {
+        return new VariantResponse(
+                v.getVariantId(),
+                v.getProduct().getProductId(),
+                v.getProduct().getProductName(),
+                v.getColor().getColorId(),
+                v.getColor().getColorName(),
+                v.getColor().getColorCode(),
+                v.getVariantSize(),
+                v.getTargetGender(),
+                v.getVariantDesc(),
+                v.getVariantSku(),
+                v.getVariantPrice(),
+                v.getVariantStock(),
+                v.getRowStatus(),
+                v.getCreatedAt(),
+                v.getUpdatedAt()
+        );
+    }
 }

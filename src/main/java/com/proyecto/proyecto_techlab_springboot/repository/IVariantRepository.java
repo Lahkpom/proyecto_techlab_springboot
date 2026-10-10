@@ -21,9 +21,17 @@ public interface IVariantRepository extends JpaRepository<Variant, UUID> {
             Integer     colorId,
             NumericSize variantSize
     );
+    boolean existsByProduct_ProductIdAndColor_ColorIdAndVariantSizeAndVariantIdNot(
+            UUID        productId,
+            Integer     colorId,
+            NumericSize variantSize,
+            UUID        variantId
+    );
 
     // Validar SKU duplicado
     boolean existsByVariantSkuIgnoreCase(String sku);
+    // Para el update: existe con ese atributo PERO con un ID distinto al que estoy editando
+    boolean existsByVariantSkuIgnoreCaseAndVariantIdNot(String sku, UUID variantId);
 
     // Buscar todas las variantes de un producto
     List<Variant> findAllByProduct_ProductId(UUID productId);
