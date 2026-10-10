@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface iColorRepository extends JpaRepository<Color, Integer> {
+public interface IColorRepository extends JpaRepository<Color, Integer> {
     boolean existsByColorNameIgnoreCase(String colorName);
     boolean existsByColorCodeIgnoreCase(String colorCode);
 

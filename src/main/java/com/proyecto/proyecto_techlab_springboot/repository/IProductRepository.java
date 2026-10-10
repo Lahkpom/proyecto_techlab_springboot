@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface iProductRepository extends JpaRepository<Product, UUID> {
+public interface IProductRepository extends JpaRepository<Product, UUID> {
     // Ya incluye save, findAll, findById, delete, etc.
 }

@@ -8,8 +8,8 @@ import com.proyecto.proyecto_techlab_springboot.exception.ProductNotFoundExcepti
 import com.proyecto.proyecto_techlab_springboot.model.Product;
 import com.proyecto.proyecto_techlab_springboot.model.enums.Category;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
-import com.proyecto.proyecto_techlab_springboot.repository.iProductRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.iVariantRepository;
+import com.proyecto.proyecto_techlab_springboot.repository.IProductRepository;
+import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +21,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final iProductRepository iProductRepository;
-    private final iVariantRepository iVariantRepository;
+    private final IProductRepository iProductRepository;
+    private final IVariantRepository iVariantRepository;
 
     @Transactional
     public ProductResponse createProduct(ProductCreateRequest request) {

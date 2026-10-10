@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.service;
 
-import com.proyecto.proyecto_techlab_springboot.repository.iVariantRepository;
+import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class VariantService {
 
-    private final iVariantRepository iVariantRepository;
+    private final IVariantRepository iVariantRepository;
 
 
 }

@@ -8,7 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.ColorAlreadyExistsExce
 import com.proyecto.proyecto_techlab_springboot.exception.ColorNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Color;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
-import com.proyecto.proyecto_techlab_springboot.repository.iColorRepository;
+import com.proyecto.proyecto_techlab_springboot.repository.IColorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ColorService {
 
-    private final iColorRepository iColorRepository;
+    private final IColorRepository iColorRepository;
 
     /**
      * GET /colores                     : Por defecto devuelve solo los activos (vista pública / cliente).
