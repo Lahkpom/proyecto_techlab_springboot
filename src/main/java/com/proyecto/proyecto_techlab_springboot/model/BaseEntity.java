@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcType;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @SuperBuilder
 @MappedSuperclass
+@SQLRestriction("row_status <> 'DELETED'") // <- MAGIA NEGRA DE HIBERNATE - Esto es para que nunca traiga registros con RowStatus.DELETED
 public abstract class BaseEntity {
 
     @Enumerated(EnumType.STRING)

@@ -14,7 +14,6 @@ import java.util.UUID;
 
 @Setter
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
 @Entity
@@ -37,6 +36,6 @@ public class Product extends BaseEntity{
     @Column(name = "product_short_desc", nullable = false)
     private String productShortDesc;
 
-    @Column(name = "product_long_desc", nullable = false)
+    @Column(name = "product_long_desc", nullable = false, columnDefinition = "TEXT")
     private String productLongDesc;
 }

@@ -4,7 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.product.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.product.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.product.ProductUpdateRequest;
-import com.proyecto.proyecto_techlab_springboot.exception.ProductDoesNotExistException;
+import com.proyecto.proyecto_techlab_springboot.exception.ProductNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Product;
 import com.proyecto.proyecto_techlab_springboot.model.enums.Category;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
@@ -89,6 +89,6 @@ public class ProductService {
 
     private Product findProductByIdOrThrow(UUID id) {
         return iProductRepository.findById(id)
-                .orElseThrow(() -> new ProductDoesNotExistException("(ID : %s)".formatted(id)));
+                .orElseThrow(() -> new ProductNotFoundException("{ ID: %s }".formatted(id)));
     }
 }
