@@ -39,19 +39,35 @@ public interface IVariantRepository extends JpaRepository<Variant, UUID> {
     // Buscar variantes activas de un producto
     List<Variant> findAllByProduct_ProductIdAndRowStatus(UUID productId, RowStatus rowStatus);
 
+    /**
+     * Marca como INACTIVE solo las variantes ACTIVE del producto indicado
+     * @param productId productId
+     */
     @Modifying(clearAutomatically = true)
     @Query("""
         UPDATE
             Variant v
         SET
-            v.rowStatus = :newStatus
+            v.rowStatus = com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus.INACTIVE
         WHERE
             v.product.productId = :productId
-            AND v.rowStatus     = :currentStatus
+            AND v.rowStatus     = com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus.ACTIVE
     """)
-    void updateStatusByProductId(
-            @Param("productId")     UUID productId,
-            @Param("newStatus")     RowStatus newStatus,
-            @Param("currentStatus") RowStatus currentStatus
-    );
+    void inactivateVariantsByProductId(@Param("productId") UUID productId);
+
+    /**
+     * Marca como DELETED todas las variantes del producto indicado
+     * @param productId productId
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE
+            Variant v
+        SET
+            v.rowStatus = com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus.DELETED
+        WHERE
+            v.product.productId = :productId
+    """)
+    void deleteVariantsByProductId(@Param("productId") UUID productId);
+
 }

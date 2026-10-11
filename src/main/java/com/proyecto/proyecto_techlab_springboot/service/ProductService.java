@@ -68,8 +68,13 @@ public class ProductService {
         RowStatus lastStatus = product.getRowStatus();
         product.setRowStatus(request.rowStatus());
 
-        if (lastStatus == RowStatus.ACTIVE && request.rowStatus() != RowStatus.ACTIVE)
-            iVariantRepository.updateStatusByProductId(id, request.rowStatus(), lastStatus);
+        if (lastStatus == RowStatus.ACTIVE) {
+            if (request.rowStatus() == RowStatus.INACTIVE)
+                this.iVariantRepository.inactivateVariantsByProductId(id);
+
+            if (request.rowStatus() == RowStatus.DELETED)
+                this.iVariantRepository.deleteVariantsByProductId(id);
+        }
 
         return mapToResponse(product);
     }
