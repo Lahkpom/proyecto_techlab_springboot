@@ -6,5 +6,5 @@ import jakarta.validation.constraints.Size;
 public record EmailUpdateRequest(
         @NotNull(message = "El email es obligatorio")
         @Size(max = 255, message = "El email no puede exceder los 255 caracteres.")
-        String password
+        String email
 ) {}
