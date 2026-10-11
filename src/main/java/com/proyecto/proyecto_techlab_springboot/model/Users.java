@@ -40,7 +40,7 @@ public class Users extends BaseEntity {
     @Column(name = "user_email", nullable = false) // Debería ser updatable=false?
     private String userEmail;
 
-    @Column(name = "user_phone") // Esta si puede ser null, hay que aclarar =true ?
+    @Column(name = "user_phone", length = 50) // Esta si puede ser null, hay que aclarar =true ?
     private String userPhone;
 
     @Column(name = "company_name")
