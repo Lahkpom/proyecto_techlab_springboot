@@ -22,6 +22,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductCreateRequest req) {
         ProductResponse res = productService.createProduct(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
@@ -40,6 +41,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable       UUID                    id,
             @Valid @RequestBody ProductUpdateRequest    request
@@ -49,6 +51,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}/status")
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ProductResponse> updateProductStatus(
             @PathVariable       UUID                id,
             @Valid @RequestBody StatusUpdateRequest request

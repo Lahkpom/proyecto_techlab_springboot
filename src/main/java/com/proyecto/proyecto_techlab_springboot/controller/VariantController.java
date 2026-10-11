@@ -35,11 +35,13 @@ public class VariantController {
     }
 
     @PostMapping
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<VariantResponse> createVariant(@Valid @RequestBody VariantCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(variantService.createVariant(request));
     }
 
     @PutMapping("/{id}")
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<VariantResponse> updateVariant(
             @PathVariable       UUID                    id,
             @Valid @RequestBody VariantUpdateRequest    request
@@ -48,6 +50,7 @@ public class VariantController {
     }
 
     @PatchMapping("/{id}/status")
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<VariantResponse> updateVariantStatus(
             @PathVariable       UUID                id,
             @Valid @RequestBody StatusUpdateRequest request

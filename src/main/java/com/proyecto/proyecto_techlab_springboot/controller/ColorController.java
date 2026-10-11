@@ -34,11 +34,13 @@ public class ColorController {
     }
 
     @PostMapping
+//    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ColorResponse> createColor(@Valid @RequestBody ColorCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(colorService.createColor(request));
     }
 
     @PutMapping("/{id}")
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ColorResponse> updateColor(
             @PathVariable       Integer             id,
             @Valid @RequestBody ColorUpdateRequest  request
@@ -47,6 +49,7 @@ public class ColorController {
     }
 
     @PatchMapping("/{id}/status")
+    //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ColorResponse> updateColorStatus(
             @PathVariable       Integer             id,
             @Valid @RequestBody StatusUpdateRequest request
