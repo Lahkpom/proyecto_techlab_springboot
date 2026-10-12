@@ -28,8 +28,8 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(this.authService.createWholesaler(request));
     }
 
-//    @GetMapping("/login")
-//    @GetMapping("/logout")
+//    @PostMapping("/login")
+//    @PostMapping("/logout")
 
 
 }
