@@ -2,9 +2,8 @@ package com.proyecto.proyecto_techlab_springboot.service;
 
 import com.proyecto.proyecto_techlab_springboot.dto.auth.UserCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest;
-import com.proyecto.proyecto_techlab_springboot.dto.auth.UserResponse;
+import com.proyecto.proyecto_techlab_springboot.dto.user.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.exception.UserAlreadyExistsException;
-import com.proyecto.proyecto_techlab_springboot.exception.UserNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
@@ -12,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

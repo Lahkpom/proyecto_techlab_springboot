@@ -1,8 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.controller;
 
 import com.proyecto.proyecto_techlab_springboot.dto.auth.UserCreateRequest;
-import com.proyecto.proyecto_techlab_springboot.dto.auth.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.user.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
