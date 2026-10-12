@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.dto.user;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -11,6 +12,7 @@ public record WholesalerCreateRequest(
         String name,
 
         @NotBlank(message = "El email es obligatoria.")
+        @Email(message = "El formato de email es inválido.")
         @Size(max = 255, message = "El email no puede exceder los 255 caracteres.")
         String email,
 

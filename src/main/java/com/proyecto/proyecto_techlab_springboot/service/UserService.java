@@ -4,8 +4,10 @@ import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.user.*;
 import com.proyecto.proyecto_techlab_springboot.exception.UserNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
+import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,13 +17,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
     private final IUserRepository iUserRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         Users user = Users.builder()
                 .userName(request.name())
                 .userEmail(request.email())
-                .userPassword(request.password())
+                .userPassword(passwordEncoder.encode(request.password()))
                 .userPhone(request.phone())
                 .build();
 
@@ -35,7 +38,7 @@ public class UserService {
         Users user = Users.builder()
                 .userName(request.name())
                 .userEmail(request.email())
-                .userPassword(request.password())
+                .userPassword(passwordEncoder.encode(request.password()))
                 .userPhone(request.phone())
                 .companyName(request.companyName())
                 .build();
@@ -61,19 +64,10 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse updateUserEmail(UUID id, EmailUpdateRequest request) {
-        Users user = this.findUserByIdOrThrow(id);
-
-        user.setUserEmail(request.email());
-
-        return mapToResponse(user);
-    }
-
-    @Transactional
     public UserResponse updateUserPassword(UUID id, PasswordUpdateRequest request) {
         Users user = this.findUserByIdOrThrow(id);
 
-        user.setUserPassword(request.password());
+        user.setUserPassword(passwordEncoder.encode(request.password()));
 
         return mapToResponse(user);
     }
@@ -83,6 +77,13 @@ public class UserService {
         Users user = this.findUserByIdOrThrow(id);
 
         user.setRowStatus(request.rowStatus());
+
+        if (request.rowStatus() == RowStatus.DELETED) {
+            user.setUserEmail("deleted_" + user.getUserId() + "@anonymized.local");
+            user.setUserName("Usuario Eliminado");
+            user.setUserPhone(null);
+            user.setUserPassword("ANONYMIZED");
+        }
 
         return mapToResponse(user);
     }

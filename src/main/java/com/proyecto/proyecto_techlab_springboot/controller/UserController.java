@@ -20,7 +20,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     // Algún tipo de autorización para que los usuarios solo puedan pedir su propia información y no la de otros
-    public ResponseEntity<UserResponse> getColorById(@PathVariable UUID id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(this.userService.getUserById(id));
     }
 
@@ -41,14 +41,6 @@ public class UserController {
             @Valid @RequestBody UserUpdateRequest   request
     ) {
         return ResponseEntity.ok(this.userService.updateUser(id, request));
-    }
-
-    @PatchMapping("/{id}/email")
-    public ResponseEntity<UserResponse> updateUserEmail(
-            @PathVariable       UUID                id,
-            @Valid @RequestBody EmailUpdateRequest  request
-    ) {
-        return ResponseEntity.ok(this.userService.updateUserEmail(id, request));
     }
 
     @PatchMapping("/{id}/password")

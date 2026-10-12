@@ -84,8 +84,19 @@
             <optional>true</optional>
         </dependency>
 
+<!--        Solo el encoder de contraseñas-->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
 <!--        DEPENDENCIAS PARA AGREGAR MÁS ADELANTE-->
-<!--        spring-boot-starter-security-->
+<!--        Spring Security completo-->
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.boot</groupId>-->
+<!--            <artifactId>spring-boot-starter-security</artifactId>-->
+<!--        </dependency>-->
+
 <!--        spring-boot-starter-actuator-->
     </dependencies>
 
