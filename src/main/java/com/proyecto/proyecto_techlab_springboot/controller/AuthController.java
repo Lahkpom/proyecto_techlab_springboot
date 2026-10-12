@@ -1,0 +1,35 @@
+package com.proyecto.proyecto_techlab_springboot.controller;
+
+import com.proyecto.proyecto_techlab_springboot.dto.auth.UserCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.auth.UserResponse;
+import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.authService.createUser(request));
+    }
+
+    @PostMapping("/register/wholesalers")
+//    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
+    public ResponseEntity<UserResponse> createWholesaler(@Valid @RequestBody WholesalerCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.authService.createWholesaler(request));
+    }
+
+//    @GetMapping("/login")
+//    @GetMapping("/logout")
+
+
+}

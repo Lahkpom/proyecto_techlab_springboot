@@ -1,4 +1,4 @@
-package com.proyecto.proyecto_techlab_springboot.dto.user;
+package com.proyecto.proyecto_techlab_springboot.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

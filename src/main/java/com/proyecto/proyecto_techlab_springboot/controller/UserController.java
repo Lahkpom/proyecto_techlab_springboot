@@ -24,17 +24,6 @@ public class UserController {
         return ResponseEntity.ok(this.userService.getUserById(id));
     }
 
-    @PostMapping
-    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.createUser(request));
-    }
-
-    @PostMapping("/wholesalers")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
-    public ResponseEntity<UserResponse> createWholesaler(@Valid @RequestBody WholesalerCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.createWholesaler(request));
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable       UUID                id,
@@ -58,6 +47,4 @@ public class UserController {
     ) {
         return ResponseEntity.ok(this.userService.updateUserStatus(id, request));
     }
-
-
 }
