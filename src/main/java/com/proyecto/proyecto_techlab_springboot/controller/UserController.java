@@ -1,11 +1,10 @@
 package com.proyecto.proyecto_techlab_springboot.controller;
 
-import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.common.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.user.*;
 import com.proyecto.proyecto_techlab_springboot.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

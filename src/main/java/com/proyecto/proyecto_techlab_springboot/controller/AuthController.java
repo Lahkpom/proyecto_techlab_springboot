@@ -1,5 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.controller;
 
+import com.proyecto.proyecto_techlab_springboot.dto.auth.AuthResponse;
+import com.proyecto.proyecto_techlab_springboot.dto.auth.LoginRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.auth.UserCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.user.UserResponse;
@@ -23,13 +25,16 @@ public class AuthController {
     }
 
     @PostMapping("/register/wholesalers")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
+    // TODO Descomentar cuando active Spring Security:
+    // @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<UserResponse> createWholesaler(@Valid @RequestBody WholesalerCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.authService.createWholesaler(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.createWholesaler(request));
     }
 
-//    @PostMapping("/login")
-//    @PostMapping("/logout")
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
+    }
 
 
 }

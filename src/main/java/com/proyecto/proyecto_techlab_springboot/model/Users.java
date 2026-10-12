@@ -50,7 +50,7 @@ public class Users extends BaseEntity {
     private boolean isEmailVerified;
 
     @Column(name = "failed_login_attempts", nullable = false)
-    private Integer failedLoginsAttempt;
+    private Integer failedLoginAttempts;
 
     @Column(name = "locked_until")
     private Instant lockedUntil;

@@ -1,4 +1,4 @@
-package com.proyecto.proyecto_techlab_springboot.dto;
+package com.proyecto.proyecto_techlab_springboot.dto.common;
 
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import jakarta.validation.constraints.NotNull;

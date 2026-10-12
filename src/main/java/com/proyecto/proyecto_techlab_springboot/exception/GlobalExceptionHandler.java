@@ -1,5 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.exception;
 
+import com.proyecto.proyecto_techlab_springboot.exception.common.ResourceAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.exception.common.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

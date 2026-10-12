@@ -1,19 +1,15 @@
 package com.proyecto.proyecto_techlab_springboot.service;
 
-import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.common.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantUpdateRequest;
-import com.proyecto.proyecto_techlab_springboot.exception.ColorNotFoundException;
-import com.proyecto.proyecto_techlab_springboot.exception.ProductNotFoundException;
-import com.proyecto.proyecto_techlab_springboot.exception.VariantAlreadyExistsException;
-import com.proyecto.proyecto_techlab_springboot.exception.VariantNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Color;
 import com.proyecto.proyecto_techlab_springboot.model.Product;
 import com.proyecto.proyecto_techlab_springboot.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
-import com.proyecto.proyecto_techlab_springboot.repository.IColorRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

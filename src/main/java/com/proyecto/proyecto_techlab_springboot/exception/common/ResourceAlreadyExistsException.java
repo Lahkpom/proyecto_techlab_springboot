@@ -1,4 +1,4 @@
-package com.proyecto.proyecto_techlab_springboot.exception;
+package com.proyecto.proyecto_techlab_springboot.exception.common;
 
 import static com.proyecto.proyecto_techlab_springboot.util.AuxiliarFunction.capitalize;
 

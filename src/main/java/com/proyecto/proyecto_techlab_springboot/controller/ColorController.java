@@ -3,7 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.controller;
 import com.proyecto.proyecto_techlab_springboot.dto.color.ColorCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.color.ColorResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.color.ColorUpdateRequest;
-import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.common.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.service.ColorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

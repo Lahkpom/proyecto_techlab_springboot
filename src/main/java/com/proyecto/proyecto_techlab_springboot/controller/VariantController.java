@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.controller;
 
-import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.common.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantUpdateRequest;

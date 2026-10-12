@@ -1,10 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.service;
 
-import com.proyecto.proyecto_techlab_springboot.dto.StatusUpdateRequest;
-import com.proyecto.proyecto_techlab_springboot.dto.auth.UserCreateRequest;
-import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.dto.common.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.user.*;
-import com.proyecto.proyecto_techlab_springboot.exception.UserNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.user.UserNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
@@ -77,5 +75,7 @@ public class UserService {
         return this.iUserRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("{ ID: %s }".formatted(id)));
     }
+
+
 }
 
