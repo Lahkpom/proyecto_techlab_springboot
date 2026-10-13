@@ -50,7 +50,7 @@ public class AuthService {
 
         Users saved = this.iUserRepository.save(user);
 
-        log.info("Usuario CUSTOMER creado exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
+        log.info("Usuario CUSTOMER creado exitosamente { email: {}, ID: {} }", saved.getUserEmail(), saved.getUserId());
         return mapToResponse(saved);
     }
 
@@ -76,7 +76,7 @@ public class AuthService {
 
         Users saved = this.iUserRepository.save(user);
 
-        log.info("Usuario WHOLESALER creado exitosamente { compañía: {}, email: {}, ID: {} }", user.getCompanyName(), user.getUserEmail(), user.getUserId());
+        log.info("Usuario WHOLESALER creado exitosamente { compañía: {}, email: {}, ID: {} }", saved.getCompanyName(), saved.getUserEmail(), saved.getUserId());
         return mapToResponse(saved);
     }
 

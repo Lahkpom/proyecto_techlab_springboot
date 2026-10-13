@@ -10,11 +10,13 @@ import com.proyecto.proyecto_techlab_springboot.model.Color;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IColorRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ColorService {
@@ -60,6 +62,8 @@ public class ColorService {
                 .build();
 
         Color savedColor = iColorRepository.save(color);
+
+        log.info("Color creado exitosamente { ID: {}, nombre: {}, código: {} }", savedColor.getColorId(), savedColor.getColorName(), savedColor.getColorCode());
         return mapToResponse(savedColor);
     }
 
@@ -81,6 +85,7 @@ public class ColorService {
         color.setColorDesc(desc);
         color.setColorCode(code);
 
+        log.info("Color modificado exitosamente { ID: {}, nombre: {}, código: {} }", color.getColorId(), color.getColorName(), color.getColorCode());
         return mapToResponse(color);
     }
 
@@ -89,6 +94,8 @@ public class ColorService {
         Color color = findColorByIdOrThrow(id);
 
         color.setRowStatus(request.rowStatus());
+
+        log.info("Estado de Color modificado exitosamente { ID: {}, estado: {} }", color.getColorId(), color.getRowStatus());
 
         return mapToResponse(color);
     }
