@@ -11,12 +11,14 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -34,6 +36,8 @@ public class ProductService {
                 .build();
 
         Product saved = iProductRepository.save(product);
+
+        log.info("Producto creado exitosamente { ID: {}, categoría: {}, nombre: {} }", saved.getProductId(), saved.getProductCategory(), saved.getProductName());
 
         return mapToResponse(saved);
     }
@@ -59,6 +63,8 @@ public class ProductService {
         product.setProductShortDesc(request.shortDesc());
         product.setProductLongDesc(request.longDesc());
 
+        log.info("Producto modificado exitosamente { ID: {} }", product.getProductId());
+
         return mapToResponse(product);
     }
 
@@ -75,6 +81,8 @@ public class ProductService {
             if (request.rowStatus() == RowStatus.DELETED)
                 this.iVariantRepository.deleteVariantsByProductId(id);
         }
+
+        log.info("Estado del Producto modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", product.getProductId(), lastStatus, product.getRowStatus());
 
         return mapToResponse(product);
     }
