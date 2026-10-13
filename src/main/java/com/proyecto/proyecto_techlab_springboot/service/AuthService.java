@@ -7,6 +7,7 @@ import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest
 import com.proyecto.proyecto_techlab_springboot.dto.user.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
+import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.exception.user.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
@@ -87,6 +88,8 @@ public class AuthService {
 
         if (!user.isEmailVerified()) throw new EmailNotVerifiedException();
 
+        if (user.getPasswordExpiresAt().isBefore(Instant.now())) throw new ExpiredPasswordException();
+
         if (user.getLockedUntil() != null) {
             if (user.getLockedUntil().isAfter(Instant.now()))
                 throw new AccountLockedException(user.getLockedUntil().toString());
@@ -136,7 +139,8 @@ public class AuthService {
                 entity.getUserEmail(),
                 entity.getUserPhone(),
                 entity.getCompanyName(),
-                entity.getLastLoginAt()
+                entity.getLastLoginAt(),
+                entity.getPasswordExpiresAt()
         );
     }
 

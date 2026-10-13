@@ -57,4 +57,7 @@ public class Users extends BaseEntity {
 
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
+
+    @Column(name = "password_expires_at", nullable = false)
+    private Instant passwordExpiresAt;
 }

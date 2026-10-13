@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.exception;
 
 import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
+import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.ErrorResponse;
 import com.proyecto.proyecto_techlab_springboot.exception.common.ResourceAlreadyExistsException;
@@ -64,6 +65,17 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.FORBIDDEN,
                 "EMAIL_NOT_VERIFIED",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 403 (Contraseña expirada)
+    @ExceptionHandler(ExpiredPasswordException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredPassword(ExpiredPasswordException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "PASSWORD_EXPIRED",
                 ex.getMessage(),
                 request
         );

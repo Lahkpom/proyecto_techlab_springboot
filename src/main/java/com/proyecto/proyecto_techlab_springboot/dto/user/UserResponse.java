@@ -12,5 +12,6 @@ public record UserResponse(
         String      userEmail,
         String      userPhone,
         String      companyName,
-        Instant     lastLoginAt
+        Instant     lastLoginAt,
+        Instant     passwordExpiresAt
 ) {}

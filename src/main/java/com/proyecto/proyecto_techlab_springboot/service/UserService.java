@@ -67,7 +67,8 @@ public class UserService {
                 entity.getUserEmail(),
                 entity.getUserPhone(),
                 entity.getCompanyName(),
-                entity.getLastLoginAt()
+                entity.getLastLoginAt(),
+                entity.getPasswordExpiresAt()
         );
     }
 
