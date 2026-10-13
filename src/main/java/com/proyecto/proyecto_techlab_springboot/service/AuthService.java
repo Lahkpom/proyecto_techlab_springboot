@@ -49,6 +49,7 @@ public class AuthService {
 
         Users saved = this.iUserRepository.save(user);
 
+        log.info("Usuario CUSTOMER creado exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
         return mapToResponse(saved);
     }
 
@@ -74,6 +75,7 @@ public class AuthService {
 
         Users saved = this.iUserRepository.save(user);
 
+        log.info("Usuario WHOLESALER creado exitosamente { compañía: {}, email: {}, ID: {} }", user.getCompanyName(), user.getUserEmail(), user.getUserId());
         return mapToResponse(saved);
     }
 
@@ -97,12 +99,12 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getUserPassword())) {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
+            log.warn("Intento de login fallido #{} para email: {} (userId: {})", attempts, user.getUserEmail(), user.getUserId());
 
             if (attempts >= 5) { // Bloquear por 15 minutos
                 user.setLockedUntil(Instant.now().plus(Duration.ofMinutes(15)));
-
                 log.warn(
-                        "Se impone bloque de cuenta al email {} hasta {} por {} intentos fallidos de login (userId: {})",
+                        "Se impone bloqueo de cuenta al email {} hasta {} por {} intentos fallidos de login (userId: {})",
                         user.getUserEmail(),
                         user.getFailedLoginAttempts(),
                         attempts,
