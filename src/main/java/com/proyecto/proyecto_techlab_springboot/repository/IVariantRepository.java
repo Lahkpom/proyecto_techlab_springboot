@@ -43,31 +43,40 @@ public interface IVariantRepository extends JpaRepository<Variant, UUID> {
      * Marca como INACTIVE solo las variantes ACTIVE del producto indicado
      * @param productId productId
      */
+    default void inactivateVariantsByProductId(@Param("productId") UUID productId) {
+        inactivateVariantsByProductId(productId, RowStatus.ACTIVE, RowStatus.INACTIVE);
+    }
     @Modifying(clearAutomatically = true)
     @Query("""
         UPDATE
             Variant v
         SET
-            v.rowStatus = com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus.INACTIVE
+            v.rowStatus = :inactive
         WHERE
             v.product.productId = :productId
-            AND v.rowStatus     = com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus.ACTIVE
+            AND v.rowStatus     = :active
     """)
-    void inactivateVariantsByProductId(@Param("productId") UUID productId);
+    void inactivateVariantsByProductId(
+            @Param("productId") UUID        productId,
+            @Param("active")    RowStatus   active,
+            @Param("inactive")  RowStatus   inactive
+    );
 
     /**
      * Marca como DELETED todas las variantes del producto indicado
      * @param productId productId
      */
+    default void deleteVariantsByProductId(@Param("productId") UUID productId) {
+        deleteVariantsByProductId(productId, RowStatus.DELETED);
+    }
     @Modifying(clearAutomatically = true)
     @Query("""
-        UPDATE
-            Variant v
-        SET
-            v.rowStatus = com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus.DELETED
-        WHERE
-            v.product.productId = :productId
+        UPDATE  Variant v
+        SET     v.rowStatus         = :deleted
+        WHERE   v.product.productId = :productId
     """)
-    void deleteVariantsByProductId(@Param("productId") UUID productId);
-
+    void deleteVariantsByProductId(
+            @Param("productId") UUID        productId,
+            @Param("deleted")   RowStatus   deleted
+    );
 }
