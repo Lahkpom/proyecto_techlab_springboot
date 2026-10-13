@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record WholesalerCreateRequest(
@@ -20,7 +21,10 @@ public record WholesalerCreateRequest(
         @Size(max = 255, message = "La contraseña no puede exceder los 255 caracteres.")
         String password,
 
-        @Size(max = 50, message = "El teléfono no puede exceder los 50 caracteres.")
+        @Pattern(
+                regexp = "^\\d{10}$",
+                message = "El teléfono debe contener exactamente 10 dígitos numéricos."
+        )
         String phone,
 
         @NotBlank(message = "El nombre de la compañía es obligatorio.")

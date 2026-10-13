@@ -7,7 +7,14 @@ public record AuthResponse(
         String          tokenType,
         UserResponse    user
 ) {
-    public static AuthResponse of(String token, UserResponse user) {
-        return new AuthResponse(token, "Bearer", user);
+    public static AuthResponse of(
+            String          token,
+            UserResponse    user
+    ) {
+        return new AuthResponse(
+                token,
+                "Bearer",
+                user
+        );
     }
 }
