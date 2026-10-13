@@ -5,18 +5,23 @@ import com.proyecto.proyecto_techlab_springboot.dto.auth.LoginRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.auth.UserCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.auth.WholesalerCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.user.UserResponse;
+import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
+import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.exception.user.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -76,21 +81,37 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         String email = request.email().trim().toLowerCase();
 
-        Users user = this.iUserRepository.findByUserEmailIgnoreCase(email)
-                .orElseThrow(() -> new InvalidCredentialsException("{ email: %s }".formatted(email)));
+        Users user = this.getUserByEmail(email);
 
-        if (!user.isEmailVerified()){
-            // TODO Hacerle una exception específica para este
-            throw new IllegalArgumentException("El Email aún no ha sido verificado.");
-        }
+        if (!user.isEmailVerified()) throw new EmailNotVerifiedException();
 
-        if (user.getLockedUntil() != null && user.getLockedUntil().isBefore(Instant.now())) {
-            // TODO Hacerle una exception específica para este
-            throw new IllegalArgumentException("La cuenta está bloqueada temporalmente.");
+        if (user.getLockedUntil() != null) {
+            if (user.getLockedUntil().isAfter(Instant.now()))
+                throw new AccountLockedException(user.getLockedUntil().toString());
+
+            // Si ya expiró el castigo, reseteamos el bloqueo
+            user.setLockedUntil(null);
+            user.setFailedLoginAttempts(0);
         }
 
         if (!passwordEncoder.matches(request.password(), user.getUserPassword())) {
-            user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
+            int attempts = user.getFailedLoginAttempts() + 1;
+            user.setFailedLoginAttempts(attempts);
+
+            if (attempts >= 5) { // Bloquear por 15 minutos
+                user.setLockedUntil(Instant.now().plus(Duration.ofMinutes(15)));
+
+                log.warn(
+                        "Se impone bloque de cuenta al email {} hasta {} por {} intentos fallidos de login (userId: {})",
+                        user.getUserEmail(),
+                        user.getFailedLoginAttempts(),
+                        attempts,
+                        user.getUserId()
+                );
+
+                throw new AccountLockedException(user.getLockedUntil().toString());
+            }
+
             throw new InvalidCredentialsException("Contraseña Incorrecta.");
         }
 
@@ -101,15 +122,9 @@ public class AuthService {
         // Simulamos token hasta implementar JwtService
         String mockToken = "temp-jwt-token-for-%s".formatted(user.getUserId());
 
+        log.info("Usuario inició sesión exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
         return AuthResponse.of(mockToken, mapToResponse(user));
     }
-
-
-
-
-
-//    Autenticación: El backend busca al usuario por email, valida que user.isEmailVerified sea true, que no esté bloqueado y compara hashes con passwordEncoder.matches(rawPassword, encodedPassword).
-//Firma del JWT: Si todo coincide, el backend genera una cadena compacta (JWT) firmada criptográficamente con una clave secreta (HMAC-SHA256). Dentro del token viajan datos públicos (claims): el ID del usuario, su email, su rol y la fecha de expiración.
 
     private UserResponse mapToResponse(Users entity) {
         return new UserResponse(
@@ -126,5 +141,10 @@ public class AuthService {
     private void validateUserEmailOrThrow(String email) {
         if (this.iUserRepository.findByUserEmailIgnoreCase(email).isPresent())
             throw new UserAlreadyExistsException("{ email: %s }".formatted(email));
+    }
+
+    private Users getUserByEmail(String email) {
+        return this.iUserRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new InvalidCredentialsException("{ email: %s }".formatted(email)));
     }
 }
