@@ -38,7 +38,6 @@ public class AuthService {
         String phone    = request.phone() != null ? request.phone().trim() : null;
 
         validateUserEmailOrThrow(email);
-        // TODO: Validar también el formato del teléfono
 
         Users user = Users.builder()
                 .userRole(UserRole.CUSTOMER)
@@ -63,7 +62,6 @@ public class AuthService {
         String company  = request.companyName().trim();
 
         validateUserEmailOrThrow(email);
-        // TODO: Validar también el formato del teléfono
 
         Users user = Users.builder()
                 .userRole(UserRole.WHOLESALE)

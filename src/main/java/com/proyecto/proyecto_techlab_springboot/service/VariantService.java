@@ -12,12 +12,14 @@ import com.proyecto.proyecto_techlab_springboot.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VariantService {
@@ -74,7 +76,11 @@ public class VariantService {
                 .rowStatus(RowStatus.ACTIVE)
                 .build();
 
-        return mapToResponse(iVariantRepository.save(variant));
+        Variant saved = iVariantRepository.save(variant);
+
+        log.info("Variante creada exitosamente { variantId: {}, productId: {}, SKU: {} }", saved.getVariantId(), saved.getProduct().getProductId(), saved.getVariantSku());
+
+        return mapToResponse(saved);
     }
 
     @Transactional
@@ -100,7 +106,7 @@ public class VariantService {
                     id
             )) {
                 throw new VariantAlreadyExistsException(
-                        "{ product_id: %s,  color_id: %s, size: %s }".formatted(
+                        "{ product_id: %s, color_id: %s, size: %s }".formatted(
                                 variant.getProduct().getProductId(),
                                 request.colorId(),
                                 request.size()
@@ -116,13 +122,17 @@ public class VariantService {
         variant.setVariantPrice(request.price());
         variant.setVariantStock(request.stock());
 
+        log.info("Variante modificada exitosamente { variantId: {}, productId: {}, SKU: {} }", variant.getVariantId(), variant.getProduct().getProductId(), variant.getVariantSku());
+
         return mapToResponse(variant);
     }
 
     @Transactional
     public VariantResponse updateVariantStatus(UUID id, StatusUpdateRequest request) {
         Variant variant = findVariantByIdOrThrow(id);
+        RowStatus lastStatus = variant.getRowStatus();
         variant.setRowStatus(request.rowStatus());
+        log.info("Estado de la variante modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", variant.getVariantId(), lastStatus, variant.getRowStatus());
         return mapToResponse(variant);
     }
 
