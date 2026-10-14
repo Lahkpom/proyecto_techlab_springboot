@@ -1,10 +1,19 @@
 package com.proyecto.proyecto_techlab_springboot.model;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Setter
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SuperBuilder
 @Entity
 @Table(name = "user_session")
 public class UserSession {
@@ -23,7 +32,7 @@ public class UserSession {
     @Column(name = "device_info")
     private String deviceInfo;
 
-    @Column(name = "ip_address") // En la base es de tipo INET, acá sería String?
+    @Column(name = "ip_address", columnDefinition = "inet")
     private String ipAddress;
 
     @Column(name = "is_revoked", nullable = false)

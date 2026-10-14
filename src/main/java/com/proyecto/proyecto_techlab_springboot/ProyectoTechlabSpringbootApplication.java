@@ -28,6 +28,12 @@ public class ProyectoTechlabSpringbootApplication {
      *          haga en segundo plano (No sé si esto tiene que ver con lo multihilo).
      *      - Podría tener un storedProcedure o un procedure común y corriente que tenga la lógica esta ?
      *  - Hacer lo mismo con las imágenes de las variantes que también deben cambiar su estado
+     *  TODO
+     *   - Hacer un /model para user_security_tokens cuando implemente verificación de email o reseteo de clave
+     *  TODO
+     *      - El siguiente paso en la cadena de seguridad es armar el filtro HTTP (JwtAuthenticationFilter) que intercepte cada request entrante,
+     *          lea el header Authorization: Bearer <token>, extraiga el usuario con este servicio y lo cargue en el contexto de Spring Security.
+     *      - Armar el JwtAuthenticationFilter y la SecurityFilterChain
      */
 
 
