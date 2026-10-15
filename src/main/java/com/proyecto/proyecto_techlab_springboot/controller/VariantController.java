@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/variantes")
@@ -23,14 +22,14 @@ public class VariantController {
 
     @GetMapping("/producto/{productId}")
     public ResponseEntity<List<VariantResponse>> getVariantsByProduct(
-            @PathVariable                           UUID    productId,
+            @PathVariable                           Long    productId,
             @RequestParam(defaultValue = "false")   boolean includeInactive
     ) {
         return ResponseEntity.ok(variantService.getVariantsByProduct(productId, includeInactive));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<VariantResponse> getVariantById(@PathVariable UUID id) {
+    public ResponseEntity<VariantResponse> getVariantById(@PathVariable Long id) {
         return ResponseEntity.ok(variantService.getVariantById(id));
     }
 
@@ -43,7 +42,7 @@ public class VariantController {
     @PutMapping("/{id}")
     //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<VariantResponse> updateVariant(
-            @PathVariable       UUID                    id,
+            @PathVariable       Long                    id,
             @Valid @RequestBody VariantUpdateRequest    request
     ) {
         return ResponseEntity.ok(variantService.updateVariant(id, request));
@@ -52,7 +51,7 @@ public class VariantController {
     @PatchMapping("/{id}/status")
     //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<VariantResponse> updateVariantStatus(
-            @PathVariable       UUID                id,
+            @PathVariable       Long                id,
             @Valid @RequestBody StatusUpdateRequest request
     ) {
         return ResponseEntity.ok(variantService.updateVariantStatus(id, request));

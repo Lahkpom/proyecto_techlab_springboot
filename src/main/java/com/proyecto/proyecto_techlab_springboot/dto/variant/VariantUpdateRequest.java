@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 public record VariantUpdateRequest(
         @NotNull(message = "El id del color es obligatorio")
-        Integer colorId,
+        Long colorId,
 
         @NotNull(message = "El talle es obligatorio")
         NumericSize size,

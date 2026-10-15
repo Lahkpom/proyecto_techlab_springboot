@@ -8,13 +8,13 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface IColorRepository extends JpaRepository<Color, Integer> {
+public interface IColorRepository extends JpaRepository<Color, Long> {
     boolean existsByColorNameIgnoreCase(String colorName);
     boolean existsByColorCodeIgnoreCase(String colorCode);
 
     // Para el update: existe con ese nombre PERO con un ID distinto al que estoy editando
-    boolean existsByColorNameIgnoreCaseAndColorIdNot(String colorName, Integer colorId);
-    boolean existsByColorCodeIgnoreCaseAndColorIdNot(String colorCode, Integer colorId);
+    boolean existsByColorNameIgnoreCaseAndColorIdNot(String colorName, Long colorId);
+    boolean existsByColorCodeIgnoreCaseAndColorIdNot(String colorCode, Long colorId);
 
     List<Color> findAllByRowStatus(RowStatus rowStatus);
 }

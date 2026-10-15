@@ -125,17 +125,22 @@ public class AuthService {
 
 
         // Comprobar bloqueo de cuenta
-        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
-            auditService.recordAttempt(
-                    user.getUserId(),
-                    request.email(),
-                    false,
-                    "ACCOUNT_LOCKED",
-                    ip,
-                    userAgent
-            );
+        if (user.getLockedUntil() != null) {
+            if (user.getLockedUntil().isAfter(Instant.now())) {
+                auditService.recordAttempt(
+                        user.getUserId(),
+                        request.email(),
+                        false,
+                        "ACCOUNT_LOCKED",
+                        ip,
+                        userAgent
+                );
 
-            throw new AccountLockedException(user.getLockedUntil().toString());
+                throw new AccountLockedException(user.getLockedUntil().toString());
+            } else {
+                user.setLockedUntil(null);
+                user.setFailedLoginAttempts(0);
+            }
         }
 
         // Comprobar contraseña

@@ -12,7 +12,7 @@ public record VariantCreateRequest(
         UUID productId,
 
         @NotNull(message = "El id del color es obligatorio")
-        Integer colorId,
+        Long colorId,
 
         @NotNull(message = "El talle es obligatorio")
         NumericSize size,

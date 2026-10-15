@@ -9,10 +9,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record VariantResponse(
-        UUID            id,
+        Long            id,
         UUID            productId,
         String          productName,
-        Integer         colorId,
+        Long            colorId,
         String          colorName,
         String          colorCode,
         NumericSize     size,

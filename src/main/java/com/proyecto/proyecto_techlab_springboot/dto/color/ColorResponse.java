@@ -4,7 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import java.time.Instant;
 
 public record ColorResponse(
-        Integer     id,
+        Long        id,
         String      name,
         String      desc,
         String      code,

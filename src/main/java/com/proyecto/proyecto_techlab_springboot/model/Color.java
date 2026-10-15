@@ -2,7 +2,6 @@ package com.proyecto.proyecto_techlab_springboot.model;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,7 +24,7 @@ public class Color extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "color_id", nullable = false, updatable = false)
-    private Integer colorId;
+    private Long colorId;
 
     @Column(name = "color_name", nullable = false, length = 50)
     private String colorName;

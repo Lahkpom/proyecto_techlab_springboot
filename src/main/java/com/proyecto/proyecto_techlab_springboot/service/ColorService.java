@@ -39,7 +39,7 @@ public class ColorService {
     }
 
     @Transactional(readOnly = true)
-    public ColorResponse getColorById(Integer id) {
+    public ColorResponse getColorById(Long id) {
         return mapToResponse(findColorByIdOrThrow(id));
     }
 
@@ -64,11 +64,12 @@ public class ColorService {
         Color savedColor = iColorRepository.save(color);
 
         log.info("Color creado exitosamente { ID: {}, nombre: {}, código: {} }", savedColor.getColorId(), savedColor.getColorName(), savedColor.getColorCode());
+
         return mapToResponse(savedColor);
     }
 
     @Transactional
-    public ColorResponse updateColor(Integer id, ColorUpdateRequest request) {
+    public ColorResponse updateColor(Long id, ColorUpdateRequest request) {
         Color color = findColorByIdOrThrow(id);
 
         String name = request.name().trim();
@@ -86,11 +87,12 @@ public class ColorService {
         color.setColorCode(code);
 
         log.info("Color modificado exitosamente { ID: {}, nombre: {}, código: {} }", color.getColorId(), color.getColorName(), color.getColorCode());
+
         return mapToResponse(color);
     }
 
     @Transactional
-    public ColorResponse updateColorStatus(Integer id, StatusUpdateRequest request) {
+    public ColorResponse updateColorStatus(Long id, StatusUpdateRequest request) {
         Color color = findColorByIdOrThrow(id);
 
         color.setRowStatus(request.rowStatus());
@@ -100,7 +102,7 @@ public class ColorService {
         return mapToResponse(color);
     }
 
-    public Color findColorByIdOrThrow(Integer id) {
+    public Color findColorByIdOrThrow(Long id) {
         return iColorRepository.findById(id)
                 .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(id)));
     }

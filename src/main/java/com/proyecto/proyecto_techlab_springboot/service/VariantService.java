@@ -40,7 +40,7 @@ public class VariantService {
     }
 
     @Transactional(readOnly = true)
-    public VariantResponse getVariantById(UUID id) {
+    public VariantResponse getVariantById(Long id) {
         return mapToResponse(findVariantByIdOrThrow(id));
     }
 
@@ -84,7 +84,7 @@ public class VariantService {
     }
 
     @Transactional
-    public VariantResponse updateVariant(UUID id, VariantUpdateRequest request) {
+    public VariantResponse updateVariant(Long id, VariantUpdateRequest request) {
         Variant variant = findVariantByIdOrThrow(id);
         String  newSku  = request.sku().toUpperCase().trim();
 
@@ -128,7 +128,7 @@ public class VariantService {
     }
 
     @Transactional
-    public VariantResponse updateVariantStatus(UUID id, StatusUpdateRequest request) {
+    public VariantResponse updateVariantStatus(Long id, StatusUpdateRequest request) {
         Variant variant = findVariantByIdOrThrow(id);
         RowStatus lastStatus = variant.getRowStatus();
         variant.setRowStatus(request.rowStatus());
@@ -136,7 +136,7 @@ public class VariantService {
         return mapToResponse(variant);
     }
 
-    private Variant findVariantByIdOrThrow(UUID id) {
+    private Variant findVariantByIdOrThrow(Long id) {
         return iVariantRepository.findById(id)
                 .orElseThrow(() -> new VariantNotFoundException("{ ID: %s }".formatted(id)));
     }

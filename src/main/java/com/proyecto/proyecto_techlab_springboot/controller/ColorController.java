@@ -29,7 +29,7 @@ public class ColorController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ColorResponse> getColorById(@PathVariable Integer id) {
+    public ResponseEntity<ColorResponse> getColorById(@PathVariable Long id) {
         return ResponseEntity.ok(colorService.getColorById(id));
     }
 
@@ -42,7 +42,7 @@ public class ColorController {
     @PutMapping("/{id}")
     //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ColorResponse> updateColor(
-            @PathVariable       Integer             id,
+            @PathVariable       Long                id,
             @Valid @RequestBody ColorUpdateRequest  request
     ) {
         return ResponseEntity.ok(colorService.updateColor(id, request));
@@ -51,7 +51,7 @@ public class ColorController {
     @PatchMapping("/{id}/status")
     //    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     public ResponseEntity<ColorResponse> updateColorStatus(
-            @PathVariable       Integer             id,
+            @PathVariable       Long                id,
             @Valid @RequestBody StatusUpdateRequest request
     ) {
         return ResponseEntity.ok(colorService.updateColorStatus(id, request));

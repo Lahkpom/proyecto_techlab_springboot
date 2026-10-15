@@ -12,7 +12,6 @@ import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Setter
 @Getter
@@ -23,9 +22,9 @@ import java.util.UUID;
 public class Variant extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "variant_id", nullable = false, updatable = false)
-    private UUID variantId;
+    private Long variantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

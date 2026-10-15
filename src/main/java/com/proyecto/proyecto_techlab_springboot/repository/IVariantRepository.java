@@ -13,25 +13,25 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface IVariantRepository extends JpaRepository<Variant, UUID> {
+public interface IVariantRepository extends JpaRepository<Variant, Long> {
 
     // Validar combinación producto + color + talle duplicada
     boolean existsByProduct_ProductIdAndColor_ColorIdAndVariantSize(
             UUID        productId,
-            Integer     colorId,
+            Long        colorId,
             NumericSize variantSize
     );
     boolean existsByProduct_ProductIdAndColor_ColorIdAndVariantSizeAndVariantIdNot(
             UUID        productId,
-            Integer     colorId,
+            Long        colorId,
             NumericSize variantSize,
-            UUID        variantId
+            Long        variantId
     );
 
     // Validar SKU duplicado
     boolean existsByVariantSkuIgnoreCase(String sku);
     // Para el update: existe con ese atributo PERO con un ID distinto al que estoy editando
-    boolean existsByVariantSkuIgnoreCaseAndVariantIdNot(String sku, UUID variantId);
+    boolean existsByVariantSkuIgnoreCaseAndVariantIdNot(String sku, Long variantId);
 
     // Buscar todas las variantes de un producto
     List<Variant> findAllByProduct_ProductId(UUID productId);
