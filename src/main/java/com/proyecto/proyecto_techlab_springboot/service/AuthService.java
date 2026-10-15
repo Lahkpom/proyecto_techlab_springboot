@@ -88,7 +88,12 @@ public class AuthService {
     }
 
     // Evitar el rollback cuando salten estas exception para que borre los insert en la tabla
-    @Transactional(noRollbackFor = {InvalidCredentialsException.class, AccountLockedException.class})
+    @Transactional(noRollbackFor = {
+            InvalidCredentialsException.class,
+            AccountLockedException.class,
+            EmailNotVerifiedException.class,
+            ExpiredPasswordException.class
+    })
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         String  ip          = extractClientIp(httpRequest);
         String  userAgent   = httpRequest.getHeader("User-Agent");
