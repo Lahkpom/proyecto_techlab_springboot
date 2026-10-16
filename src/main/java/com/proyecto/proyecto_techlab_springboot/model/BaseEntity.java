@@ -4,8 +4,10 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 import java.time.Instant;
@@ -24,20 +26,16 @@ public abstract class BaseEntity {
     @Column(name = "row_status", nullable = false)
     protected RowStatus rowStatus;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     protected Instant createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     protected Instant updatedAt;
 
     @PrePersist
-    public void prePersist() {
-        this.rowStatus = RowStatus.ACTIVE;
-        this.createdAt = Instant.now();
-    }
-
-    @PreUpdate
-    public void preUpdate() { this.updatedAt = Instant.now(); }
+    public void prePersist() { this.rowStatus = RowStatus.ACTIVE; }
 
     public static void validateRowStatus(RowStatus rowStatus) {
         if (rowStatus == null)
