@@ -1,4 +1,4 @@
-package com.proyecto.proyecto_techlab_springboot.exception.auth;
+package com.proyecto.proyecto_techlab_springboot.exception.common;
 
 //import org.springframework.security.authentication.BadCredentialsException;
 

@@ -5,7 +5,7 @@ import com.proyecto.proyecto_techlab_springboot.dto.user.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
-import com.proyecto.proyecto_techlab_springboot.exception.auth.InvalidCredentialsException;
+import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.exception.user.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.model.UserSession;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
