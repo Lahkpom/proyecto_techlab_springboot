@@ -136,7 +136,7 @@ public class VariantService {
         return mapToResponse(variant);
     }
 
-    private Variant findVariantByIdOrThrow(Long id) {
+    public Variant findVariantByIdOrThrow(Long id) {
         return iVariantRepository.findById(id)
                 .orElseThrow(() -> new VariantNotFoundException("{ ID: %s }".formatted(id)));
     }

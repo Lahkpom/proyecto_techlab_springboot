@@ -80,7 +80,7 @@ public class UserService {
         );
     }
 
-    private Users findUserByIdOrThrow(UUID id) {
+    public Users findUserByIdOrThrow(UUID id) {
         return this.iUserRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("{ ID: %s }".formatted(id)));
     }
