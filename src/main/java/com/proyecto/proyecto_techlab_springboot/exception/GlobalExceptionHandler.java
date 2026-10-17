@@ -3,10 +3,8 @@ package com.proyecto.proyecto_techlab_springboot.exception;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
-import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidCredentialsException;
-import com.proyecto.proyecto_techlab_springboot.exception.common.ErrorResponse;
-import com.proyecto.proyecto_techlab_springboot.exception.common.ResourceAlreadyExistsException;
-import com.proyecto.proyecto_techlab_springboot.exception.common.ResourceNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.cart.InsufficientStockException;
+import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -92,12 +90,34 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // Maneja TODOS los 409 (Conflictos / Duplicados) de cualquier entidad (Product, Color, User, etc.)
+    // Maneja los 409 (Conflictos / Duplicados) de cualquier entidad (Product, Color, User, etc.)
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleResourceAlreadyExists(ResourceAlreadyExistsException ex, HttpServletRequest request) {
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "RESOURCE_ALREADY_EXISTS",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja los 409 (Conflictos / Stock Insuficiente)
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientStock(InsufficientStockException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "INSUFFICIENT_STOCK",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja los 410 (Recursos que ya no están disponibles)
+    @ExceptionHandler(ResourceNoLongerAvailableException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientStock(ResourceNoLongerAvailableException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.GONE,
+                "RESOURCE_NO_LONGER_AVAILABLE",
                 ex.getMessage(),
                 request
         );
