@@ -14,8 +14,6 @@ import com.proyecto.proyecto_techlab_springboot.model.Users;
 import com.proyecto.proyecto_techlab_springboot.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.model.CartItemId;
 import com.proyecto.proyecto_techlab_springboot.repository.ICartItemRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,12 +29,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CartService {
 
-    private final ICartItemRepository   iCartItemRepository;
-    private final IUserRepository       iUserRepository;
-    private final IVariantRepository    iVariantRepository;
+    private final ICartItemRepository iCartItemRepository;
 
     private final UserService       userService;
-    private final VariantService       variantService;
+    private final VariantService    variantService;
 
     @Transactional
     public CartResponse getCartByUser(UUID userId) {
@@ -44,6 +40,15 @@ public class CartService {
         return fetchAndSyncCartResponse(userId);
     }
 
+    /**
+     * Agrega un item al carrito. Si el item ya existía, se le ajusta la cantidad sumando la nueva y la existente.
+     * En ambos casos se chequea previamente que la cantidad no pase el stock disponible de la variante.
+     * (Se chequea además que tanto el usuario como la variante, ambos buscados por ID, sean válidos)
+     *
+     * @param userId Se extrae del token en el CartController
+     * @param request CartItemRequest
+     * @return CartResponse
+     */
     @Transactional
     public CartResponse addItemToCart(UUID userId, CartItemRequest request) {
         Users user = this.userService.findUserByIdOrThrow(userId);
@@ -53,71 +58,56 @@ public class CartService {
         if (variant.getRowStatus() != RowStatus.ACTIVE)
             throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(request.variantId()));
 
-        CartItemId  cartItemId  = new CartItemId(userId, variant.getVariantId());
-        CartItem    cartItem    = this.iCartItemRepository.findById(cartItemId).orElse(null);
+        CartItem cartItem = this.iCartItemRepository
+                .findById(new CartItemId(userId, variant.getVariantId()))
+                .orElse(null);
 
-        int targetQuantity = request.quantity();
+        int required = request.quantity();
 
         if (cartItem != null) {
             // Ya existía: sumar la cantidad
-            targetQuantity = cartItem.getQuantity() + request.quantity();
-            if (targetQuantity > variant.getVariantStock()) {
-                throw new InsufficientStockException(
-                        String.format("Stock insuficiente. Solicitado total: %d, disponible: %d",
-                                targetQuantity, variant.getVariantStock())
-                );
-            }
-            cartItem.setQuantity(targetQuantity);
+            required += cartItem.getQuantity();
+
+            validateQuantity(required, variant.getVariantStock());
+
+            cartItem.setQuantity(required);
         } else {
             // No existía: validar stock inicial e insertar
-            if (targetQuantity > variant.getVariantStock()) {
-                throw new InsufficientStockException(
-                        String.format("Stock insuficiente. Solicitado: %d, disponible: %d",
-                                targetQuantity, variant.getVariantStock())
-                );
-            }
-            cartItem = new CartItem(user, variant, targetQuantity);
-        }
+            validateQuantity(required, variant.getVariantStock());
 
-        iCartItemRepository.save(cartItem);
+            cartItem = new CartItem(user, variant, required);
+
+            this.iCartItemRepository.save(cartItem);
+        }
 
         // Devolver el carrito completo y actualizado
         return fetchAndSyncCartResponse(userId);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = VariantNoLongerAvailableException.class)
     public CartResponse updateItemQuantity(UUID userId, Long variantId, CartItemUpdateRequest request) {
         this.userService.findUserByIdOrThrow(userId);
 
-        CartItemId cartItemId = new CartItemId(userId, variantId);
-
-        CartItem cartItem = iCartItemRepository.findById(cartItemId)
+        CartItem cartItem = this.iCartItemRepository
+                .findById(new CartItemId(userId, variantId))
                 .orElseThrow(() -> new CartItemNotFoundException("{ ID: %s }".formatted(variantId)));
 
         Variant variant = cartItem.getVariant();
         if (variant.getRowStatus() != RowStatus.ACTIVE) {
-            iCartItemRepository.delete(cartItem);
+            this.iCartItemRepository.delete(cartItem);
             throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(variant.getVariantId()));
         }
 
-        if (request.quantity() > variant.getVariantStock())
-            throw new InsufficientStockException(
-                    "No es posible asignar %d unidades. Stock disponible: %d"
-                            .formatted(
-                                    request.quantity(),
-                                    variant.getVariantStock()
-                            )
-            );
+        validateQuantity(request.quantity(), variant.getVariantStock());
 
         cartItem.setQuantity(request.quantity());
-        iCartItemRepository.save(cartItem);
 
         return fetchAndSyncCartResponse(userId);
     }
 
     @Transactional
     public void removeItemFromCart(UUID userId, Long variantId) {
-        int deleted = iCartItemRepository.deleteByUserIdAndVariantId(userId, variantId);
+        int deleted = this.iCartItemRepository.deleteByUserIdAndVariantId(userId, variantId);
 
         if (deleted == 0)
             throw new VariantNotFoundException(
@@ -129,26 +119,33 @@ public class CartService {
     @Transactional
     public void clearCart(UUID userId) {
         this.userService.findUserByIdOrThrow(userId);
-        iCartItemRepository.deleteAllByUserId(userId);
+        this.iCartItemRepository.deleteAllByUserId(userId);
     }
 
+    /**
+     * Devuelve el carrito de compras por userId, luego de una filtración de aquellos productos que pudieron ser eliminados o que el stock actual de la variante
+     * esté en conflicto con la cantidad que fue guardada.
+     *
+     * @param userId userId
+     * @return CartResponse
+     */
     private CartResponse fetchAndSyncCartResponse(UUID userId) {
         List<CartItem> storedItems = this.iCartItemRepository.findAllByUserIdWithDetails(userId);
 
-        List<CartItem> itemsToKeep = new ArrayList<>();
-        List<CartItem> itemsToDelete = new ArrayList<>();
+        List<CartItem> itemsToKeep      = new ArrayList<>();
+        List<CartItem> itemsToDelete    = new ArrayList<>();
+
         boolean itemsAdjusted = false;
 
         for (CartItem item : storedItems) {
             Variant variant = item.getVariant();
 
-            if (variant.getRowStatus() != RowStatus.ACTIVE) {
-                itemsToDelete.add(item);
-                continue;
-            }
-
             int currentStock = variant.getVariantStock();
-            if (currentStock <= 0) {
+
+            if (
+                    variant.getRowStatus() != RowStatus.ACTIVE
+                    || currentStock <= 0
+            ) {
                 itemsToDelete.add(item);
                 continue;
             }
@@ -162,6 +159,7 @@ public class CartService {
         }
 
         if (!itemsToDelete.isEmpty()) {
+            // Borrado físico directamente en la DB con una única consulta SQL masiva
             this.iCartItemRepository.deleteAllInBatch(itemsToDelete);
             log.info("Se purgaron {} ítems obsoletos del carrito del usuario {}", itemsToDelete.size(), userId);
         }
@@ -169,36 +167,45 @@ public class CartService {
         return buildCartResponse(userId, itemsToKeep, !itemsToDelete.isEmpty(), itemsAdjusted);
     }
 
+    private void validateQuantity(int required, int stock) {
+        if (required > stock)
+            throw new InsufficientStockException(
+                    "No es posible asignar %d unidades. Stock disponible: %d".formatted(required, stock)
+            );
+    }
+
     private CartResponse buildCartResponse(
-            UUID userId,
-            List<CartItem> items,
-            boolean itemsPurged,
-            boolean itemsAdjusted
+            UUID            userId,
+            List<CartItem>  items,
+            boolean         itemsPurged,
+            boolean         itemsAdjusted
     ) {
-        List<CartItemResponse> itemResponses = new ArrayList<>();
-        int totalUnits = 0;
-        BigDecimal grandTotal = BigDecimal.ZERO;
+        int                     totalUnits      = 0;
+        BigDecimal              grandTotal      = BigDecimal.ZERO;
+        List<CartItemResponse>  itemResponses   = new ArrayList<>();
 
         for (CartItem item : items) {
-            Variant v = item.getVariant();
-            BigDecimal price = v.getVariantPrice();
-            BigDecimal subtotal = price.multiply(BigDecimal.valueOf(item.getQuantity()));
+            Variant     v           = item.getVariant();
+            BigDecimal  price       = v.getVariantPrice();
+            BigDecimal  subtotal    = price.multiply(BigDecimal.valueOf(item.getQuantity()));
 
             totalUnits += item.getQuantity();
             grandTotal = grandTotal.add(subtotal);
 
-            itemResponses.add(new CartItemResponse(
-                    v.getVariantId(),
-                    v.getProduct().getProductName(),
-                    v.getVariantSku(),
-                    v.getVariantDesc(),
-                    null, //v.getPrimaryImageUrl(), este valor no viene con el registro de variante, hay que buscarlo en la tabla Image
-                    price,
-                    item.getQuantity(),
-                    subtotal,
-                    v.getVariantStock(),
-                    item.getQuantity() > v.getVariantStock()
-            ));
+            itemResponses.add(
+                    new CartItemResponse(
+                            v.getVariantId(),
+                            v.getProduct().getProductName(),
+                            v.getVariantSku(),
+                            v.getVariantDesc(),
+                            null, //v.getPrimaryImageUrl(), este valor no viene con el registro de variante, hay que buscarlo en la tabla Image
+                            price,
+                            item.getQuantity(),
+                            subtotal,
+                            v.getVariantStock(),
+                            item.getQuantity() > v.getVariantStock()
+                    )
+            );
         }
 
         return new CartResponse(
