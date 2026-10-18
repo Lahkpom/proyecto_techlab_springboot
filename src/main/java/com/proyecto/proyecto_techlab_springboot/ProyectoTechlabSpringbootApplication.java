@@ -12,7 +12,7 @@ public class ProyectoTechlabSpringbootApplication {
      * TODO
      *  - Ver el flujo de los productos.
      *      - Cuando un producto se inactiva o elimina hace lo mismo en cascada con sus variantes
-     *      - Tratar de hacer que solo se cambie el estado al producto y termine la transacción, y que la cascada en lasvariantes se
+     *      - Tratar de hacer que solo se cambie el estado al producto y termine la transacción, y que la cascada en las variantes se
      *          haga en segundo plano (No sé si esto tiene que ver con lo multihilo).
      *      - Podría tener un storedProcedure o un procedure común y corriente que tenga la lógica esta ?
      *  - Hacer lo mismo con las imágenes de las variantes que también deben cambiar su estado
