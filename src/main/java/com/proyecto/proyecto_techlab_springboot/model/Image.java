@@ -31,6 +31,6 @@ public class Image extends BaseEntity {
     private Integer displayOrder;
 
     @Column(name = "is_primary", nullable = false)
-    private Boolean isPrimary;
+    private boolean isPrimary = false;
 
 }
