@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/variantes")
@@ -22,7 +23,7 @@ public class VariantController {
 
     @GetMapping("/producto/{productId}")
     public ResponseEntity<List<VariantResponse>> getVariantsByProduct(
-            @PathVariable                           Long    productId,
+            @PathVariable                           UUID    productId,
             @RequestParam(defaultValue = "false")   boolean includeInactive
     ) {
         return ResponseEntity.ok(variantService.getVariantsByProduct(productId, includeInactive));

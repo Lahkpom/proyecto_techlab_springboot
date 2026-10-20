@@ -8,6 +8,10 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
+     *  - Revisar el .env porque se subió al repo
+     * TODO
+     *  - Debería renombrar la ruta de la variantes para que empiece con /products así como las de imagenes empieza con /variants
+     * TODO
      *  - Sale. Ver cómo agregar la parte de sales y lo que es los saleItems
      * TODO
      *  - Ver el flujo de los productos.
