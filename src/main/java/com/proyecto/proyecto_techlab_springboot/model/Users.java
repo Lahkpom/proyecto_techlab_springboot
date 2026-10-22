@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.model;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,6 +12,7 @@ import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Setter
@@ -47,10 +49,12 @@ public class Users extends BaseEntity {
     private String companyName;
 
     @Column(name = "is_email_verified", nullable = false)
-    private boolean isEmailVerified;
+    @Builder.Default
+    private boolean isEmailVerified = false;
 
     @Column(name = "failed_login_attempts", nullable = false)
-    private Integer failedLoginAttempts;
+    @Builder.Default
+    private Integer failedLoginAttempts = 0;
 
     @Column(name = "locked_until")
     private Instant lockedUntil;
@@ -59,5 +63,6 @@ public class Users extends BaseEntity {
     private Instant lastLoginAt;
 
     @Column(name = "password_expires_at", nullable = false)
-    private Instant passwordExpiresAt;
+    @Builder.Default
+    private Instant passwordExpiresAt = Instant.now().plus(180, ChronoUnit.DAYS);
 }

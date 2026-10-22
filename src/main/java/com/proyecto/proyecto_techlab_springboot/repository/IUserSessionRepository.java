@@ -11,5 +11,5 @@ import java.util.UUID;
 public interface IUserSessionRepository  extends JpaRepository<UserSession, UUID> {
     Optional<UserSession> findByRefreshTokenHashAndIsRevokedFalse(String refreshTokenHash);
 
-    void deleteAllByUserId(UUID userId);
+    void deleteAllByUser_UserId(UUID userId);
 }

@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnTransformer;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,7 @@ public class UserSession {
     private String deviceInfo;
 
     @Column(name = "ip_address", columnDefinition = "inet")
+    @ColumnTransformer(write = "cast(? as inet)")
     private String ipAddress;
 
     @Column(name = "is_revoked", nullable = false)

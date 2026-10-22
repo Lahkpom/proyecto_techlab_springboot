@@ -152,10 +152,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
         log.error("Error no controlado al procesar {} {}: ", request.getMethod(), request.getRequestURI(), ex);
 
+//        return buildResponse(
+//                HttpStatus.INTERNAL_SERVER_ERROR,
+//                "INTERNAL_SERVER_ERROR",
+//                "Ocurrió un error inesperado. Contacte al administrador si el problema persiste.",
+//                request
+//        );
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",
-                "Ocurrió un error inesperado. Contacte al administrador si el problema persiste.",
+                ex.getMessage(),
                 request
         );
     }

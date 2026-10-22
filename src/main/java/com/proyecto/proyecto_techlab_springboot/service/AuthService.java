@@ -73,7 +73,7 @@ public class AuthService {
         validateUserEmailOrThrow(email);
 
         Users user = Users.builder()
-                .userRole(UserRole.WHOLESALE)
+                .userRole(UserRole.WHOLESALER)
                 .userName(name)
                 .userEmail(email)
                 .userPassword(password)
@@ -203,20 +203,21 @@ public class AuthService {
             throw new ExpiredPasswordException();
         }
 
-        // Login exitoso -> El trigger Postgres actualiza last_login_at y limpia failed_login_attempts
-        log.info("Usuario inició sesión exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
+        // Crear sesión y tokens antes de registrar el login como exitoso.
+        AuthResponse authResponse = createSessionAndTokens(user, ip, userAgent);
 
         auditService.recordAttempt(
-                user.getUserId(),
-                request.email(),
-                true,
-                null,
-                ip,
-                userAgent
+            user.getUserId(),
+            request.email(),
+            true,
+            null,
+            ip,
+            userAgent
         );
 
-        // Emitir tokens y crear sesión
-        return createSessionAndTokens(user, ip, userAgent);
+        // El trigger Postgres actualiza last_login_at y limpia failed_login_attempts.
+        log.info("Usuario inició sesión exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
+        return authResponse;
     }
 
     @Transactional
@@ -244,7 +245,7 @@ public class AuthService {
         AuthResponse newAuth = createSessionAndTokens(user, ip, userAgent);
 
         // Enlazar sesión vieja con la nueva para trazabilidad
-        this.iUserSessionRepository.save(session);
+        this.iUserSessionRepository.saveAndFlush(session);
 
         return newAuth;
     }
