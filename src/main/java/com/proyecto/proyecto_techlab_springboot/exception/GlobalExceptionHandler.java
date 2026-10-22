@@ -5,6 +5,8 @@ import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedE
 import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
 import com.proyecto.proyecto_techlab_springboot.exception.cart.InsufficientStockException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.*;
+import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
+import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -123,6 +125,17 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Maneja 422: sintácticamente correcto, semánticamente inválido
+    @ExceptionHandler(InvalidImageReorderException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidImageReorder(InvalidImageReorderException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_REORDER_SEQUENCE",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja 423 (Cuenta bloqueada por fuerza bruta)
     @ExceptionHandler(AccountLockedException.class)
     public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex, HttpServletRequest request) {
@@ -143,6 +156,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",
                 "Ocurrió un error inesperado. Contacte al administrador si el problema persiste.",
+                request
+        );
+    }
+
+    // Maneja 502 representa fallos con APIs upstream
+    @ExceptionHandler(StorageOperationException.class)
+    public ResponseEntity<ErrorResponse> handleStorageOperation(StorageOperationException ex, HttpServletRequest request) {
+        log.error("Fallo de comunicación con Storage: {}", ex.getMessage());
+        return buildResponse(
+                HttpStatus.BAD_GATEWAY,
+                "STORAGE_SERVICE_ERROR",
+                "No fue posible procesar el archivo en el servicio de almacenamiento.",
                 request
         );
     }

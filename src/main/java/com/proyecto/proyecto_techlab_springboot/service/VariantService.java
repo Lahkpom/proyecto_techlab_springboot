@@ -5,6 +5,7 @@ import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantCreateRequest
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.variant.VariantUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Color;
 import com.proyecto.proyecto_techlab_springboot.model.Product;
@@ -129,16 +130,24 @@ public class VariantService {
 
     @Transactional
     public VariantResponse updateVariantStatus(Long id, StatusUpdateRequest request) {
-        Variant variant = findVariantByIdOrThrow(id);
-        RowStatus lastStatus = variant.getRowStatus();
+        Variant     variant     = findVariantByIdOrThrow(id);
+        RowStatus   lastStatus  = variant.getRowStatus();
+
         variant.setRowStatus(request.rowStatus());
+
         log.info("Estado de la variante modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", variant.getVariantId(), lastStatus, variant.getRowStatus());
+
         return mapToResponse(variant);
     }
 
     public Variant findVariantByIdOrThrow(Long id) {
         return iVariantRepository.findById(id)
                 .orElseThrow(() -> new VariantNotFoundException("{ ID: %s }".formatted(id)));
+    }
+
+    public void requireAvailableVariantOrThrow(Variant variant){
+        if (variant.getRowStatus() != RowStatus.ACTIVE)
+            throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(variant.getVariantId()));
     }
 
     private VariantResponse mapToResponse(Variant v) {

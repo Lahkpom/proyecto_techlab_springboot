@@ -12,15 +12,21 @@ import java.util.Optional;
 public interface IImageRepository extends JpaRepository<Image, Long> {
 
     @Query("""
-        SELECT i FROM Image i
+        SELECT i
+        FROM Image i
         WHERE i.variant.variantId = :variantId
-        ORDER BY i.isPrimary DESC, i.displayOrder ASC, i.createdAt ASC
+        ORDER BY
+            i.isPrimary DESC,
+            i.displayOrder ASC,
+            i.createdAt ASC
     """)
     List<Image> findAllByVariantIdOrdered(@Param("variantId") Long variantId);
 
     @Query("""
-        SELECT i FROM Image i
-        WHERE i.variant.variantId = :variantId AND i.isPrimary = true
+        SELECT i
+        FROM Image i
+        WHERE i.variant.variantId = :variantId
+            AND i.isPrimary = true
     """)
     Optional<Image> findPrimaryByVariantId(@Param("variantId") Long variantId);
 
@@ -32,7 +38,8 @@ public interface IImageRepository extends JpaRepository<Image, Long> {
     int findMaxDisplayOrderByVariantId(@Param("variantId") Long variantId);
 
     @Query("""
-        SELECT i.imageId FROM Image i
+        SELECT i.imageId
+        FROM Image i
         WHERE i.variant.variantId = :variantId
     """)
     List<Long> findImageIdsByVariantId(@Param("variantId") Long variantId);
@@ -43,7 +50,8 @@ public interface IImageRepository extends JpaRepository<Image, Long> {
     @Query("""
         UPDATE Image i
         SET i.isPrimary = false
-        WHERE i.variant.variantId = :variantId AND i.isPrimary = true
+        WHERE i.variant.variantId = :variantId
+            AND i.isPrimary = true
     """)
     void resetPrimaryByVariantId(@Param("variantId") Long variantId);
 }

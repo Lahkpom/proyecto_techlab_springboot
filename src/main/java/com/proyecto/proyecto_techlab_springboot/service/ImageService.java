@@ -5,19 +5,16 @@ import com.proyecto.proyecto_techlab_springboot.dto.image.ImagePresignedUrlReque
 import com.proyecto.proyecto_techlab_springboot.dto.image.ImagePresignedUrlResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.image.ImageReorderRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.image.ImageResponse;
-import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
-import com.proyecto.proyecto_techlab_springboot.exception.common.BadRequestException;
-import com.proyecto.proyecto_techlab_springboot.exception.common.ResourceNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.image.ImageNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.model.Image;
 import com.proyecto.proyecto_techlab_springboot.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.repository.IImageRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,160 +28,158 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final IImageRepository imageRepository;
-    private final IVariantRepository variantRepository;
-    private final SupabaseStorageService storageService;
+    private final IImageRepository          iImageRepository;
+    private final VariantService            variantService;
+    private final SupabaseStorageService    storageService;
 
     @Transactional(readOnly = true)
     public ImagePresignedUrlResponse generatePresignedUrl(Long variantId, ImagePresignedUrlRequest request) {
-        validateVariantExists(variantId);
+        this.variantService.findVariantByIdOrThrow(variantId);
 
-        String extension = extractExtension(request.originalFileName(), request.contentType());
-        String storagePath = String.format("variants/%d/%s.%s", variantId, UUID.randomUUID(), extension);
+        String extension    = extractExtension(request.originalFileName(), request.contentType());
+        String storagePath  = "variants/%d/%s.%s".formatted(variantId, UUID.randomUUID(), extension);
 
-        String uploadUrl = storageService.createSignedUploadUrl(storagePath);
-        String publicUrl = storageService.buildPublicUrl(storagePath);
+        String uploadUrl = this.storageService.createSignedUploadUrl(storagePath);
+        String publicUrl = this.storageService.buildPublicUrl(storagePath);
 
         return new ImagePresignedUrlResponse(uploadUrl, publicUrl, storagePath);
     }
 
     @Transactional
     public ImageResponse addImage(Long variantId, ImageCreateRequest request) {
-        Variant variant = variantRepository.findById(variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Variante no encontrada con ID: " + variantId));
+        Variant variant = this.variantService.findVariantByIdOrThrow(variantId);
 
-        if (variant.getRowStatus() != RowStatus.ACTIVE) {
-            throw new ResourceNotFoundException("La variante indicada no se encuentra activa.");
-        }
+        this.variantService.requireAvailableVariantOrThrow(variant);
 
-        int nextOrder = imageRepository.findMaxDisplayOrderByVariantId(variantId) + 1;
-        boolean shouldBePrimary = Boolean.TRUE.equals(request.isPrimary());
+        int     nextOrder       = this.iImageRepository.findMaxDisplayOrderByVariantId(variantId) + 1;
+        boolean shouldBePrimary = request.isPrimary();
 
         // Si es la primera imagen de la variante, obligatoriamente es la principal
         if (nextOrder == 0) {
             shouldBePrimary = true;
         } else if (shouldBePrimary) {
-            imageRepository.resetPrimaryByVariantId(variantId);
+            this.iImageRepository.resetPrimaryByVariantId(variantId);
         }
 
         Image image = Image.builder()
                 .variant(variant)
-                .imageUrl(request.publicUrl())
+                .imageUrl(request.imageUrl())
                 .displayOrder(nextOrder)
                 .isPrimary(shouldBePrimary)
                 .build();
 
-        Image saved = imageRepository.save(image);
-        return toResponse(saved);
+        Image saved = this.iImageRepository.save(image);
+
+        return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public List<ImageResponse> getImagesByVariant(Long variantId) {
-        validateVariantExists(variantId);
-        return imageRepository.findAllByVariantIdOrdered(variantId)
+        this.variantService.findVariantByIdOrThrow(variantId);
+
+        return this.iImageRepository.findAllByVariantIdOrdered(variantId)
                 .stream()
-                .map(this::toResponse)
+                .map(this::mapToResponse)
                 .toList();
     }
 
     @Transactional
     public ImageResponse setPrimaryImage(Long variantId, Long imageId) {
-        validateVariantExists(variantId);
+        this.variantService.findVariantByIdOrThrow(variantId);
 
-        Image targetImage = imageRepository.findByImageIdAndVariant_VariantId(imageId, variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Imagen no encontrada para la variante especificada."));
+        Image image = this.findImageByVariantIdAndImageIdOrThrow(variantId, imageId);
 
-        if (!targetImage.isPrimary()) {
-            imageRepository.resetPrimaryByVariantId(variantId);
-            targetImage.setPrimary(true);
-            // Dirty checking ejecutará el UPDATE al cerrar la transacción
+        if (!image.isPrimary()) {
+            this.iImageRepository.resetPrimaryByVariantId(variantId);
+            image.setPrimary(true);
         }
 
-        return toResponse(targetImage);
+        return mapToResponse(image);
     }
 
     @Transactional
     public List<ImageResponse> reorderImages(Long variantId, ImageReorderRequest request) {
-        validateVariantExists(variantId);
+        this.variantService.findVariantByIdOrThrow(variantId);
 
-        List<Long> incomingIds = request.orderedImageIds();
-        Set<Long> uniqueIds = new HashSet<>(incomingIds);
+        List<Long>  incomingIds = request.orderedImageIds();
+        Set<Long>   uniqueIds   = new HashSet<>(incomingIds);
 
-        if (uniqueIds.size() != incomingIds.size()) {
-            throw new BadRequestException("La lista de reordenamiento contiene identificadores duplicados.");
-        }
+        if (uniqueIds.size() != incomingIds.size())
+            throw new InvalidImageReorderException("La lista de reordenamiento contiene identificadores duplicados.");
 
-        List<Image> existingImages = imageRepository.findAllByVariantIdOrdered(variantId);
-        Set<Long> existingIds = existingImages.stream().map(Image::getImageId).collect(Collectors.toSet());
+        List<Image> existingImages  = this.iImageRepository.findAllByVariantIdOrdered(variantId);
+        Set<Long>   existingIds     = existingImages.stream().map(Image::getImageId).collect(Collectors.toSet());
 
-        if (!existingIds.equals(uniqueIds)) {
-            throw new BadRequestException("Los IDs provistos no coinciden exactamente con las imágenes existentes de la variante.");
-        }
+        if (!existingIds.equals(uniqueIds))
+            throw new InvalidImageReorderException("Los IDs provistos no coinciden exactamente con las imágenes existentes de la variante.");
 
         Map<Long, Image> imageMap = existingImages.stream()
                 .collect(Collectors.toMap(Image::getImageId, Function.identity()));
 
         // Aplicamos el nuevo índice a cada entidad en memoria (dirty checking dispara los UPDATEs)
         for (int i = 0; i < incomingIds.size(); i++) {
-            Long imageId = incomingIds.get(i);
-            Image image = imageMap.get(imageId);
+            Long    imageId = incomingIds.get(i);
+            Image   image   = imageMap.get(imageId);
             image.setDisplayOrder(i);
         }
 
         return existingImages.stream()
                 .sorted((a, b) -> {
-                    if (a.isPrimary() != b.isPrimary()) {
+                    if (a.isPrimary() != b.isPrimary())
                         return a.isPrimary() ? -1 : 1;
-                    }
+
                     return Integer.compare(a.getDisplayOrder(), b.getDisplayOrder());
                 })
-                .map(this::toResponse)
+                .map(this::mapToResponse)
                 .toList();
     }
 
     @Transactional
     public void deleteImage(Long variantId, Long imageId) {
-        validateVariantExists(variantId);
+        this.variantService.findVariantByIdOrThrow(variantId);
 
-        Image image = imageRepository.findByImageIdAndVariant_VariantId(imageId, variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Imagen no encontrada con ID: " + imageId));
+        Image image = this.findImageByVariantIdAndImageIdOrThrow(variantId, imageId);
 
-        boolean wasPrimary = image.isPrimary();
-        String storagePath = storageService.extractPathFromPublicUrl(image.getImageUrl());
+        String storagePath = this.storageService.extractPathFromPublicUrl(image.getImageUrl());
 
-        // 1. Borrado físico en base de datos
-        imageRepository.delete(image);
+        // Borrado físico en base de datos
+        this.iImageRepository.delete(image);
 
-        // 2. Si eliminamos la portada y quedan otras imágenes, promovemos la siguiente en orden
-        if (wasPrimary) {
-            List<Image> remaining = imageRepository.findAllByVariantIdOrdered(variantId);
-            if (!remaining.isEmpty()) {
-                remaining.get(0).setPrimary(true);
-            }
+        // Si eliminamos la portada y quedan otras imágenes, promovemos la siguiente en orden
+        if (image.isPrimary()) {
+            List<Image> remaining = this.iImageRepository.findAllByVariantIdOrdered(variantId);
+            if (!remaining.isEmpty()) remaining.getFirst().setPrimary(true);
         }
 
-        // 3. Borrado físico del archivo binario en el bucket de Supabase
-        storageService.deleteFile(storagePath);
-    }
-
-    private void validateVariantExists(Long variantId) {
-        if (!variantRepository.existsById(variantId)) {
-            throw new ResourceNotFoundException("Variante no encontrada con ID: " + variantId);
-        }
+        // Borrado físico del archivo binario en el bucket de Supabase
+        this.storageService.deleteFile(storagePath);
     }
 
     private String extractExtension(String filename, String contentType) {
-        if (filename != null && filename.contains(".")) {
+        if (filename != null && filename.contains("."))
             return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-        }
+
         return switch (contentType) {
-            case "image/png" -> "png";
-            case "image/webp" -> "webp";
-            default -> "jpg";
+            case "image/png"    -> "png";
+            case "image/webp"   -> "webp";
+            default             -> "jpg";
         };
     }
 
-    private ImageResponse toResponse(Image image) {
+    /**
+     * Para evitar que en un llamado se haga un llamado por error a un imageId que corresponde a otra variante,
+     * se solicita que se ingrese ambos id para confirmar identidad
+     *
+     * @param variantId variantId
+     * @param imageId   imageId
+     * @return Image filtrada por imageId y variantId
+     */
+    private Image findImageByVariantIdAndImageIdOrThrow(Long variantId, Long imageId){
+        return this.iImageRepository.findByImageIdAndVariant_VariantId(imageId, variantId)
+                .orElseThrow(() -> new ImageNotFoundException("{ imageId: %s, variantId: %s }".formatted(imageId, variantId)));
+    }
+
+    private ImageResponse mapToResponse(Image image) {
         return new ImageResponse(
                 image.getImageId(),
                 image.getVariant().getVariantId(),

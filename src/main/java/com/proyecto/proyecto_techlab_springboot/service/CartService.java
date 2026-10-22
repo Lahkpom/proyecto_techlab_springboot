@@ -55,8 +55,7 @@ public class CartService {
 
         Variant variant = this.variantService.findVariantByIdOrThrow(request.variantId());
 
-        if (variant.getRowStatus() != RowStatus.ACTIVE)
-            throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(request.variantId()));
+        this.variantService.requireAvailableVariantOrThrow(variant);
 
         CartItem cartItem = this.iCartItemRepository
                 .findById(new CartItemId(userId, variant.getVariantId()))
@@ -95,7 +94,7 @@ public class CartService {
         Variant variant = cartItem.getVariant();
         if (variant.getRowStatus() != RowStatus.ACTIVE) {
             this.iCartItemRepository.delete(cartItem);
-            throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(variant.getVariantId()));
+            this.variantService.requireAvailableVariantOrThrow(variant);
         }
 
         validateQuantity(request.quantity(), variant.getVariantStock());
