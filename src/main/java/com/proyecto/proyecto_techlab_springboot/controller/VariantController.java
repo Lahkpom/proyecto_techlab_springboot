@@ -15,13 +15,13 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/variantes")
+@RequestMapping("/variants")
 @RequiredArgsConstructor
 public class VariantController {
 
     private final VariantService variantService;
 
-    @GetMapping("/producto/{productId}")
+    @GetMapping("/by-product/{productId}")
     public ResponseEntity<List<VariantResponse>> getVariantsByProduct(
             @PathVariable                           UUID    productId,
             @RequestParam(defaultValue = "false")   boolean includeInactive
