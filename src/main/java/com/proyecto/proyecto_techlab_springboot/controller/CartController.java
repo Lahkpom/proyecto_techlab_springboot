@@ -21,8 +21,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CartController {
 
-    private final CartService cartService;
-    private final JwtService jwtService;
+    private final CartService   cartService;
+    private final JwtService    jwtService;
 
     @GetMapping
     public ResponseEntity<CartResponse> getCart(HttpServletRequest request) {
@@ -42,8 +42,8 @@ public class CartController {
 
     @PatchMapping("/item/{variantId}")
     public ResponseEntity<CartResponse> updateItemQuantity(
-            @PathVariable Long variantId,
-            @Valid @RequestBody CartItemUpdateRequest updateRequest,
+            @PathVariable       Long                    variantId,
+            @Valid @RequestBody CartItemUpdateRequest   updateRequest,
             HttpServletRequest request
     ) {
         UUID userId = resolveUserIdFromToken(request);
