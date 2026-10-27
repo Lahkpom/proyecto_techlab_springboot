@@ -8,7 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.MinimumWholesaleQuantityException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.MinimumWholesalerQuantityException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -139,8 +139,8 @@ public class GlobalExceptionHandler {
     }
 
     // Maneja 422: regla de negocio rota cuando un mayorista pide menos del mínimo permitido
-    @ExceptionHandler(MinimumWholesaleQuantityException.class)
-    public ResponseEntity<ErrorResponse> handleMinimumWholesaleQuantity(MinimumWholesaleQuantityException ex, HttpServletRequest request) {
+    @ExceptionHandler(MinimumWholesalerQuantityException.class)
+    public ResponseEntity<ErrorResponse> handleMinimumWholesaleQuantity(MinimumWholesalerQuantityException ex, HttpServletRequest request) {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "MINIMUM_WHOLESALE_QUANTITY_NOT_MET",
