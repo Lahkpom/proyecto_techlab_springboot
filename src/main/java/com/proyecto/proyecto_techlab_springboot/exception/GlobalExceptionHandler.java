@@ -3,7 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.exception;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
-import com.proyecto.proyecto_techlab_springboot.exception.cart.InsufficientStockException;
+import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientStockException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
@@ -158,6 +158,7 @@ public class GlobalExceptionHandler {
 //                "Ocurrió un error inesperado. Contacte al administrador si el problema persiste.",
 //                request
 //        );
+//        TODO - CAMBIAR ESTO CUANDO ESTÉ EN PRODUCCIÓN
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",
