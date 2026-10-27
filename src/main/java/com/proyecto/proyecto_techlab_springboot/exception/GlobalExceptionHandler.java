@@ -7,6 +7,8 @@ import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientSto
 import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.MinimumWholesaleQuantityException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -131,6 +133,28 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "INVALID_REORDER_SEQUENCE",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: regla de negocio rota cuando un mayorista pide menos del mínimo permitido
+    @ExceptionHandler(MinimumWholesaleQuantityException.class)
+    public ResponseEntity<ErrorResponse> handleMinimumWholesaleQuantity(MinimumWholesaleQuantityException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "MINIMUM_WHOLESALE_QUANTITY_NOT_MET",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: Se intenta cambiar el estado de una venta de un estado a otro que no correpsonde (CANCELADO -> ENVIADO)
+    @ExceptionHandler(InvalidSaleStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSaleStatusTransition(InvalidSaleStatusTransitionException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT, // 422: transición de máquina de estados inválida
+                "INVALID_STATUS_TRANSITION",
                 ex.getMessage(),
                 request
         );
