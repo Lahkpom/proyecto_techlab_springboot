@@ -12,6 +12,8 @@ public class ProyectoTechlabSpringbootApplication {
      * TODO
      *  - Sale. Ver cómo agregar la parte de sales y lo que es los saleItems
      * TODO
+     *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
+     * TODO
      *  - Ver el flujo de los productos.
      *      - Cuando un producto se inactiva o elimina hace lo mismo en cascada con sus variantes
      *      - Tratar de hacer que solo se cambie el estado al producto y termine la transacción, y que la cascada en las variantes se

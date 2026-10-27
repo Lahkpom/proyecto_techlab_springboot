@@ -3,13 +3,19 @@ package com.proyecto.proyecto_techlab_springboot.repository;
 import com.proyecto.proyecto_techlab_springboot.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.model.enums.NumericSize;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
+
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -68,7 +74,7 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
      */
     default void deleteVariantsByProductId(@Param("productId") UUID productId) {
         deleteVariantsByProductId(productId, RowStatus.DELETED);
-    }
+    }    
     @Modifying(clearAutomatically = true)
     @Query("""
         UPDATE  Variant v
@@ -79,4 +85,31 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
             @Param("productId") UUID        productId,
             @Param("deleted")   RowStatus   deleted
     );
+    
+    // =========================================================================
+    // Concurrencia y Control de Stock (Pessimistic Locking: SELECT FOR UPDATE)
+    // =========================================================================
+
+    /**
+     * Bloquea la fila de la variante a nivel base de datos hasta que termine la transacción.
+     * Evita que dos compras concurrentes descuenten stock sobre el mismo registro a la vez.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT  v 
+        FROM    Variant v 
+        WHERE   v.variantId = :variantId
+    """)
+    Optional<Variant> findByIdWithLock(@Param("variantId") Long variantId);
+
+    /**
+     * Bloquea en lote todas las variantes involucradas en un checkout.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT  v 
+        FROM    Variant v 
+        WHERE   v.variantId IN :variantIds
+    """)
+    List<Variant> findAllByIdInWithLock(@Param("variantIds") Collection<Long> variantIds);
 }
