@@ -14,6 +14,11 @@ public class ProyectoTechlabSpringbootApplication {
      * TODO
      *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
      * TODO
+     *  - Reveer el shippingCost del flujo de sale, se lo está recibiendo por el front pero eso debería:
+     *      - Estar seteado con un costo fijo en el back
+     *      - Ser dinamico dándole un flujo y una tabla en la db donde pueda modificarse
+     *      - Ver si los proveedores del servicio tienen alguna api que devuelva el valor actual y calcularlo en base a eso
+     * TODO
      *  - Ver el flujo de los productos.
      *      - Cuando un producto se inactiva o elimina hace lo mismo en cascada con sus variantes
      *      - Tratar de hacer que solo se cambie el estado al producto y termine la transacción, y que la cascada en las variantes se
