@@ -15,11 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -177,6 +173,10 @@ public class ImageService {
     private Image findImageByVariantIdAndImageIdOrThrow(Long variantId, Long imageId){
         return this.iImageRepository.findByImageIdAndVariant_VariantId(imageId, variantId)
                 .orElseThrow(() -> new ImageNotFoundException("{ imageId: %s, variantId: %s }".formatted(imageId, variantId)));
+    }
+
+    public Optional<Image> getPrimaryByVariantId(Long variantId) {
+        return this.iImageRepository.findPrimaryByVariantId(variantId);
     }
 
     private ImageResponse mapToResponse(Image image) {

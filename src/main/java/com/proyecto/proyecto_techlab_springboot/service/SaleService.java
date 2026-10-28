@@ -2,7 +2,8 @@ package com.proyecto.proyecto_techlab_springboot.service;
 
 import com.proyecto.proyecto_techlab_springboot.dto.sale.*;
 import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientStockException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotAvailableException;
+import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidCredentialsException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.*;
@@ -33,7 +34,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SaleService {
 
-    private final ISaleRepository saleRepository;
+    private final ISaleRepository iSaleRepository;
 
     private final SalePolicyService salePolicyService;
     private final VariantService    variantService;
@@ -46,8 +47,7 @@ public class SaleService {
     @Transactional
     public SaleResponse createSale(CheckoutRequest request, UUID authenticatedUserId) {
         if (request.items() == null || request.items().isEmpty())
-            // TODO - Hacer una exception customizada
-            throw new IllegalArgumentException("La orden debe contener al menos un producto.");
+            throw new EmptySaleItemsException();
 
         // Resolver usuario y rol del comprador
         Users       buyer       = null;
@@ -150,7 +150,7 @@ public class SaleService {
             sale.addItem(item);
         }
 
-        Sale savedSale = saleRepository.save(sale);
+        Sale savedSale = this.iSaleRepository.save(sale);
 
         // Retornar DTO de respuesta
         return mapToSaleResponse(savedSale, null);
@@ -161,7 +161,7 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public SaleResponse getSaleByTrackingToken(UUID trackingToken) {
-        Sale sale = saleRepository.findByTrackingToken(trackingToken)
+        Sale sale = this.iSaleRepository.findByTrackingToken(trackingToken)
                 .orElseThrow(() -> new SaleNotFoundException("{ Token de seguimiento: %s }".formatted(trackingToken)));
 
         return mapToSaleResponse(sale, null);
@@ -172,12 +172,11 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public SaleResponse getSaleByIdForUser(UUID saleId, UUID userId) {
-        Sale sale = saleRepository.findById(saleId)
+        Sale sale = this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }" + saleId));
 
         if (sale.getUser() == null || !sale.getUser().getUserId().equals(userId))
-            // TODO - Agregar esta exception al globalHandler
-            throw new SaleNotAvailableException();
+            throw new InvalidCredentialsException("No tiene permisos para ver esta orden o la misma no le pertenece.");
 
         return mapToSaleResponse(sale, null);
     }
@@ -187,7 +186,7 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public Page<SaleSummaryResponse> getMyOrders(UUID userId, Pageable pageable) {
-        return this.saleRepository
+        return this.iSaleRepository
                 .findAllByUser_UserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::mapToSaleSummaryResponse);
     }
@@ -197,9 +196,7 @@ public class SaleService {
     // =========================================================================
 
     private String resolveMainImageUrl(Long variantId) {
-        return imageService.findAllByVariant_VariantIdOrderByDisplayOrderAsc(variantId)
-                .stream()
-                .findFirst()
+        return this.imageService.getPrimaryByVariantId(variantId)
                 .map(Image::getImageUrl)
                 .orElse("https://via.placeholder.com/300x400?text=Sin+Imagen");
     }

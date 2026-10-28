@@ -7,6 +7,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientSto
 import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.MinimumWholesalerQuantityException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -155,6 +156,17 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT, // 422: transición de máquina de estados inválida
                 "INVALID_STATUS_TRANSITION",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: Se intenta iniciar una orden de compra con una lista de items vacía o inexistente.
+    @ExceptionHandler(EmptySaleItemsException.class)
+    public ResponseEntity<ErrorResponse> handleEmptySaleItems(EmptySaleItemsException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "EMPTY_SALE_ITEMS",
                 ex.getMessage(),
                 request
         );
