@@ -84,6 +84,17 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Maneja 403 (El recurso existe pero no tiene permisos para verlo)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "UNAUTHORIZED",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja TODOS los 404 de cualquier entidad (Product, Color, User, etc.)
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex, HttpServletRequest request) {

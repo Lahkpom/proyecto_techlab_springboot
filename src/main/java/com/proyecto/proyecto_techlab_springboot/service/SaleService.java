@@ -1,8 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.service;
 
 import com.proyecto.proyecto_techlab_springboot.dto.sale.*;
+import com.proyecto.proyecto_techlab_springboot.exception.common.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientStockException;
-import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
@@ -176,7 +176,7 @@ public class SaleService {
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }" + saleId));
 
         if (sale.getUser() == null || !sale.getUser().getUserId().equals(userId))
-            throw new InvalidCredentialsException("No tiene permisos para ver esta orden o la misma no le pertenece.");
+            throw new AccessDeniedException("No tiene permisos para ver esta orden o la misma no le pertenece.");
 
         return mapToSaleResponse(sale, null);
     }
