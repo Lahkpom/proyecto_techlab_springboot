@@ -168,9 +168,7 @@ public class CartService {
 
     private void validateQuantity(int required, int stock) {
         if (required > stock)
-            throw new InsufficientStockException(
-                    "No es posible asignar %d unidades. Stock disponible: %d".formatted(required, stock)
-            );
+            throw new InsufficientStockException("{ Disponible: %d, Solicitado: %d }".formatted(stock, required));
     }
 
     private CartResponse buildCartResponse(

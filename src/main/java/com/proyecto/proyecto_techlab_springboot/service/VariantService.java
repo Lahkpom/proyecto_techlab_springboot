@@ -145,6 +145,10 @@ public class VariantService {
                 .orElseThrow(() -> new VariantNotFoundException("{ ID: %s }".formatted(id)));
     }
 
+    public List<Variant> findAllByIdInWithLock(List<Long> variantIds){
+        return this.iVariantRepository.findAllByIdInWithLock(variantIds);
+    }
+
     public void requireAvailableVariantOrThrow(Variant variant){
         if (variant.getRowStatus() != RowStatus.ACTIVE)
             throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(variant.getVariantId()));
