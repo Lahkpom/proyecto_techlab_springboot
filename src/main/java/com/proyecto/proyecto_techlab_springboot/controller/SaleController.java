@@ -79,4 +79,17 @@ public class SaleController {
         UUID userId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
         return ResponseEntity.ok(saleService.getSaleByIdForUser(saleId, userId));
     }
+
+    /**
+     * Cancela una orden propia del cliente si aún está en estado PENDIENTE|PREPARACION.
+     */
+    // @PreAuthorize("isAuthenticated()") // TODO: Descomentar al habilitar Spring Security
+    @PatchMapping("/me/{saleId}/cancel")
+    public ResponseEntity<SaleResponse> cancelMyOrder(
+            @PathVariable UUID saleId,
+            HttpServletRequest httpRequest
+    ) {
+        UUID userId = securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
+        return ResponseEntity.ok(saleService.cancelMySale(saleId, userId));
+    }
 }

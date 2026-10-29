@@ -45,7 +45,7 @@ public class SaleAdminController {
             @RequestParam(required = false) String          customerEmail,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
-            @PageableDefault(size = 20) Pageable pageable
+            @PageableDefault(size = 20)     Pageable pageable
     ) {
         Page<SaleSummaryResponse> sales = saleAdminService.searchSales(
                 saleStatus,

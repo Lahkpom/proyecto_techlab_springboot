@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.service;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.*;
 import com.proyecto.proyecto_techlab_springboot.exception.common.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientStockException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
@@ -19,7 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Servicio que atiende al cliente final:
@@ -172,11 +176,7 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public SaleResponse getSaleByIdForUser(UUID saleId, UUID userId) {
-        Sale sale = this.iSaleRepository.findById(saleId)
-                .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }" + saleId));
-
-        if (sale.getUser() == null || !sale.getUser().getUserId().equals(userId))
-            throw new AccessDeniedException("No tiene permisos para ver esta orden o la misma no le pertenece.");
+        Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
 
         return mapToSaleResponse(sale, null);
     }
@@ -191,14 +191,71 @@ public class SaleService {
                 .map(this::mapToSaleSummaryResponse);
     }
 
+    /**
+     * Permite al cliente comprador cancelar su propia orden mientras siga en estado PENDIENTE.
+     * Restituye automáticamente el stock comprometido.
+     */
+    @Transactional
+    public SaleResponse cancelMySale(UUID saleId, UUID userId) {
+        Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
+
+        // Validar que la orden siga en un estado cancelable por el cliente
+        if (sale.getSaleStatus() != SaleStatus.PENDIENTE) {
+            throw new InvalidSaleStatusTransitionException(
+                    "Solo se pueden cancelar pedidos en estado PENDIENTE. El pedido actual se encuentra en: " + sale.getSaleStatus()
+            );
+        }
+
+        // Restituir el stock de las variantes
+        this.restoreVariantStock(sale.getItems());
+
+        // Actualizar estado
+        sale.setSaleStatus(SaleStatus.CANCELADO);
+        sale.setUpdatedAt(Instant.now());
+        sale.setUpdatedBy(userId);
+
+        Sale updatedSale = this.iSaleRepository.save(sale);
+        return mapToSaleResponse(updatedSale, null);
+    }
+
     // =========================================================================
     // Métodos Auxiliares
     // =========================================================================
+
+    private Sale getSaleByIdAndCheckBelonginOrThrow(UUID saleId, UUID userId) {
+        Sale sale = this.iSaleRepository.findById(saleId).orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
+
+        // Validar que la orden pertenezca al usuario autenticado
+        if (sale.getUser() == null || !sale.getUser().getUserId().equals(userId))
+            throw new AccessDeniedException("No tiene permisos para modificar esta orden o la misma no le pertenece.");
+
+        return sale;
+    }
 
     private String resolveMainImageUrl(Long variantId) {
         return this.imageService.getPrimaryByVariantId(variantId)
                 .map(Image::getImageUrl)
                 .orElse("https://via.placeholder.com/300x400?text=Sin+Imagen");
+    }
+
+    private void restoreVariantStock(List<SaleItem> items) {
+        List<SaleItem> validItems = items.stream().filter(item -> item.getVariant() != null).toList();        
+        List<Long> variantIds = validItems.stream()
+                .map(item -> item.getVariant().getVariantId())
+                .distinct()
+                .toList();
+
+        if (variantIds.isEmpty()) return;
+
+        List<Variant> lockedVariants = this.variantService.findAllByIdInWithLock(variantIds);
+        Map<Long, Variant> variantMap = lockedVariants.stream()
+                .collect(Collectors.toMap(Variant::getVariantId, Function.identity()));
+
+        for (SaleItem item : validItems) {
+            Variant v = variantMap.get(item.getVariant().getVariantId());
+            
+            if (v != null) v.setVariantStock(v.getVariantStock() + item.getQuantity());
+        }
     }
 
     private SaleResponse mapToSaleResponse(Sale sale, String mpInitPoint) {
