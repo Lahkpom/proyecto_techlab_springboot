@@ -3,12 +3,13 @@ package com.proyecto.proyecto_techlab_springboot.exception;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordException;
-import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientStockException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidWebhookSignatureException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.MercadoPagoIntegrationException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.MinimumWholesalerQuantityException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,17 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNAUTHORIZED,
                 "UNAUTHORIZED",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 401: Firma criptográfica no auténtica (Posible intento de falsificación)
+    @ExceptionHandler(InvalidWebhookSignatureException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidWebhookSignature(InvalidWebhookSignatureException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED, 
+                "INVALID_WEBHOOK_SIGNATURE",
                 ex.getMessage(),
                 request
         );
@@ -222,6 +234,17 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_GATEWAY,
                 "STORAGE_SERVICE_ERROR",
                 "No fue posible procesar el archivo en el servicio de almacenamiento.",
+                request
+        );
+    }
+
+    // Maneja 502: El gateway upstream falló
+    @ExceptionHandler(MercadoPagoIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleMercadoPagoIntegration(MercadoPagoIntegrationException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.BAD_GATEWAY, 
+                "MERCADO_PAGO_INTEGRATION_ERROR",
+                ex.getMessage(),
                 request
         );
     }
