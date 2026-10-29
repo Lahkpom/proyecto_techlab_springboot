@@ -203,7 +203,8 @@ public class SaleService {
         SaleStatus currentStatus = sale.getSaleStatus();
         if (!List.of(SaleStatus.PENDIENTE, SaleStatus.PREPARACION).contains(currentStatus)) {
             throw new InvalidSaleStatusTransitionException(
-                    "Solo se pueden cancelar pedidos en estado PENDIENTE. El pedido actual se encuentra en: " + currentStatus
+                    "Solo se pueden cancelar pedidos en estado PENDIENTE o PREPARACION. El pedido actual se encuentra en: %s. Comuníquese para soporte."
+                    .formatted(currentStatus)
             );
         }
 
