@@ -4,11 +4,11 @@ import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleInternalNoteRequest
 import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleStatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleSummaryResponse;
-import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
-import com.proyecto.proyecto_techlab_springboot.service.JwtService;
 import com.proyecto.proyecto_techlab_springboot.service.SaleAdminService;
+import com.proyecto.proyecto_techlab_springboot.util.SecurityContextUtil;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,8 +32,8 @@ import java.util.UUID;
 // @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class SaleAdminController {
 
-    private final SaleAdminService  saleAdminService;
-    private final JwtService        jwtService;
+    private final SaleAdminService      saleAdminService;
+    private final SecurityContextUtil   securityContextUtil;
 
     /**
      * Búsqueda paginada multicriterio de órdenes de compra.
@@ -76,7 +75,7 @@ public class SaleAdminController {
             @Valid @RequestBody SaleStatusUpdateRequest request,
             HttpServletRequest httpRequest
     ) {
-        UUID operatorId = resolveUserIdFromToken(httpRequest);
+        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
         return ResponseEntity.ok(saleAdminService.updateSaleStatus(saleId, request, operatorId));
     }
 
@@ -89,30 +88,7 @@ public class SaleAdminController {
             @Valid @RequestBody SaleInternalNoteRequest request,
             HttpServletRequest httpRequest
     ) {
-        UUID operatorId = resolveUserIdFromToken(httpRequest);
+        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
         return ResponseEntity.ok(saleAdminService.updateInternalNotes(saleId, request, operatorId));
-    }
-
-    // =========================================================================
-    // Extracción de Identidad del Operador
-    // =========================================================================
-
-    private UUID resolveUserIdFromToken(HttpServletRequest request) {
-        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new InvalidCredentialsException("Encabezado de autorización ausente o inválido.");
-        }
-
-        String token = authHeader.substring(7);
-        if (!jwtService.validateTokenStructure(token)) {
-            throw new InvalidCredentialsException("El token provisto es inválido o se encuentra expirado.");
-        }
-
-        String userIdClaim = jwtService.extractClaim(token, claims -> claims.get("userId", String.class));
-        if (userIdClaim == null) {
-            throw new InvalidCredentialsException("El token no contiene el claim de usuario requerido.");
-        }
-
-        return UUID.fromString(userIdClaim);
     }
 }
