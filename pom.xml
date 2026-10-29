@@ -120,11 +120,11 @@
         </dependency>
 
 <!-- SDK de Mercado Pago para pagos  -->
-        <!-- <dependency>
-            <groupId>com.mercadopago</groupId>
+        <dependency>
+            <groupId>com.mercadopago</groupId> 
             <artifactId>sdk-java</artifactId>
             <version>3.7.0</version>
-        </dependency> -->
+        </dependency>
 
 <!--        DEPENDENCIAS PARA AGREGAR MÁS ADELANTE-->
 <!--        spring-boot-starter-actuator-->
