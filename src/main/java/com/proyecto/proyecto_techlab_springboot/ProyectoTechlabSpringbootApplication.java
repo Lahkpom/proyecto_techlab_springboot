@@ -8,10 +8,6 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
-     *  - Debería renombrar la ruta de la variantes para que empiece con /products así como las de imagenes empieza con /variants
-     * TODO
-     *  - Sale. Ver cómo agregar la parte de sales y lo que es los saleItems
-     * TODO
      *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
      * TODO
      *  - Reveer el shippingCost del flujo de sale, se lo está recibiendo por el front pero eso debería:
