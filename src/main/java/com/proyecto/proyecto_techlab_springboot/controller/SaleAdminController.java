@@ -29,7 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/sales")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
+// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class SaleAdminController {
 
     private final SaleAdminService      saleAdminService;
