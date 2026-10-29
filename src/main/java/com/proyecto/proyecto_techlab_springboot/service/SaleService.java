@@ -9,6 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundExcep
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.*;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
@@ -22,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -40,10 +40,11 @@ public class SaleService {
 
     private final ISaleRepository iSaleRepository;
 
-    private final SalePolicyService salePolicyService;
-    private final VariantService    variantService;
-    private final ImageService      imageService;
-    private final UserService       userService;
+    private final MercadoPagoService    mercadoPagoService;
+    private final SalePolicyService     salePolicyService;
+    private final VariantService        variantService;
+    private final ImageService          imageService;
+    private final UserService           userService;
 
     /**
      * Orquestación transaccional unificada para checkout (registrado o invitado).
@@ -132,6 +133,12 @@ public class SaleService {
                 buyerRole
         );
 
+        // Determinar estado inicial según método de pago:
+        // Efectivo contraentrega nace directamente en PREPARACION
+        SaleStatus initialSaleStatus = (request.paymentMethod() == PaymentMethod.EFECTIVO)
+                ? SaleStatus.PREPARACION
+                : SaleStatus.PENDIENTE;
+
         // Construir y persistir la entidad cabecera Sale
         Sale sale = Sale.builder()
                 .user(buyer)
@@ -145,7 +152,7 @@ public class SaleService {
                 .saleDiscountAmount(calc.discountAmount())
                 .shippingCost(calc.shippingCost())
                 .saleTotal(calc.total())
-                .saleStatus(SaleStatus.PENDIENTE)
+                .saleStatus(initialSaleStatus)
                 .paymentMethod(request.paymentMethod())
                 .paymentStatus(PaymentStatus.PENDIENTE)
                 .build();
@@ -156,8 +163,53 @@ public class SaleService {
 
         Sale savedSale = this.iSaleRepository.save(sale);
 
-        // Retornar DTO de respuesta
-        return mapToSaleResponse(savedSale, null);
+        // Si es Mercado Pago, generar la preferencia (COMENTAR CUANDO SE HAGAN PRUEBAS PARA QUE NO MOLESTE)
+        String mpInitPoint = null;
+        if (request.paymentMethod() == PaymentMethod.MERCADO_PAGO) {
+            MercadoPagoPreferenceResult prefResult = this.mercadoPagoService.createPreference(savedSale);
+            savedSale.setMpPreferenceId(prefResult.preferenceId());
+            mpInitPoint = prefResult.initPoint();
+        }
+
+        // return mapToSaleResponse(savedSale, null);
+        return mapToSaleResponse(savedSale, mpInitPoint);
+    }
+
+    /**
+     * Permite reintentar el pago con Mercado Pago para una orden propia.
+     * Solo es válido si:
+     *  - El método de pago original es MERCADO_PAGO.
+     *  - El estado logístico sigue en PENDIENTE.
+     *  - El estado del pago es PENDIENTE o RECHAZADO.
+     */
+    @Transactional
+    public SaleResponse retryMercadoPagoPayment(UUID saleId, UUID userId) {
+        Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
+
+        // Validar método de pago original
+        if (sale.getPaymentMethod() != PaymentMethod.MERCADO_PAGO)
+            throw new InvalidSaleStatusTransitionException(
+                    "Solo se puede generar un link de Mercado Pago para órdenes configuradas con dicho método de pago. Método actual: " + sale.getPaymentMethod()
+            );
+        
+        // Validar estado comercial de la venta
+        if (sale.getSaleStatus() != SaleStatus.PENDIENTE)
+            throw new InvalidSaleStatusTransitionException(
+                    "No es posible reintentar el pago. La orden se encuentra en estado logístico: " + sale.getSaleStatus()
+            );
+
+        // Validar estado financiero actual
+        PaymentStatus currentPaymentStatus = sale.getPaymentStatus();
+        if (currentPaymentStatus != PaymentStatus.PENDIENTE && currentPaymentStatus != PaymentStatus.RECHAZADO)
+            throw new InvalidSaleStatusTransitionException(
+                    "No es posible reintentar el cobro. El estado del pago actual es: " + currentPaymentStatus
+            );
+
+        // Crear nueva preferencia en MP y actualizar entidad administrada
+        MercadoPagoPreferenceResult prefResult = this.mercadoPagoService.createPreference(sale);
+        sale.setMpPreferenceId(prefResult.preferenceId());
+
+        return mapToSaleResponse(sale, prefResult.initPoint());
     }
 
     /**
@@ -216,8 +268,7 @@ public class SaleService {
         sale.setUpdatedAt(Instant.now());
         sale.setUpdatedBy(userId);
 
-        Sale updatedSale = this.iSaleRepository.save(sale);
-        return mapToSaleResponse(updatedSale, null);
+        return mapToSaleResponse(sale, null);
     }
 
     // =========================================================================

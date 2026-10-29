@@ -47,6 +47,19 @@ public class SaleController {
     }
 
     /**
+     * Permite reintentar el pago con Mercado Pago para una orden propia en estado PENDIENTE.
+     */
+    // @PreAuthorize("isAuthenticated()") // TODO: Descomentar al habilitar Spring Security
+    @PostMapping("/me/{saleId}/retry-mp")
+    public ResponseEntity<SaleResponse> retryMercadoPagoPayment(
+            @PathVariable UUID saleId,
+            HttpServletRequest httpRequest
+    ) {
+        UUID userId = securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
+        return ResponseEntity.ok(saleService.retryMercadoPagoPayment(saleId, userId));
+    }
+
+    /**
      * Consulta pública segura del estado del pedido mediante token criptográfico (Magic Link).
      */
     @GetMapping("/track/{trackingToken}")

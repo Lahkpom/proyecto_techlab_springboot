@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.controller;
 
+import com.proyecto.proyecto_techlab_springboot.dto.sale.PaymentStatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleInternalNoteRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.SaleStatusUpdateRequest;
@@ -33,7 +34,7 @@ import java.util.UUID;
 public class SaleAdminController {
 
     private final SaleAdminService      saleAdminService;
-    private final SecurityContextUtil   securityContextUtil;
+    private final SecurityContextUtil   securityContextUtil;    
 
     /**
      * Búsqueda paginada multicriterio de órdenes de compra.
@@ -77,6 +78,19 @@ public class SaleAdminController {
     ) {
         UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
         return ResponseEntity.ok(saleAdminService.updateSaleStatus(saleId, request, operatorId));
+    }
+
+    /**
+     * Conciliación manual del estado del pago por parte de un administrador.
+     */
+    @PatchMapping("/{saleId}/payment-status")
+    public ResponseEntity<SaleResponse> updatePaymentStatus(
+            @PathVariable UUID saleId,
+            @Valid @RequestBody PaymentStatusUpdateRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        UUID operatorId = securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
+        return ResponseEntity.ok(saleAdminService.updatePaymentStatus(saleId, request, operatorId));
     }
 
     /**

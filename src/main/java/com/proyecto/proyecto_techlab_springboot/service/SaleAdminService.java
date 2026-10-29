@@ -5,8 +5,8 @@ import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatus
 import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.model.SaleItem;
-import com.proyecto.proyecto_techlab_springboot.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -79,8 +78,9 @@ public class SaleAdminService {
     }
 
     /**
-     * Avanza o cambia el estado logístico de una orden respetando la máquina de estados.
-     * Si la orden pasa a CANCELADO, restituye el stock comprometido.
+     * Avanza o cambia el estado logístico de una orden respetando:
+     * 1. La máquina de estados propia de SaleStatus.
+     * 2. Las restricciones cruzadas con PaymentMethod y PaymentStatus.
      */
     @Transactional
     public SaleResponse updateSaleStatus(UUID saleId, SaleStatusUpdateRequest request, UUID operatorId) {
@@ -90,13 +90,25 @@ public class SaleAdminService {
 
         if (currentStatus == targetStatus) return mapToSaleResponse(sale);
 
+        // Validar máquina de estados logísticos
         this.validateTransition(currentStatus, targetStatus);
 
-        // Si se cancela antes de ser entregada, reingresar stock
+        // Validaciones cruzadas de negocio
+        validateSaleStatusCrossRules(sale, targetStatus);
+
+        // Manejo de stock ante cancelación
         if (targetStatus == SaleStatus.CANCELADO && currentStatus != SaleStatus.ENTREGADO)
             this.restoreVariantStock(sale.getItems());
 
-        // Marcas temporales de logística
+        // Efectivo entregado aprueba el cobro
+        if (targetStatus == SaleStatus.ENTREGADO && sale.getPaymentMethod() == PaymentMethod.EFECTIVO)
+            sale.setPaymentStatus(PaymentStatus.APROBADO);
+
+        // Si se cancela una orden ya cobrada, pasa a REEMBOLSADO
+        if (targetStatus == SaleStatus.CANCELADO && sale.getPaymentStatus() == PaymentStatus.APROBADO)
+            sale.setPaymentStatus(PaymentStatus.REEMBOLSADO);
+
+        // Marcas temporales logísticas
         Instant now = Instant.now();
         if (targetStatus == SaleStatus.ENVIADO && sale.getSaleShippedAt() == null) {
             sale.setSaleShippedAt(now);
@@ -108,8 +120,53 @@ public class SaleAdminService {
         sale.setUpdatedBy(operatorId);
         sale.setUpdatedAt(now);
 
-        Sale updatedSale = this.iSaleRepository.save(sale);
-        return mapToSaleResponse(updatedSale);
+        return mapToSaleResponse(sale);
+    }
+
+    /**
+     * Actualiza el estado del pago asegurando coherencia con el canal y la logística.
+     */
+    @Transactional
+    public SaleResponse updatePaymentStatus(UUID saleId, PaymentStatusUpdateRequest request, UUID operatorId) {
+        Sale            sale                    = this.findSaleByIdOrThrow(saleId);
+        PaymentStatus   currentPaymentStatus    = sale.getPaymentStatus();
+        PaymentStatus   targetPaymentStatus     = request.newPaymentStatus();
+
+        if (currentPaymentStatus == targetPaymentStatus) return mapToSaleResponse(sale);
+
+        // Validar reglas de transición de pagos
+        validatePaymentTransition(sale, currentPaymentStatus, targetPaymentStatus);
+
+        // Aplicar cambio de pago
+        sale.setPaymentStatus(targetPaymentStatus);
+        sale.setUpdatedBy(operatorId);
+        sale.setUpdatedAt(Instant.now());
+
+        // Efectos colaterales automáticos sobre la venta
+        if (
+            targetPaymentStatus == PaymentStatus.APROBADO &&
+            (sale.getPaymentMethod() == PaymentMethod.TRANSFERENCIA && sale.getSaleStatus() == SaleStatus.PENDIENTE)
+        ) {
+            // Transferencia aprobada avanza automáticamente a PREPARACION
+            sale.setSaleStatus(SaleStatus.PREPARACION);
+        } else if (
+            targetPaymentStatus == PaymentStatus.RECHAZADO &&
+            sale.getSaleStatus() == SaleStatus.PENDIENTE
+        ) {
+            // Si el pago de una orden pendiente es rechazado, se cancela la orden y libera stock
+            this.restoreVariantStock(sale.getItems());
+            sale.setSaleStatus(SaleStatus.CANCELADO);
+        } else if (targetPaymentStatus == PaymentStatus.REEMBOLSADO) {
+            sale.setSaleStatus(SaleStatus.REEMBOLSADO);
+        }
+
+        // Notas de auditoría interna
+        if (request.paymentNotes() != null && !request.paymentNotes().isBlank()) {
+            String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
+            sale.setInternalNotes(currentNotes + "[Pago " + targetPaymentStatus + "]: " + request.paymentNotes().trim());
+        }
+
+        return mapToSaleResponse(sale);
     }
 
     /**
@@ -123,13 +180,73 @@ public class SaleAdminService {
         sale.setUpdatedBy(operatorId);
         sale.setUpdatedAt(Instant.now());
 
-        Sale updatedSale = this.iSaleRepository.save(sale);
-        return mapToSaleResponse(updatedSale);
+        return mapToSaleResponse(sale);
     }
 
     // =========================================================================
     // Lógica Privada de Soporte
     // =========================================================================
+
+    private void validateSaleStatusCrossRules(Sale sale, SaleStatus targetSaleStatus) {
+        PaymentMethod method    = sale.getPaymentMethod();
+        PaymentStatus payment   = sale.getPaymentStatus();
+
+        // Regla: No despachar sin cobrar (salvo efectivo)
+        if ((targetSaleStatus == SaleStatus.ENVIADO || targetSaleStatus == SaleStatus.ENTREGADO)
+                && method != PaymentMethod.EFECTIVO
+                && payment != PaymentStatus.APROBADO) {
+            throw new InvalidSaleStatusTransitionException(
+                    String.format("No se puede pasar a '%s' un pedido con método '%s' cuyo pago está en '%s'. Debe estar APROBADO.",
+                            targetSaleStatus, method, payment)
+            );
+        }
+
+        // Regla: No preparar pedidos de transferencia o MP sin estar aprobados
+        if (targetSaleStatus == SaleStatus.PREPARACION
+                && method != PaymentMethod.EFECTIVO
+                && payment != PaymentStatus.APROBADO) {
+            throw new InvalidSaleStatusTransitionException(
+                    String.format("No se puede iniciar PREPARACION para pedidos por '%s' hasta que el pago figure APROBADO.", method)
+            );
+        }
+
+        // Regla: Reembolso logístico exige pago previamente reembolsado o aprobado
+        if (targetSaleStatus == SaleStatus.REEMBOLSADO
+                && payment != PaymentStatus.APROBADO
+                && payment != PaymentStatus.REEMBOLSADO) {
+            throw new InvalidSaleStatusTransitionException(
+                    "No se puede reembolsar una venta cuyo pago nunca fue APROBADO."
+            );
+        }
+    }
+
+    private void validatePaymentTransition(Sale sale, PaymentStatus current, PaymentStatus target) {
+        PaymentMethod method = sale.getPaymentMethod();
+
+        // 1. Protección de pasarela: Mercado Pago solo admite REEMBOLSADO manual por admin
+        if (method == PaymentMethod.MERCADO_PAGO && target != PaymentStatus.REEMBOLSADO) {
+            throw new InvalidSaleStatusTransitionException(
+                    "Los pagos con Mercado Pago son conciliados automáticamente por Webhook. Solo se permite registrar REEMBOLSADO de forma manual."
+            );
+        }
+
+        // 2. No se puede reembolsar lo no cobrado
+        if (target == PaymentStatus.REEMBOLSADO && current != PaymentStatus.APROBADO) {
+            throw new InvalidSaleStatusTransitionException(
+                    "Solo se puede pasar a REEMBOLSADO un pago que se encuentra APROBADO."
+            );
+        }
+
+        // 3. Estados terminales de pago
+        if (current == PaymentStatus.REEMBOLSADO) {
+            throw new InvalidSaleStatusTransitionException("Un pago en estado REEMBOLSADO no puede cambiar de estado.");
+        }
+
+        // 4. Pago aprobado no vuelve a pendiente
+        if (current == PaymentStatus.APROBADO && target == PaymentStatus.PENDIENTE) {
+            throw new InvalidSaleStatusTransitionException("Un pago APROBADO no puede revertirse a PENDIENTE.");
+        }
+    }
 
     private void validateTransition(SaleStatus current, SaleStatus target) {
         Set<SaleStatus> allowed = ALLOWED_TRANSITIONS.getOrDefault(current, Set.of());
