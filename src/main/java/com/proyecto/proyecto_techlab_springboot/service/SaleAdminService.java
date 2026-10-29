@@ -142,25 +142,17 @@ public class SaleAdminService {
      * Restituye atómicamente el stock de las variantes correspondientes a una venta cancelada.
      */
     private void restoreVariantStock(List<SaleItem> items) {
-        List<SaleItem> validItems = items.stream().filter(item -> item.getVariant() != null).toList();
+        Map<Long, Integer> stockMap = items.stream()
+                .filter(item -> item.getVariant() != null)
+                .collect(
+                    Collectors.toMap(
+                        item -> item.getVariant().getVariantId(),
+                        SaleItem::getQuantity,
+                        Integer::sum // Si la misma variante estuviera repetida, acumula las cantidades
+                    )
+                );
 
-        List<Long> variantIds = validItems.stream()
-                .map(item -> item.getVariant().getVariantId())
-                .distinct()
-                .toList();
-
-        if (variantIds.isEmpty()) return;
-
-        List<Variant> lockedVariants = this.variantService.findAllByIdInWithLock(variantIds);
-
-        Map<Long, Variant> variantMap = lockedVariants.stream()
-                .collect(Collectors.toMap(Variant::getVariantId, Function.identity()));
-
-        for (SaleItem item : validItems) {
-            Variant v = variantMap.get(item.getVariant().getVariantId());
-
-            if (v != null) v.setVariantStock(v.getVariantStock() + item.getQuantity());
-        }
+        this.variantService.restoreStock(stockMap);
     }
 
     private Sale findSaleByIdOrThrow(UUID saleId) {

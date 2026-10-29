@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -138,6 +139,25 @@ public class VariantService {
         log.info("Estado de la variante modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", variant.getVariantId(), lastStatus, variant.getRowStatus());
 
         return mapToResponse(variant);
+    }
+
+    /**
+     * Restituye el stock físico de un conjunto de ítems (usado en cancelaciones y devoluciones).
+     * Bloquea las variantes con SELECT FOR UPDATE para evitar condiciones de carrera.
+     */
+    @Transactional
+    public void restoreStock(Map<Long, Integer> itemsToRestore) {
+        if (itemsToRestore == null || itemsToRestore.isEmpty()) return;
+
+        List<Long>      variantIds      = itemsToRestore.keySet().stream().toList();
+        List<Variant>   lockedVariants  = this.findAllByIdInWithLock(variantIds);
+
+        for (Variant variant : lockedVariants) {
+            Integer quantity = itemsToRestore.get(variant.getVariantId());
+            
+            if (quantity != null && quantity > 0)
+                variant.setVariantStock(variant.getVariantStock() + quantity);
+        }
     }
 
     public Variant findVariantByIdOrThrow(Long id) {

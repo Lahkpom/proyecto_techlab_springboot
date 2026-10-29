@@ -200,9 +200,10 @@ public class SaleService {
         Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
 
         // Validar que la orden siga en un estado cancelable por el cliente
-        if (sale.getSaleStatus() != SaleStatus.PENDIENTE) {
+        SaleStatus currentStatus = sale.getSaleStatus();
+        if (!List.of(SaleStatus.PENDIENTE, SaleStatus.PREPARACION).contains(currentStatus)) {
             throw new InvalidSaleStatusTransitionException(
-                    "Solo se pueden cancelar pedidos en estado PENDIENTE. El pedido actual se encuentra en: " + sale.getSaleStatus()
+                    "Solo se pueden cancelar pedidos en estado PENDIENTE. El pedido actual se encuentra en: " + currentStatus
             );
         }
 
@@ -239,23 +240,17 @@ public class SaleService {
     }
 
     private void restoreVariantStock(List<SaleItem> items) {
-        List<SaleItem> validItems = items.stream().filter(item -> item.getVariant() != null).toList();        
-        List<Long> variantIds = validItems.stream()
-                .map(item -> item.getVariant().getVariantId())
-                .distinct()
-                .toList();
+        Map<Long, Integer> stockMap = items.stream()
+                .filter(item -> item.getVariant() != null)
+                .collect(
+                    Collectors.toMap(
+                        item -> item.getVariant().getVariantId(),
+                        SaleItem::getQuantity,
+                        Integer::sum // Si la misma variante estuviera repetida, acumula las cantidades
+                    )
+                );
 
-        if (variantIds.isEmpty()) return;
-
-        List<Variant> lockedVariants = this.variantService.findAllByIdInWithLock(variantIds);
-        Map<Long, Variant> variantMap = lockedVariants.stream()
-                .collect(Collectors.toMap(Variant::getVariantId, Function.identity()));
-
-        for (SaleItem item : validItems) {
-            Variant v = variantMap.get(item.getVariant().getVariantId());
-            
-            if (v != null) v.setVariantStock(v.getVariantStock() + item.getQuantity());
-        }
+        this.variantService.restoreStock(stockMap);
     }
 
     private SaleResponse mapToSaleResponse(Sale sale, String mpInitPoint) {
