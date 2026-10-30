@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,4 +55,15 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
             @Param("endDate")       Instant         endDate,
             Pageable pageable
     );
+
+    /**
+     * Recupera órdenes que permanecen en PENDIENTE tras haber superado el umbral de expiración,
+     * excluyendo métodos de pago manuales que requieran revisión humana prolongada si correspondiera.
+     */
+    @Query("""
+        SELECT s FROM Sale s
+        WHERE s.saleStatus = com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus.PENDIENTE
+          AND s.createdAt < :threshold
+    """)
+    List<Sale> findExpiredPendingSales(@Param("threshold") Instant threshold);
 }
