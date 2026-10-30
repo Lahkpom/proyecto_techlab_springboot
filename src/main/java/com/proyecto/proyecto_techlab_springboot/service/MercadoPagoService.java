@@ -22,6 +22,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,13 +74,15 @@ public class MercadoPagoService {
 
             // Si hubo costo de envío, agregarlo como concepto
             if (sale.getShippingCost().compareTo(BigDecimal.ZERO) > 0) {
-                items.add(PreferenceItemRequest.builder()
-                        .id("SHIPPING")
-                        .title("Costo de Envío")
-                        .quantity(1)
-                        .currencyId("ARS")
-                        .unitPrice(sale.getShippingCost())
-                        .build());
+                items.add(
+                        PreferenceItemRequest.builder()
+                                .id("SHIPPING")
+                                .title("Costo de Envío")
+                                .quantity(1)
+                                .currencyId("ARS")
+                                .unitPrice(sale.getShippingCost())
+                                .build()
+                );
             }
 
             // Datos del pagador
@@ -100,7 +104,10 @@ public class MercadoPagoService {
                     .backUrls(backUrls)
                     .autoReturn("approved")
                     .notificationUrl(mpConfig.getNotificationUrl())
-                    .externalReference(sale.getSaleId().toString()) // Usa el SaleId para referencia con nuestra base de datos
+                    .externalReference(sale.getSaleId().toString())
+                    .expires(true)
+                    // Expiración de 48 horas en Checkout Pro
+                    .expirationDateTo(OffsetDateTime.now(ZoneOffset.of("-03:00")).plusHours(48))
                     .build();
 
             Preference preference = client.create(preferenceRequest);
