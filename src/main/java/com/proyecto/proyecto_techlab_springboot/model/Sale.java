@@ -123,4 +123,15 @@ public class Sale {
         items.add(item);
         item.setSale(this);
     }
+
+    /**
+     * Determina si la venta ya tiene consolidado el pago con este identificador y estado.
+     * Evita ejecuciones redundantes en Webhooks idempotentes.
+     */
+    public boolean hasSamePaymentState(String mpPaymentId, PaymentStatus paymentStatus) {
+        if (this.mpPaymentId == null || !this.mpPaymentId.equals(mpPaymentId))
+            return false;
+
+        return this.paymentStatus == paymentStatus;
+    }
 }

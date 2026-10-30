@@ -39,7 +39,8 @@ public class MercadoPagoWebhookService {
             return;
         }
 
-        Long paymentId = Long.valueOf(dataId);
+        Long    paymentId       = Long.valueOf(dataId);
+        String  stringPaymentId = String.valueOf(paymentId);
 
         // Consultar a la API de Mercado Pago para verificar autenticidad y montos
         Payment payment             = this.mercadoPagoService.getPaymentDetails(paymentId);
@@ -54,24 +55,46 @@ public class MercadoPagoWebhookService {
         Sale sale   = this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("Venta no encontrada para externalReference: " + saleId));
 
-        sale.setMpPaymentId(String.valueOf(paymentId));
-        sale.setUpdatedAt(Instant.now());
-
-        // Mapeo de estados de Mercado Pago
-        String status = payment.getStatus();
-        log.info("Procesando pago MP ID: {} para Venta: {} con estado: {}", paymentId, saleId, status);
-
-        if ("approved".equalsIgnoreCase(status)) {
-            sale.setPaymentStatus(PaymentStatus.APROBADO);
-            
-            if (sale.getSaleStatus() == SaleStatus.PENDIENTE) sale.setSaleStatus(SaleStatus.PREPARACION);
-        } else if ("rejected".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status)) {
-            sale.setPaymentStatus(PaymentStatus.RECHAZADO);
-        } else if ("refunded".equalsIgnoreCase(status)) {
-            sale.setPaymentStatus(PaymentStatus.REEMBOLSADO);
-            sale.setSaleStatus(SaleStatus.REEMBOLSADO);
+        // Traducir el estado de MP a nuestro enum de dominio
+        PaymentStatus targetPaymentStatus = mapMercadoPagoStatus(payment.getStatus());
+        if (targetPaymentStatus == null) {
+            log.warn("El pago MP ID: {} posee un estado no gestionable ('{}'). Se descarta.", paymentId, payment.getStatus());
+            return;
         }
 
-        this.iSaleRepository.save(sale);
+        // FILTRO DE IDEMPOTENCIA: Si ya está procesado, no hacemos nada
+        if (sale.hasSamePaymentState(stringPaymentId, targetPaymentStatus)) {
+            log.info("Notificación duplicada ignorada (Idempotencia). Venta ID: {} ya se encuentra en estado {} para MP Payment ID: {}",
+                    saleId, targetPaymentStatus, stringPaymentId);
+            return;
+        }
+
+        log.info("Aplicando actualización por Webhook: Venta ID: {}, MP Payment ID: {}, Nuevo PaymentStatus: {}",
+                saleId, stringPaymentId, targetPaymentStatus);
+
+        sale.setMpPaymentId(stringPaymentId);
+        sale.setPaymentStatus(targetPaymentStatus);
+        sale.setUpdatedAt(Instant.now());
+
+        // Transición cruzada a nivel logístico
+        if (targetPaymentStatus == PaymentStatus.APROBADO
+                && sale.getSaleStatus() == SaleStatus.PENDIENTE
+        ) {
+            sale.setSaleStatus(SaleStatus.PREPARACION);
+        } else if (targetPaymentStatus == PaymentStatus.REEMBOLSADO) {
+            sale.setSaleStatus(SaleStatus.REEMBOLSADO);
+        }
+    }
+
+    private PaymentStatus mapMercadoPagoStatus(String mpStatus) {
+        if (mpStatus == null) return null;
+
+        return switch (mpStatus.toLowerCase()) {
+            case "approved" -> PaymentStatus.APROBADO;
+            case "rejected", "cancelled" -> PaymentStatus.RECHAZADO;
+            case "refunded", "charged_back" -> PaymentStatus.REEMBOLSADO;
+            case "in_process", "pending", "authorized" -> PaymentStatus.PENDIENTE;
+            default -> null;
+        };
     }
 }
