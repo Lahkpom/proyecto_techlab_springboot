@@ -6,5 +6,6 @@ public enum SaleStatus {
     ENVIADO,
     ENTREGADO,
     CANCELADO,
-    REEMBOLSADO
+    REEMBOLSADO,
+    AUDITORIA // Orden retenida por discrepancias de pago, fraude potencial o revisión manual
 }

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -60,6 +61,30 @@ public class MercadoPagoWebhookService {
         if (targetPaymentStatus == null) {
             log.warn("El pago MP ID: {} posee un estado no gestionable ('{}'). Se descarta.", paymentId, payment.getStatus());
             return;
+        }
+
+        // VALIDACIÓN DE MONTO (Amount Tampering) para pagos aprobados
+        if (targetPaymentStatus == PaymentStatus.APROBADO) {
+            BigDecimal paidAmount       = payment.getTransactionAmount();
+            BigDecimal expectedAmount   = sale.getSaleTotal();
+
+            if (paidAmount == null || expectedAmount.compareTo(paidAmount) != 0) {
+                String warningMessage =
+                        "[AUDITORÍA AUTOMÁTICA]: El monto cobrado por Mercado Pago ($%s) no coincide con el total de la orden ($%s). MP Payment ID: %s"
+                                .formatted(paidAmount, expectedAmount, stringPaymentId);
+                log.error("Discrepancia financiera detectada en Venta ID: {}. Reteniendo en AUDITORIA. {}", saleId, warningMessage);
+
+                // Asignamos el estado de retención y la nota de alerta
+                sale.setSaleStatus(SaleStatus.AUDITORIA);
+                sale.setMpPaymentId(stringPaymentId);
+                sale.setUpdatedAt(Instant.now());
+
+                String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
+                sale.setInternalNotes(currentNotes + warningMessage);
+
+                // Finalizamos la ejecución del webhook con éxito hacia MP, dejando la orden retenida en la BD
+                return;
+            }
         }
 
         // FILTRO DE IDEMPOTENCIA: Si ya está procesado, no hacemos nada

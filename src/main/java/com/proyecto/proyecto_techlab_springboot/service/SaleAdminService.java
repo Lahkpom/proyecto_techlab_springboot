@@ -39,12 +39,13 @@ public class SaleAdminService {
 
     // Matriz de transiciones de ciclo de vida legales
     private static final Map<SaleStatus, Set<SaleStatus>> ALLOWED_TRANSITIONS = Map.of(
-            SaleStatus.PENDIENTE,   Set.of(SaleStatus.PREPARACION, SaleStatus.CANCELADO),
-            SaleStatus.PREPARACION, Set.of(SaleStatus.ENVIADO, SaleStatus.CANCELADO),
-            SaleStatus.ENVIADO,     Set.of(SaleStatus.ENTREGADO, SaleStatus.CANCELADO),
-            SaleStatus.ENTREGADO,   Set.of(SaleStatus.REEMBOLSADO),
-            SaleStatus.CANCELADO,   Set.of(), // Estado terminal
-            SaleStatus.REEMBOLSADO, Set.of()  // Estado terminal
+            SaleStatus.PENDIENTE    , Set.of(SaleStatus.PREPARACION , SaleStatus.CANCELADO, SaleStatus.AUDITORIA),
+            SaleStatus.AUDITORIA    , Set.of(SaleStatus.PREPARACION , SaleStatus.CANCELADO),
+            SaleStatus.PREPARACION  , Set.of(SaleStatus.ENVIADO     , SaleStatus.CANCELADO),
+            SaleStatus.ENVIADO      , Set.of(SaleStatus.ENTREGADO   , SaleStatus.CANCELADO),
+            SaleStatus.ENTREGADO    , Set.of(SaleStatus.REEMBOLSADO),
+            SaleStatus.CANCELADO    , Set.of(), // Estado terminal
+            SaleStatus.REEMBOLSADO  , Set.of()  // Estado terminal
     );
 
     /**

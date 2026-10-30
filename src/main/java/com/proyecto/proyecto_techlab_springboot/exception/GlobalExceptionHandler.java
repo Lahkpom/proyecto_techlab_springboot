@@ -6,11 +6,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.auth.ExpiredPasswordEx
 import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidWebhookSignatureException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.MercadoPagoIntegrationException;
-import com.proyecto.proyecto_techlab_springboot.exception.sale.MinimumWholesalerQuantityException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -190,6 +186,17 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "EMPTY_SALE_ITEMS",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: El valor del monto pagado informado por Mercado Pago difiere del monto alojado en la entidad Sale.
+    @ExceptionHandler(PaymentAmountMismatchException.class)
+    public ResponseEntity<ErrorResponse> handlePaymentAmountMismatch(PaymentAmountMismatchException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "PAYMENT_AMOUNT_MISMATCH",
                 ex.getMessage(),
                 request
         );
