@@ -6,6 +6,8 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -78,15 +80,18 @@ public class Sale {
     // Máquinas de estado
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "sale_status", nullable = false)
     private SaleStatus saleStatus = SaleStatus.PENDIENTE;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PENDIENTE;
 

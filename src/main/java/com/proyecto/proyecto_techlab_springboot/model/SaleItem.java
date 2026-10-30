@@ -4,6 +4,8 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.NumericSize;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -43,6 +45,7 @@ public class SaleItem {
     private String variantSku;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "variant_size", nullable = false)
     private NumericSize variantSize;
 
