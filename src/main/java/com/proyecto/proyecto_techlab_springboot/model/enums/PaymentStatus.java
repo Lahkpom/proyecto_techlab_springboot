@@ -4,5 +4,6 @@ public enum PaymentStatus {
     PENDIENTE,
     APROBADO,
     RECHAZADO,
-    REEMBOLSADO
+    REEMBOLSO_PENDIENTE,    // Reintegro autorizado internamente, pendiente de impacto bancario/pasarela
+    REEMBOLSADO             // Fondos devueltos al cliente
 }
