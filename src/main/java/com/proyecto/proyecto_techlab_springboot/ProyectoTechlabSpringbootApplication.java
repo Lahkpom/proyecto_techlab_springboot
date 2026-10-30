@@ -10,6 +10,8 @@ public class ProyectoTechlabSpringbootApplication {
      * TODO
      *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
      * TODO
+     *  - Ver en SaleAdminService, si una venta no puede ser reembolsada después de aprobado el pago, que pasa entonces cuando ya pagó y quiere hacer una devolución?
+     * TODO
      *  - Reveer el shippingCost del flujo de sale, se lo está recibiendo por el front pero eso debería:
      *      - Estar seteado con un costo fijo en el back
      *      - Ser dinamico dándole un flujo y una tabla en la db donde pueda modificarse

@@ -194,26 +194,29 @@ public class SaleAdminService {
         // Regla: No despachar sin cobrar (salvo efectivo)
         if ((targetSaleStatus == SaleStatus.ENVIADO || targetSaleStatus == SaleStatus.ENTREGADO)
                 && method != PaymentMethod.EFECTIVO
-                && payment != PaymentStatus.APROBADO) {
+                && payment != PaymentStatus.APROBADO
+        ) {
             throw new InvalidSaleStatusTransitionException(
-                    String.format("No se puede pasar a '%s' un pedido con método '%s' cuyo pago está en '%s'. Debe estar APROBADO.",
-                            targetSaleStatus, method, payment)
+                    "No se puede pasar a '%s' un pedido con método '%s' cuyo pago está en '%s'. Debe estar APROBADO."
+                            .formatted(targetSaleStatus, method, payment)
             );
         }
 
         // Regla: No preparar pedidos de transferencia o MP sin estar aprobados
         if (targetSaleStatus == SaleStatus.PREPARACION
                 && method != PaymentMethod.EFECTIVO
-                && payment != PaymentStatus.APROBADO) {
+                && payment != PaymentStatus.APROBADO
+        ) {
             throw new InvalidSaleStatusTransitionException(
-                    String.format("No se puede iniciar PREPARACION para pedidos por '%s' hasta que el pago figure APROBADO.", method)
+                    "No se puede iniciar PREPARACION para pedidos por '%s' hasta que el pago figure APROBADO.".formatted(method)
             );
         }
 
         // Regla: Reembolso logístico exige pago previamente reembolsado o aprobado
         if (targetSaleStatus == SaleStatus.REEMBOLSADO
                 && payment != PaymentStatus.APROBADO
-                && payment != PaymentStatus.REEMBOLSADO) {
+                && payment != PaymentStatus.REEMBOLSADO
+        ) {
             throw new InvalidSaleStatusTransitionException(
                     "No se puede reembolsar una venta cuyo pago nunca fue APROBADO."
             );
@@ -223,29 +226,25 @@ public class SaleAdminService {
     private void validatePaymentTransition(Sale sale, PaymentStatus current, PaymentStatus target) {
         PaymentMethod method = sale.getPaymentMethod();
 
-        // 1. Protección de pasarela: Mercado Pago solo admite REEMBOLSADO manual por admin
-        if (method == PaymentMethod.MERCADO_PAGO && target != PaymentStatus.REEMBOLSADO) {
+        // Protección de pasarela: Mercado Pago solo admite REEMBOLSADO manual por admin
+        if (method == PaymentMethod.MERCADO_PAGO && target != PaymentStatus.REEMBOLSADO)
             throw new InvalidSaleStatusTransitionException(
                     "Los pagos con Mercado Pago son conciliados automáticamente por Webhook. Solo se permite registrar REEMBOLSADO de forma manual."
             );
-        }
 
-        // 2. No se puede reembolsar lo no cobrado
-        if (target == PaymentStatus.REEMBOLSADO && current != PaymentStatus.APROBADO) {
+        // No se puede reembolsar lo no cobrado
+        if (target == PaymentStatus.REEMBOLSADO && current != PaymentStatus.APROBADO)
             throw new InvalidSaleStatusTransitionException(
                     "Solo se puede pasar a REEMBOLSADO un pago que se encuentra APROBADO."
             );
-        }
 
-        // 3. Estados terminales de pago
-        if (current == PaymentStatus.REEMBOLSADO) {
+        // Estados terminales de pago
+        if (current == PaymentStatus.REEMBOLSADO)
             throw new InvalidSaleStatusTransitionException("Un pago en estado REEMBOLSADO no puede cambiar de estado.");
-        }
 
-        // 4. Pago aprobado no vuelve a pendiente
-        if (current == PaymentStatus.APROBADO && target == PaymentStatus.PENDIENTE) {
+        // Pago aprobado no vuelve a pendiente
+        if (current == PaymentStatus.APROBADO && target == PaymentStatus.PENDIENTE)
             throw new InvalidSaleStatusTransitionException("Un pago APROBADO no puede revertirse a PENDIENTE.");
-        }
     }
 
     private void validateTransition(SaleStatus current, SaleStatus target) {
