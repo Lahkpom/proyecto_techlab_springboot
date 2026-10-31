@@ -7,6 +7,10 @@ import com.proyecto.proyecto_techlab_springboot.exception.common.*;
 import com.proyecto.proyecto_techlab_springboot.exception.image.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.exception.image.StorageOperationException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.*;
+import com.proyecto.proyecto_techlab_springboot.exception.salereturn.ActiveReturnAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.exception.salereturn.ReturnItemQuantityExceededException;
+import com.proyecto.proyecto_techlab_springboot.exception.salereturn.ReturnWindowExpiredException;
+import com.proyecto.proyecto_techlab_springboot.exception.salereturn.SaleNotEligibleForReturnException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -44,6 +48,28 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_PARAMETER",
                 detail,
+                request
+        );
+    }
+
+    // Maneja 400: Cuando se hace un cambio de estado a otro no permitido de forma directa entre sí
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatusTransition(InvalidStatusTransitionException ex,HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_STATUS_TRANSITION",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 400: Cuando hay una diferencia entre la cantidad por la que se hace la devolución y la que fue entregada
+    @ExceptionHandler(ReturnItemQuantityExceededException.class)
+    public ResponseEntity<ErrorResponse> handleReturnItemQuantityExceeded(ReturnItemQuantityExceededException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "RETURN_QUANTITY_EXCEEDED",
+                ex.getMessage(),
                 request
         );
     }
@@ -136,6 +162,28 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Maneja los 409: Para cuando se intenta abrir un pedido de devolución pero la prenda aún no fue entregada o ya hay un reclamo previo
+    @ExceptionHandler(SaleNotEligibleForReturnException.class)
+    public ResponseEntity<ErrorResponse> handleSaleNotEligibleForReturn(SaleNotEligibleForReturnException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "SALE_NOT_ELIGIBLE_FOR_RETURN",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja los 409: Ya hay un reclamo abierto por este pedido
+    @ExceptionHandler(ActiveReturnAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleActiveReturnAlreadyExists(ActiveReturnAlreadyExistsException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "ACTIVE_RETURN_ALREADY_EXISTS",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja los 410 (Recursos que ya no están disponibles)
     @ExceptionHandler(ResourceNoLongerAvailableException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientStock(ResourceNoLongerAvailableException ex, HttpServletRequest request) {
@@ -197,6 +245,17 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "PAYMENT_AMOUNT_MISMATCH",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: El cliente intenta hacer una devolución pasado el tiempo
+    @ExceptionHandler(ReturnWindowExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleReturnWindowExpired(ReturnWindowExpiredException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "RETURN_WINDOW_EXPIRED",
                 ex.getMessage(),
                 request
         );

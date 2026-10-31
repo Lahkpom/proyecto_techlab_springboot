@@ -1,13 +1,13 @@
 package com.proyecto.proyecto_techlab_springboot.exception.sale;
 
-public class InvalidSaleStatusTransitionException extends RuntimeException {
+import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidStatusTransitionException;
+
+public class InvalidSaleStatusTransitionException extends InvalidStatusTransitionException {
     public InvalidSaleStatusTransitionException(String message) {
         super(message);
     }
 
     public InvalidSaleStatusTransitionException(String currentStatus, String targetStatus) {
-        super("Transición de estado inválida: no es posible pasar de '%s' a '%s'"
-                .formatted(currentStatus, targetStatus)
-        );
+        super("venta", currentStatus, targetStatus);
     }
 }
