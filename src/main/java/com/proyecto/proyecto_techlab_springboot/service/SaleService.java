@@ -184,7 +184,7 @@ public class SaleService {
      */
     @Transactional
     public SaleResponse retryMercadoPagoPayment(UUID saleId, UUID userId) {
-        Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
+        Sale sale = this.getSaleByIdAndCheckBelongingOrThrow(saleId, userId);
 
         // Validar método de pago original
         if (sale.getPaymentMethod() != PaymentMethod.MERCADO_PAGO)
@@ -217,8 +217,7 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public SaleResponse getSaleByTrackingToken(UUID trackingToken) {
-        Sale sale = this.iSaleRepository.findByTrackingToken(trackingToken)
-                .orElseThrow(() -> new SaleNotFoundException("{ Token de seguimiento: %s }".formatted(trackingToken)));
+        Sale sale = this.internalGetSaleByTrackingTokenEntityOrThrow(trackingToken);
 
         return mapToSaleResponse(sale, null);
     }
@@ -228,7 +227,7 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public SaleResponse getSaleByIdForUser(UUID saleId, UUID userId) {
-        Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
+        Sale sale = this.getSaleByIdAndCheckBelongingOrThrow(saleId, userId);
 
         return mapToSaleResponse(sale, null);
     }
@@ -249,7 +248,7 @@ public class SaleService {
      */
     @Transactional
     public SaleResponse cancelMySale(UUID saleId, UUID userId) {
-        Sale sale = this.getSaleByIdAndCheckBelonginOrThrow(saleId, userId);
+        Sale sale = this.getSaleByIdAndCheckBelongingOrThrow(saleId, userId);
 
         // Validar que la orden siga en un estado cancelable por el cliente
         SaleStatus currentStatus = sale.getSaleStatus();
@@ -275,14 +274,58 @@ public class SaleService {
     // Métodos Auxiliares
     // =========================================================================
 
-    private Sale getSaleByIdAndCheckBelonginOrThrow(UUID saleId, UUID userId) {
-        Sale sale = this.iSaleRepository.findById(saleId).orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
+    public Sale getSaleByIdAndCheckBelongingOrThrow(UUID saleId, UUID userId) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
 
         // Validar que la orden pertenezca al usuario autenticado
         if (sale.getUser() == null || !sale.getUser().getUserId().equals(userId))
             throw new AccessDeniedException("No tiene permisos para modificar esta orden o la misma no le pertenece.");
 
         return sale;
+    }
+
+    /**
+     * Recupera la entidad administrada Sale para clientes invitados mediante el trackingToken.
+     */
+    @Transactional(readOnly = true)
+    public Sale getSaleByTrackingTokenEntityOrThrow(UUID trackingToken) {
+        return this.internalGetSaleByTrackingTokenEntityOrThrow(trackingToken);
+    }
+
+    /**
+     * Pone la orden en estado de disputa/reclamo posventa sin alterar stock ni importes.
+     */
+    @Transactional
+    public void markSaleAsDisputed(UUID saleId) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
+
+        sale.setSaleStatus(SaleStatus.RECLAMO_ABIERTO);
+        sale.setUpdatedAt(Instant.now());
+
+        String auditNote = "\n[POSVENTA]: Solicitud de devolución ingresada. Orden retenida en RECLAMO_ABIERTO.";
+        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
+        sale.setInternalNotes(currentNotes + auditNote);
+    }
+
+    /**
+     * Cierra formalmente la orden cuando la devolución concluyó su liquidación física y monetaria.
+     */
+    @Transactional
+    public void closeSaleWithReturn(UUID saleId) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
+
+        sale.setSaleStatus(SaleStatus.CERRADO_CON_DEVOLUCION);
+        sale.setUpdatedAt(Instant.now());
+    }
+
+    private Sale getSaleByIdOrElseThrow(UUID saleId) {
+        return this.iSaleRepository.findById(saleId)
+                .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
+    }
+
+    private Sale internalGetSaleByTrackingTokenEntityOrThrow(UUID trackingToken) {
+        return this.iSaleRepository.findByTrackingToken(trackingToken)
+                .orElseThrow(() -> new SaleNotFoundException("{ Token de seguimiento: %s }".formatted(trackingToken)));
     }
 
     private String resolveMainImageUrl(Long variantId) {
