@@ -1,11 +1,12 @@
 package com.proyecto.proyecto_techlab_springboot.exception.salereturn;
 
 import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnStatus;
 
 public class InvalidReturnStatusTransitionException extends InvalidStatusTransitionException {
 
-    public InvalidReturnStatusTransitionException(String currentStatus, String targetStatus) {
-        super("devolución", currentStatus, targetStatus);
+    public InvalidReturnStatusTransitionException(ReturnStatus currentStatus, ReturnStatus targetStatus) {
+        super("devolución", currentStatus.toString(), targetStatus.toString());
     }
 
     public InvalidReturnStatusTransitionException(String message) {

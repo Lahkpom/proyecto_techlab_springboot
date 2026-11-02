@@ -318,6 +318,37 @@ public class SaleService {
         sale.setUpdatedAt(Instant.now());
     }
 
+    /**
+     * Revierte el estado de la venta desde RECLAMO_ABIERTO hacia ENTREGADO
+     * ante desistimiento del cliente o rechazo total de la inspección física.
+     */
+    @Transactional
+    public void revertSaleFromDispute(UUID saleId, String reason) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
+
+        sale.setSaleStatus(SaleStatus.ENTREGADO);
+        sale.setUpdatedAt(Instant.now());
+
+        String auditNote = "\n[POSVENTA - REVERSIÓN]: Orden reincorporada a ENTREGADO. Motivo: " + reason;
+        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
+        sale.setInternalNotes(currentNotes + auditNote);
+    }
+
+    /**
+     * Marca el cobro de la venta en REEMBOLSO_PENDIENTE tras aprobarse la inspección de la mercadería.
+     */
+    @Transactional
+    public void markPaymentAsPendingRefund(UUID saleId, BigDecimal amountToRefund) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
+
+        sale.setPaymentStatus(PaymentStatus.REEMBOLSO_PENDIENTE);
+        sale.setUpdatedAt(Instant.now());
+
+        String auditNote = "\n[POSVENTA - REEMBOLSO]: Inspección aprobada. Pago en REEMBOLSO_PENDIENTE por un monto de $" + amountToRefund;
+        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
+        sale.setInternalNotes(currentNotes + auditNote);
+    }
+
     private Sale getSaleByIdOrElseThrow(UUID saleId) {
         return this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
