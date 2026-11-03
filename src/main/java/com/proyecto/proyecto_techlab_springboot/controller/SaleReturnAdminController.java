@@ -28,6 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/returns")
 @RequiredArgsConstructor
+// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPER_ADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class SaleReturnAdminController {
 
     private final SaleReturnAdminService    saleReturnAdminService;
@@ -36,7 +37,6 @@ public class SaleReturnAdminController {
     /**
      * Búsqueda paginada multicriterio de devoluciones para el panel administrativo.
      */
-    // @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')") // TODO: Descomentar al habilitar Spring Security
     @GetMapping
     public ResponseEntity<Page<SaleReturnSummaryResponse>> searchReturns(
             @RequestParam(required = false) ReturnStatus    returnStatus,
@@ -54,7 +54,6 @@ public class SaleReturnAdminController {
     /**
      * Recupera el expediente completo de una devolución (cabecera, ítems e inspección).
      */
-    // @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')") // TODO: Descomentar al habilitar Spring Security
     @GetMapping("/{returnId}")
     public ResponseEntity<SaleReturnResponse> getReturnDetail(@PathVariable UUID returnId) {
         return ResponseEntity.ok(this.saleReturnAdminService.getReturnDetail(returnId));
@@ -63,7 +62,6 @@ public class SaleReturnAdminController {
     /**
      * Modifica el estado logístico de la devolución (ej: EN_TRANSITO, RECIBIDO_EN_CONTROL, CANCELADA).
      */
-    // @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')") // TODO: Descomentar al habilitar Spring Security
     @PatchMapping("/{returnId}/status")
     public ResponseEntity<SaleReturnResponse> updateReturnStatus(
             @PathVariable UUID returnId,
@@ -77,7 +75,6 @@ public class SaleReturnAdminController {
     /**
      * Asienta el peritaje físico de calidad en taller prenda por prenda.
      */
-    // @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')") // TODO: Descomentar al habilitar Spring Security
     @PostMapping("/{returnId}/inspect")
     public ResponseEntity<SaleReturnResponse> inspectReturn(
             @PathVariable UUID returnId,
@@ -91,7 +88,6 @@ public class SaleReturnAdminController {
     /**
      * Ejecuta el reembolso por pasarela (Mercado Pago) o asienta la conciliación bancaria manual.
      */
-    // @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')") // TODO: Descomentar al habilitar Spring Security
     @PostMapping("/{returnId}/process-refund")
     public ResponseEntity<SaleReturnResponse> processRefund(
             @PathVariable UUID returnId,
