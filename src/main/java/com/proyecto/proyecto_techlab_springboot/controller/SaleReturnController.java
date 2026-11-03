@@ -34,7 +34,7 @@ public class SaleReturnController {
     /**
      * Inicia una solicitud de devolución para un usuario registrado sobre una orden propia.
      */
-    // @PreAuthorize("hasAnyAuthority('CLIENTE', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
+    // @PreAuthorize("isAuthenticated()") // TODO: Descomentar al habilitar Spring Security
     @PostMapping("/orders/{saleId}")
     public ResponseEntity<SaleReturnResponse> createReturnForCustomer(
             @PathVariable UUID saleId,
@@ -67,7 +67,7 @@ public class SaleReturnController {
     /**
      * Historial paginado de devoluciones del cliente autenticado.
      */
-    // @PreAuthorize("hasAnyAuthority('CLIENTE', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
+    // @PreAuthorize("isAuthenticated()") // TODO: Descomentar al habilitar Spring Security
     @GetMapping("/me")
     public ResponseEntity<Page<SaleReturnSummaryResponse>> getMyReturns(
             @PageableDefault(size = 10) Pageable pageable,
