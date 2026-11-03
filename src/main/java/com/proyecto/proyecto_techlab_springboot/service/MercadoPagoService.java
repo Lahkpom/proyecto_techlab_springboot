@@ -1,10 +1,13 @@
 package com.proyecto.proyecto_techlab_springboot.service;
 
-import com.mercadopago.client.payment.PaymentClient;
+import com.mercadopago.core.MPRequestOptions;
 import com.mercadopago.client.preference.*;
+import com.mercadopago.client.payment.PaymentClient;
+import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.payment.Payment;
+import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
 import com.proyecto.proyecto_techlab_springboot.config.MercadoPagoConfiguration;
 import com.proyecto.proyecto_techlab_springboot.dto.sale.MercadoPagoPreferenceResult;
@@ -26,6 +29,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Creación de Preferencias y Validación Criptográfica
@@ -183,6 +187,47 @@ public class MercadoPagoService {
             throw ex;
         } catch (Exception ex) {
             throw new InvalidWebhookSignatureException("Fallo en el cálculo de validación de firma: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Ejecuta el reembolso (total o parcial) de un cobro en la API de Mercado Pago.
+     *
+     * @param mpPaymentId Identificador numérico del pago registrado en Mercado Pago.
+     * @param amountToRefund Monto a reembolsar (si es null o igual al total, MP reembolsa completo).
+     * @param returnId Identificador de la devolución (utilizado como clave de idempotencia).
+     * @return Identificador del reembolso generado por Mercado Pago.
+     */
+    public Long refundPayment(Long mpPaymentId, BigDecimal amountToRefund, UUID returnId) {
+        try {
+            PaymentRefundClient refundClient =
+                    new PaymentRefundClient();
+
+            MPRequestOptions requestOptions = MPRequestOptions.builder()
+                    .customHeaders(java.util.Map.of("X-Idempotency-Key", "refund-" + returnId.toString()))
+                    .build();
+
+            PaymentRefund refund;
+
+            if (amountToRefund != null) {
+                refund = refundClient.refund(mpPaymentId, amountToRefund, requestOptions);
+            } else {
+                refund = refundClient.refund(mpPaymentId, requestOptions);
+            }
+
+            log.info("Reembolso ejecutado exitosamente en Mercado Pago { refundId: {}, paymentId: {}, monto: ${} }",
+                    refund.getId(), mpPaymentId, amountToRefund);
+
+            return refund.getId();
+
+        } catch (MPApiException apiEx) {
+            log.error("Error API Mercado Pago al reembolsar [Status: {}]: {}", apiEx.getStatusCode(), apiEx.getApiResponse().getContent());
+            throw new MercadoPagoIntegrationException(
+                    "Fallo al procesar el reembolso en Mercado Pago: " + apiEx.getMessage(), apiEx
+            );
+        } catch (MPException ex) {
+            log.error("Excepción SDK Mercado Pago en reembolso: {}", ex.getMessage());
+            throw new MercadoPagoIntegrationException("Error interno al solicitar reembolso en Mercado Pago.", ex);
         }
     }
 }

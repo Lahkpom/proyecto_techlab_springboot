@@ -7,6 +7,8 @@ import com.proyecto.proyecto_techlab_springboot.model.*;
 import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnReason;
 import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnResolution;
 import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleReturnRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,8 @@ public class SaleReturnAdminService {
     private final SaleService           saleService;
     private final VariantService        variantService;
     private final UserService           userService;
+    private final MercadoPagoService    mercadoPagoService;
+
 
     // Matriz de transiciones permitidas para la gestión del expediente
     private static final Map<ReturnStatus, Set<ReturnStatus>> ALLOWED_TRANSITIONS = Map.of(
@@ -209,6 +213,92 @@ public class SaleReturnAdminService {
             log.info("Devolución { ID: {} } APROBADA. Unidades reincorporadas a stock: {}, Reembolso final: ${}",
                     returnId, approvedItemsCount, finalRefund);
         }
+
+        return mapToResponse(saleReturn);
+    }
+
+    /**
+     * Procesa la liquidación financiera de una devolución aprobada:
+     * - Si pagó con MERCADO_PAGO: llama a la API de MP con idempotencia.
+     * - Si pagó con TRANSFERENCIA o EFECTIVO: exige comprobante manual de conciliación bancaria.
+     * Notifica a SaleService para transicionar a REEMBOLSADO y CERRADO_CON_DEVOLUCION.
+     */
+    @Transactional
+    public SaleReturnResponse processRefund(
+            UUID                    returnId,
+            SaleReturnRefundRequest request,
+            UUID                    operatorId
+    ) {
+        SaleReturn saleReturn = this.findReturnWithDetailsOrThrow(returnId);
+
+        // Validar que el expediente califique para liquidación monetaria
+        if (saleReturn.getReturnStatus() != ReturnStatus.APROBADA)
+            throw new InvalidReturnStatusTransitionException(
+                    "Solo se pueden reembolsar devoluciones que se encuentren en estado APROBADA. Estado actual: %s"
+                            .formatted(saleReturn.getReturnStatus())
+            );
+
+        if (saleReturn.getReturnResolution() != ReturnResolution.REEMBOLSO_DINERO)
+            throw new IllegalStateException(
+                    "Esta devolución tiene resolución '%s'. No requiere liquidación monetaria."
+                            .formatted(saleReturn.getReturnResolution())
+            );
+
+        if (saleReturn.getRefundAmount().compareTo(BigDecimal.ZERO) <= 0)
+            throw new IllegalStateException("El monto liquidable para esta devolución es $0.00.");
+
+        Sale sale = saleReturn.getSale();
+
+        if (sale.getPaymentStatus() == PaymentStatus.REEMBOLSADO)
+            throw new IllegalStateException("El cobro de la orden vinculada ya figura como REEMBOLSADO.");
+
+        String auditDetail;
+
+        // Liquidación según forma de pago original
+        if (sale.getPaymentMethod() == PaymentMethod.MERCADO_PAGO) {
+            if (sale.getMpPaymentId() == null || sale.getMpPaymentId().isBlank())
+                throw new IllegalStateException(
+                        "La orden { ID: %s } fue pagada con Mercado Pago pero no registra un mpPaymentId válido para ejecutar el reembolso."
+                                .formatted(sale.getSaleId())
+                );
+
+            Long mpPayId    = Long.valueOf(sale.getMpPaymentId());
+            Long mpRefundId = this.mercadoPagoService.refundPayment(
+                    mpPayId,
+                    saleReturn.getRefundAmount(),
+                    saleReturn.getReturnId()
+            );
+
+            auditDetail = "Mercado Pago Refund ID: %d (Pago MP: %d)".formatted(mpRefundId, mpPayId);
+
+        } else {
+            // TRANSFERENCIA o EFECTIVO: Conciliación manual bancaria
+            if (request == null || request.transactionReference() == null || request.transactionReference().isBlank())
+                throw new IllegalArgumentException(
+                        "Para órdenes abonadas con %s es obligatorio ingresar el código o número de comprobante de la transferencia de reintegro."
+                                .formatted(sale.getPaymentMethod())
+                );
+
+            auditDetail = "Conciliación bancaria manual. Ref: %s. Notas: %s"
+                    .formatted(
+                            request.transactionReference().trim(),
+                            request.notes() != null ? request.notes().trim() : "Sin notas adicionales"
+                    );
+        }
+
+        // Notificar a SaleService para actualizar estados y asentar auditoría
+        this.saleService.completeSaleRefund(
+                sale.getSaleId(),
+                saleReturn.getRefundAmount(),
+                auditDetail,
+                operatorId
+        );
+
+        // Actualizar marca temporal en el expediente de posventa
+        saleReturn.setClosedAt(Instant.now());
+
+        log.info("Reembolso de devolución { returnId: {} } liquidado exitosamente por el operador {}. Detalle: {}",
+                returnId, operatorId, auditDetail);
 
         return mapToResponse(saleReturn);
     }

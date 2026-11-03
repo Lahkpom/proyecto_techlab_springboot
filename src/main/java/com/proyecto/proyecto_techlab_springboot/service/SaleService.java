@@ -15,6 +15,7 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.service.policy.SaleCalculationResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
  *  - Invoca a SalePolicyService para calcular totales y descuentos.
  *  - Persiste la orden y expone las consultas por trackingToken (Magic Link) y por usuario logueado.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SaleService {
@@ -252,12 +254,11 @@ public class SaleService {
 
         // Validar que la orden siga en un estado cancelable por el cliente
         SaleStatus currentStatus = sale.getSaleStatus();
-        if (!List.of(SaleStatus.PENDIENTE, SaleStatus.PREPARACION).contains(currentStatus)) {
+        if (!List.of(SaleStatus.PENDIENTE, SaleStatus.PREPARACION).contains(currentStatus))
             throw new InvalidSaleStatusTransitionException(
                     "Solo se pueden cancelar pedidos en estado PENDIENTE o PREPARACION. El pedido actual se encuentra en: %s. Comuníquese para soporte."
                     .formatted(currentStatus)
             );
-        }
 
         // Restituir el stock de las variantes
         this.restoreVariantStock(sale.getItems());
@@ -347,6 +348,27 @@ public class SaleService {
         String auditNote = "\n[POSVENTA - REEMBOLSO]: Inspección aprobada. Pago en REEMBOLSO_PENDIENTE por un monto de $" + amountToRefund;
         String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
         sale.setInternalNotes(currentNotes + auditNote);
+    }
+
+    /**
+     * Completa formalmente el ciclo contable de la orden tras liquidarse el reembolso.
+     * Mueve el estado de pago a REEMBOLSADO y la orden a CERRADO_CON_DEVOLUCION.
+     */
+    @Transactional
+    public void completeSaleRefund(UUID saleId, BigDecimal refundedAmount, String auditDetail, UUID operatorId) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
+
+        sale.setPaymentStatus(PaymentStatus.REEMBOLSADO);
+        sale.setSaleStatus(SaleStatus.CERRADO_CON_DEVOLUCION);
+        sale.setUpdatedAt(Instant.now());
+        sale.setUpdatedBy(operatorId);
+
+        String auditNote = "%n[POSVENTA - REEMBOLSO LIQUIDADO]: Reintegro completado por $%s. Detalle: %s"
+                .formatted(refundedAmount, auditDetail);
+        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
+        sale.setInternalNotes(currentNotes + auditNote);
+
+        log.info("Venta { ID: {} } liquidada financieramente: PaymentStatus=REEMBOLSADO, SaleStatus=CERRADO_CON_DEVOLUCION", saleId);
     }
 
     private Sale getSaleByIdOrElseThrow(UUID saleId) {
