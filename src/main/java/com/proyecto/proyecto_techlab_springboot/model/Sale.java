@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.model;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -45,6 +46,14 @@ public class Sale {
 
     @Column(name = "customer_phone", length = 50, nullable = false)
     private String customerPhone;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "customer_tax_id_type")
+    private TaxIdType customerTaxIdType;
+
+    @Column(name = "customer_tax_id_number", length = 20)
+    private String customerTaxIdNumber;
 
     @Column(name = "customer_notes", columnDefinition = "TEXT")
     private String customerNotes;
