@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.dto.user;
 
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 
 import java.time.Instant;
@@ -12,6 +13,8 @@ public record UserResponse(
         String      userEmail,
         String      userPhone,
         String      companyName,
+        TaxIdType   taxIdType,
+        String      taxIdNumber,
         Instant     lastLoginAt,
         Instant     passwordExpiresAt
 ) {}
