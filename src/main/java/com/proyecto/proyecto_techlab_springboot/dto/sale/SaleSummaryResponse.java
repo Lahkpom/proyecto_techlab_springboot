@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.dto.sale;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -19,6 +20,8 @@ public record SaleSummaryResponse(
         UUID            trackingToken,
         String          customerName,
         String          customerEmail,
+        TaxIdType       customerTaxIdType,
+        String          customerTaxIdNumber,
         Integer         saleQuantity,
         BigDecimal      saleTotal,
         SaleStatus      saleStatus,
