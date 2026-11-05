@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.model;
 
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -47,6 +48,14 @@ public class Users extends BaseEntity {
 
     @Column(name = "company_name")
     private String companyName;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "tax_id_type")
+    private TaxIdType taxIdType;
+
+    @Column(name = "tax_id_number", length = 20)
+    private String taxIdNumber;
 
     @Column(name = "is_email_verified", nullable = false)
     @Builder.Default
