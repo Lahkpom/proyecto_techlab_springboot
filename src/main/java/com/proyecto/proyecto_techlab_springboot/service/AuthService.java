@@ -68,6 +68,7 @@ public class AuthService {
         );
     }
 
+    // TODO - Hacer las validaciones correspondientes al tipo y número de identificación fiscal acorde al tipo de usuario registrado
     private UserResponse registerUser(
             UserRole    role,
             String      rawName,

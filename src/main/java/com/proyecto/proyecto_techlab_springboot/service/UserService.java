@@ -26,12 +26,15 @@ public class UserService {
         return mapToResponse(this.findUserByIdOrThrow(id));
     }
 
+    // TODO - Hacer las validaciones correspondientes en estos campos de update
     @Transactional
     public UserResponse updateUser(UUID id, UserUpdateRequest request) {
         Users user = this.findUserByIdOrThrow(id);
 
         user.setUserName(request.name());
         user.setUserPhone(request.phone());
+        user.setTaxIdType(request.taxIdType());
+        user.setTaxIdNumber(request.taxIdNumber());
 
         log.info("Usuario modificado exitosamente { ID: {}, email: {}, name: {}, phone: {} }", user.getUserId(), user.getUserEmail(), user.getUserName(), user.getUserPhone());
 
@@ -75,6 +78,8 @@ public class UserService {
                 entity.getUserEmail(),
                 entity.getUserPhone(),
                 entity.getCompanyName(),
+                entity.getTaxIdType(),
+                entity.getTaxIdNumber(),
                 entity.getLastLoginAt(),
                 entity.getPasswordExpiresAt()
         );
