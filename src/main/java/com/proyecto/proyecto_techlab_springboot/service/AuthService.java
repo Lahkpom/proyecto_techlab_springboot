@@ -9,6 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.common.InvalidCredenti
 import com.proyecto.proyecto_techlab_springboot.exception.user.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.model.UserSession;
 import com.proyecto.proyecto_techlab_springboot.model.Users;
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
 import com.proyecto.proyecto_techlab_springboot.repository.IUserSessionRepository;
@@ -40,11 +41,13 @@ public class AuthService {
     private static final int REFRESH_TOKEN_DAYS     = 7;
 
     @Transactional
-    public UserResponse createUser(UserCreateRequest request) {
-        String name     = request.name().trim();
-        String email    = request.email().trim().toLowerCase();
-        String password = passwordEncoder.encode(request.password());
-        String phone    = request.phone() != null ? request.phone().trim() : null;
+    public UserResponse createUser(UserCreateRequest req) {
+        String      name        = req.name().trim();
+        String      email       = req.email().trim().toLowerCase();
+        String      password    = passwordEncoder.encode(req.password());
+        String      phone       = req.phone() != null ? req.phone().trim() : null;
+        TaxIdType   taxIdType   = req.taxIdType();
+        String      taxIdNumber = req.taxIdNumber().trim();
 
         validateUserEmailOrThrow(email);
 
@@ -54,6 +57,8 @@ public class AuthService {
                 .userEmail(email)
                 .userPassword(password)
                 .userPhone(phone)
+                .taxIdType(taxIdType)
+                .taxIdNumber(taxIdNumber)
                 .build();
 
         Users saved = this.iUserRepository.save(user);
@@ -63,12 +68,14 @@ public class AuthService {
     }
 
     @Transactional
-    public UserResponse createWholesaler(WholesalerCreateRequest request) {
-        String name     = request.name().trim();
-        String email    = request.email().trim().toLowerCase();
-        String password = passwordEncoder.encode(request.password());
-        String phone    = request.phone() != null ? request.phone().trim() : null;
-        String company  = request.companyName().trim();
+    public UserResponse createWholesaler(WholesalerCreateRequest req) {
+        String      name        = req.name().trim();
+        String      email       = req.email().trim().toLowerCase();
+        String      password    = passwordEncoder.encode(req.password());
+        String      phone       = req.phone() != null ? req.phone().trim() : null;
+        String      company     = req.companyName().trim();
+        TaxIdType   taxIdType   = req.taxIdType();
+        String      taxIdNumber = req.taxIdNumber().trim();
 
         validateUserEmailOrThrow(email);
 
@@ -79,6 +86,8 @@ public class AuthService {
                 .userPassword(password)
                 .userPhone(phone)
                 .companyName(company)
+                .taxIdType(taxIdType)
+                .taxIdNumber(taxIdNumber)
                 .build();
 
         Users saved = this.iUserRepository.save(user);
@@ -94,17 +103,17 @@ public class AuthService {
             EmailNotVerifiedException.class,
             ExpiredPasswordException.class
     })
-    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+    public AuthResponse login(LoginRequest req, HttpServletRequest httpRequest) {
         String  ip          = extractClientIp(httpRequest);
         String  userAgent   = httpRequest.getHeader("User-Agent");
-        String  email       = request.email().trim().toLowerCase();
+        String  email       = req.email().trim().toLowerCase();
         Users   user        = this.getUserByEmail(email).orElse(null);
 
         // Usuario inexistente
         if (user == null) {
             auditService.recordAttempt(
                     null,
-                    request.email(),
+                    req.email(),
                     false,
                     "USER_NOT_FOUND",
                     ip,
@@ -118,7 +127,7 @@ public class AuthService {
         if (!user.isEmailVerified()) {
             auditService.recordAttempt(
                     user.getUserId(),
-                    request.email(),
+                    req.email(),
                     false,
                     "EMAIL_NOT_VERIFIED",
                     ip,
@@ -134,7 +143,7 @@ public class AuthService {
             if (user.getLockedUntil().isAfter(Instant.now())) {
                 auditService.recordAttempt(
                         user.getUserId(),
-                        request.email(),
+                        req.email(),
                         false,
                         "ACCOUNT_LOCKED",
                         ip,
@@ -149,7 +158,7 @@ public class AuthService {
         }
 
         // Comprobar contraseña
-        if (!passwordEncoder.matches(request.password(), user.getUserPassword())) {
+        if (!passwordEncoder.matches(req.password(), user.getUserPassword())) {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
 
@@ -168,7 +177,7 @@ public class AuthService {
 
                 auditService.recordAttempt(
                         user.getUserId(),
-                        request.email(),
+                        req.email(),
                         false,
                         "ACCOUNT_LOCKED",
                         ip,
@@ -180,7 +189,7 @@ public class AuthService {
 
             auditService.recordAttempt(
                     user.getUserId(),
-                    request.email(),
+                    req.email(),
                     false,
                     "INVALID_CREDENTIALS",
                     ip,
@@ -193,7 +202,7 @@ public class AuthService {
         if (user.getPasswordExpiresAt().isBefore(Instant.now())) {
             auditService.recordAttempt(
                     user.getUserId(),
-                    request.email(),
+                    req.email(),
                     false,
                     "PASSWORD_EXPIRED",
                     ip,
@@ -208,7 +217,7 @@ public class AuthService {
 
         auditService.recordAttempt(
             user.getUserId(),
-            request.email(),
+            req.email(),
             true,
             null,
             ip,
@@ -221,8 +230,8 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse refreshToken(RefreshTokenRequest request, HttpServletRequest httpRequest) {
-        String tokenHash = TokenHashUtil.hash(request.refreshToken());
+    public AuthResponse refreshToken(RefreshTokenRequest req, HttpServletRequest httpRequest) {
+        String tokenHash = TokenHashUtil.hash(req.refreshToken());
 
         UserSession session = this.iUserSessionRepository.findByRefreshTokenHashAndIsRevokedFalse(tokenHash)
                 .orElseThrow(() -> new InvalidCredentialsException("Sesión inválida o revocada."));
@@ -262,10 +271,10 @@ public class AuthService {
         }
     }
 
-    private String extractClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
+    private String extractClientIp(HttpServletRequest req) {
+        String xfHeader = req.getHeader("X-Forwarded-For");
 
-        if (xfHeader == null || xfHeader.isBlank()) return request.getRemoteAddr();
+        if (xfHeader == null || xfHeader.isBlank()) return req.getRemoteAddr();
 
         return xfHeader.split(",")[0].trim();
     }
@@ -299,6 +308,8 @@ public class AuthService {
                 entity.getUserEmail(),
                 entity.getUserPhone(),
                 entity.getCompanyName(),
+                entity.getTaxIdType(),
+                entity.getTaxIdNumber(),
                 entity.getLastLoginAt(),
                 entity.getPasswordExpiresAt()
         );
