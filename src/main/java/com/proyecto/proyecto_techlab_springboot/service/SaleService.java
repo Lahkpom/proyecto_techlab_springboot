@@ -4,6 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.dto.sale.*;
 import com.proyecto.proyecto_techlab_springboot.exception.common.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.exception.common.InsufficientStockException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.InvalidSaleStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.exception.sale.MissingTaxIdentificationException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
@@ -11,11 +12,14 @@ import com.proyecto.proyecto_techlab_springboot.model.*;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.service.policy.SaleCalculationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,6 +51,11 @@ public class SaleService {
     private final VariantService        variantService;
     private final ImageService          imageService;
     private final UserService           userService;
+
+    @Value("${arca.anonymous-invoice-limit:340000.00}")
+    private BigDecimal anonymousInvoiceLimit;
+
+    private record ResolvedTaxData(TaxIdType type, String number) {}
 
     /**
      * Orquestación transaccional unificada para checkout (registrado o invitado).
@@ -135,6 +144,15 @@ public class SaleService {
                 buyerRole
         );
 
+        // Resolver y Validar Identificación Fiscal del Comprador
+        ResolvedTaxData taxData = resolveAndValidateTaxData(
+                buyer,
+                buyerRole,
+                request.customerTaxIdType(),
+                request.customerTaxIdNumber(),
+                calc.total()
+        );
+
         // Determinar estado inicial según método de pago:
         // Efectivo contraentrega nace directamente en PREPARACION
         SaleStatus initialSaleStatus = (request.paymentMethod() == PaymentMethod.EFECTIVO)
@@ -147,6 +165,8 @@ public class SaleService {
                 .customerName(request.customerName().trim())
                 .customerEmail(request.customerEmail().trim().toLowerCase())
                 .customerPhone(request.customerPhone().trim())
+                .customerTaxIdType(taxData.type())
+                .customerTaxIdNumber(taxData.number())
                 .customerNotes(request.customerNotes())
                 .shippingAddress(request.shippingAddress().trim())
                 .saleQuantity(calc.totalQuantity())
@@ -175,6 +195,38 @@ public class SaleService {
 
         // return mapToSaleResponse(savedSale, null);
         return mapToSaleResponse(savedSale, mpInitPoint);
+    }
+
+    private ResolvedTaxData resolveAndValidateTaxData(
+            Users       buyer,
+            UserRole    buyerRole,
+            TaxIdType   requestTaxType,
+            String      requestTaxNumber,
+            BigDecimal  saleTotal
+    ) {
+        // Datos cargados en el perfil de usuario registrado
+        TaxIdType resolvedType = (buyer != null && buyer.getTaxIdType() != null)
+                ? buyer.getTaxIdType()
+                : requestTaxType;
+
+        String resolvedNumber = (buyer != null && buyer.getTaxIdNumber() != null && !buyer.getTaxIdNumber().isBlank())
+                ? buyer.getTaxIdNumber()
+                : (requestTaxNumber != null ? requestTaxNumber.trim() : null);
+
+        // Mayoristas deben tener CUIT obligatorio
+        if (buyerRole == UserRole.WHOLESALER && (resolvedType != TaxIdType.CUIT || resolvedNumber == null || resolvedNumber.isBlank()))
+            throw new MissingTaxIdentificationException(
+                    "Para compras mayoristas es obligatorio registrar un CUIT tributario válido."
+            );
+
+        // Compras que superan el límite de facturación anónima de ARCA
+        if (saleTotal.compareTo(this.anonymousInvoiceLimit) >= 0 && (resolvedType == null || resolvedNumber == null || resolvedNumber.isBlank()))
+            throw new MissingTaxIdentificationException(
+                    "Por regulaciones fiscales de ARCA, las operaciones que superan los $%s requieren identificación obligatoria (DNI o CUIT)."
+                            .formatted(this.anonymousInvoiceLimit)
+            );
+
+        return new ResolvedTaxData(resolvedType, resolvedNumber);
     }
 
     /**

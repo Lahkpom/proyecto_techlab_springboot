@@ -74,6 +74,17 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Maneja 400: En los casos que se requiere de forma obligatoria los datos fiscales del comprador
+    @ExceptionHandler(MissingTaxIdentificationException.class)
+    public ResponseEntity<ErrorResponse> handleMissingTaxIdentification(MissingTaxIdentificationException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "TAX_IDENTIFICATION_REQUIRED",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja 401 (Credenciales inválidas en login)
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
