@@ -42,45 +42,53 @@ public class AuthService {
 
     @Transactional
     public UserResponse createUser(UserCreateRequest req) {
-        String      name        = req.name().trim();
-        String      email       = req.email().trim().toLowerCase();
-        String      password    = passwordEncoder.encode(req.password());
-        String      phone       = req.phone() != null ? req.phone().trim() : null;
-        TaxIdType   taxIdType   = req.taxIdType();
-        String      taxIdNumber = req.taxIdNumber().trim();
-
-        validateUserEmailOrThrow(email);
-
-        Users user = Users.builder()
-                .userRole(UserRole.CUSTOMER)
-                .userName(name)
-                .userEmail(email)
-                .userPassword(password)
-                .userPhone(phone)
-                .taxIdType(taxIdType)
-                .taxIdNumber(taxIdNumber)
-                .build();
-
-        Users saved = this.iUserRepository.save(user);
-
-        log.info("Usuario CUSTOMER creado exitosamente { email: {}, ID: {} }", saved.getUserEmail(), saved.getUserId());
-        return mapToResponse(saved);
+        return registerUser(
+                UserRole.CUSTOMER,
+                req.name(),
+                req.email(),
+                req.password(),
+                req.phone(),
+                req.taxIdType(),
+                req.taxIdNumber(),
+                null
+        );
     }
 
     @Transactional
     public UserResponse createWholesaler(WholesalerCreateRequest req) {
-        String      name        = req.name().trim();
-        String      email       = req.email().trim().toLowerCase();
-        String      password    = passwordEncoder.encode(req.password());
-        String      phone       = req.phone() != null ? req.phone().trim() : null;
-        String      company     = req.companyName().trim();
-        TaxIdType   taxIdType   = req.taxIdType();
-        String      taxIdNumber = req.taxIdNumber().trim();
+        return registerUser(
+                UserRole.WHOLESALER,
+                req.name(),
+                req.email(),
+                req.password(),
+                req.phone(),
+                req.taxIdType(),
+                req.taxIdNumber(),
+                req.companyName()
+        );
+    }
+
+    private UserResponse registerUser(
+            UserRole    role,
+            String      rawName,
+            String      rawEmail,
+            String      rawPassword,
+            String      rawPhone,
+            TaxIdType   taxIdType,
+            String      rawTaxIdNumber,
+            String      rawCompanyName
+    ) {
+        String name        = rawName != null ? rawName.trim() : null;
+        String email       = rawEmail.trim().toLowerCase();
+        String password    = passwordEncoder.encode(rawPassword);
+        String phone       = rawPhone != null ? rawPhone.trim() : null;
+        String taxIdNumber = rawTaxIdNumber != null ? rawTaxIdNumber.trim() : null;
+        String company     = rawCompanyName != null ? rawCompanyName.trim() : null;
 
         validateUserEmailOrThrow(email);
 
         Users user = Users.builder()
-                .userRole(UserRole.WHOLESALER)
+                .userRole(role)
                 .userName(name)
                 .userEmail(email)
                 .userPassword(password)
@@ -92,7 +100,9 @@ public class AuthService {
 
         Users saved = this.iUserRepository.save(user);
 
-        log.info("Usuario WHOLESALER creado exitosamente { compañía: {}, email: {}, ID: {} }", saved.getCompanyName(), saved.getUserEmail(), saved.getUserId());
+        log.info("Usuario {} creado exitosamente { ID: {}, email: {}, compañía: {} }", 
+                    role, saved.getUserId(), saved.getUserEmail(), saved.getCompanyName());
+
         return mapToResponse(saved);
     }
 
