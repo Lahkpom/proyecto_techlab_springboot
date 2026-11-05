@@ -1,10 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.dto.auth;
 
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.util.ValidationUtil;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public record WholesalerCreateRequest(
 
@@ -30,5 +28,11 @@ public record WholesalerCreateRequest(
 
         @NotBlank(message = "El nombre de la compañía es obligatorio.")
         @Size(max = 255, message = "El nombre de la compañía no puede exceder los 255 caracteres.")
-        String companyName
+        String companyName,
+
+        @NotNull(message = "El tipo de documento de identificación fiscal no puede ser nulo.")
+        TaxIdType taxIdType,
+
+        @NotBlank(message = "El número de identificación fiscal no puede estar vacío.")
+        String taxIdNumber
 ) {}
