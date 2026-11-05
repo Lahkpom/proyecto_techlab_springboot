@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.dto.sale;
 
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -37,6 +38,9 @@ public record CheckoutRequest(
 
         @NotNull(message = "El método de pago es obligatorio")
         PaymentMethod paymentMethod,
+
+        TaxIdType       customerTaxIdType,
+        String          customerTaxIdNumber,
 
         @Valid
         List<CheckoutItemRequest> items
