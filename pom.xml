@@ -126,6 +126,18 @@
             <version>3.7.0</version>
         </dependency>
 
+<!-- BouncyCastle: Motor criptográfico para firma CMS / PKCS#7 (WSAA ARCA) -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+
 <!--        DEPENDENCIAS PARA AGREGAR MÁS ADELANTE-->
 <!--        spring-boot-starter-actuator-->
     </dependencies>
