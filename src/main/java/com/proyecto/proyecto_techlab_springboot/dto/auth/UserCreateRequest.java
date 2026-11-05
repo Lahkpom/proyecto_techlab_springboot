@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.dto.auth;
 
+import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.util.ValidationUtil;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -24,5 +25,8 @@ public record UserCreateRequest(
                 regexp = ValidationUtil.PHONE_REGEX,
                 message = "El teléfono debe contener exactamente 10 dígitos numéricos."
         )
-        String phone
+        String phone,
+
+        TaxIdType       taxIdType,
+        String          taxIdNumber
 ) {}
