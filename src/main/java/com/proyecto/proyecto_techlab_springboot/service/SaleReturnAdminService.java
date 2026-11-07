@@ -10,6 +10,7 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleReturnRepository;
+import com.proyecto.proyecto_techlab_springboot.service.fiscal.FiscalReceiptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,7 @@ public class SaleReturnAdminService {
     private final VariantService        variantService;
     private final UserService           userService;
     private final MercadoPagoService    mercadoPagoService;
+    private final FiscalReceiptService  fiscalReceiptService;
 
 
     // Matriz de transiciones permitidas para la gestión del expediente
@@ -293,6 +295,9 @@ public class SaleReturnAdminService {
                 auditDetail,
                 operatorId
         );
+
+        // DISPARO FISCAL: Emisión de Nota de Crédito C vinculada a la Factura C original
+        this.fiscalReceiptService.emitCreditNoteForReturn(returnId, operatorId);
 
         // Actualizar marca temporal en el expediente de posventa
         saleReturn.setClosedAt(Instant.now());

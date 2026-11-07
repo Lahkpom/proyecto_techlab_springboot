@@ -9,6 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
+import com.proyecto.proyecto_techlab_springboot.service.fiscal.FiscalReceiptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,8 +35,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SaleAdminService {
 
-    private final ISaleRepository   iSaleRepository;
-    private final VariantService    variantService;
+    private final ISaleRepository       iSaleRepository;
+    private final VariantService        variantService;
+    private final FiscalReceiptService  fiscalReceiptService;
 
     // Matriz de transiciones de ciclo de vida legales
     private static final Map<SaleStatus, Set<SaleStatus>> ALLOWED_TRANSITIONS = Map.of(
@@ -101,9 +103,11 @@ public class SaleAdminService {
         if (targetStatus == SaleStatus.CANCELADO && currentStatus != SaleStatus.ENTREGADO)
             this.restoreVariantStock(sale.getItems());
 
-        // Efectivo entregado aprueba el cobro
-        if (targetStatus == SaleStatus.ENTREGADO && sale.getPaymentMethod() == PaymentMethod.EFECTIVO)
+        // Efectivo entregado aprueba el cobro y dispara Factura C
+        if (targetStatus == SaleStatus.ENTREGADO && sale.getPaymentMethod() == PaymentMethod.EFECTIVO) {
             sale.setPaymentStatus(PaymentStatus.APROBADO);
+            this.fiscalReceiptService.tryEmitInvoiceSafely(sale.getSaleId(), operatorId);
+        }
 
         // Si se cancela una orden ya cobrada, pasa a REEMBOLSADO
         if (targetStatus == SaleStatus.CANCELADO && sale.getPaymentStatus() == PaymentStatus.APROBADO)
@@ -150,6 +154,7 @@ public class SaleAdminService {
         ) {
             // Transferencia aprobada avanza automáticamente a PREPARACION
             sale.setSaleStatus(SaleStatus.PREPARACION);
+            this.fiscalReceiptService.tryEmitInvoiceSafely(sale.getSaleId(), operatorId);
         } else if (
             targetPaymentStatus == PaymentStatus.RECHAZADO &&
             sale.getSaleStatus() == SaleStatus.PENDIENTE

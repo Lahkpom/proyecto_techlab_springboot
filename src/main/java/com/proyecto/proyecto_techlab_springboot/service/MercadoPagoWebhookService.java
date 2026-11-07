@@ -6,6 +6,7 @@ import com.proyecto.proyecto_techlab_springboot.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
+import com.proyecto.proyecto_techlab_springboot.service.fiscal.FiscalReceiptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class MercadoPagoWebhookService {
 
     private final MercadoPagoService    mercadoPagoService;
+    private final FiscalReceiptService  fiscalReceiptService;
     private final ISaleRepository       iSaleRepository;
 
     @Transactional
@@ -106,6 +108,8 @@ public class MercadoPagoWebhookService {
                 && sale.getSaleStatus() == SaleStatus.PENDIENTE
         ) {
             sale.setSaleStatus(SaleStatus.PREPARACION);
+            // DISPARO FISCAL: Emisión de Factura C ante pago aprobado en Mercado Pago
+            this.fiscalReceiptService.tryEmitInvoiceSafely(saleId, null);
         } else if (targetPaymentStatus == PaymentStatus.REEMBOLSADO) {
             sale.setSaleStatus(SaleStatus.REEMBOLSADO);
         }

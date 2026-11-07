@@ -56,10 +56,22 @@ public class FiscalReceiptService {
     private boolean mockMode;
 
     /**
-     * Emite la Factura C correspondiente a una venta cobrada.
+     * Intenta emitir la factura sin interrumpir transacciones de cobro en caso de caída temporal de ARCA.
      */
     @Transactional
-    public FiscalReceipt emitInvoiceForSale(UUID saleId, UUID operatorId) {
+    public void tryEmitInvoiceSafely(UUID saleId, UUID operatorId) {
+        try {
+            this.emitInvoiceForSale(saleId, operatorId);
+        } catch (Exception ex) {
+            log.warn("[ALERTA FISCAL]: No se pudo emitir Factura C en ARCA de forma inmediata para Venta ID {}. Reintentará el Scheduler. Motivo: {}",
+                    saleId, ex.getMessage());
+        }
+    }
+
+    /**
+     * Emite la Factura C correspondiente a una venta cobrada.
+     */
+    private FiscalReceipt emitInvoiceForSale(UUID saleId, UUID operatorId) {
         Sale sale = this.saleService.getSaleByIdOrElseThrow(saleId);
 
         if (sale.getPaymentStatus() != PaymentStatus.APROBADO)
