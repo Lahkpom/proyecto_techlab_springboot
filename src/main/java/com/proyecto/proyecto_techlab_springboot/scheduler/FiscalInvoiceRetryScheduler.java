@@ -3,8 +3,6 @@ package com.proyecto.proyecto_techlab_springboot.scheduler;
 import com.proyecto.proyecto_techlab_springboot.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.model.enums.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.repository.IFiscalReceiptRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.service.SaleService;
 import com.proyecto.proyecto_techlab_springboot.service.fiscal.FiscalReceiptService;
 import lombok.RequiredArgsConstructor;
@@ -37,12 +35,11 @@ public class FiscalInvoiceRetryScheduler {
     )
     public void retryPendingFiscalInvoices() {
         // Obtenemos ventas con pago aprobado pendientes de facturación en lotes de 20
-        List<Sale> unbilledApprovedSales = this.saleService.getAllByPaymentStatus(
-                        PaymentStatus.APROBADO,
-                        PageRequest.of(0, 20)
-                ).stream()
-                .filter(sale -> !this.fiscalReceiptService.existsBySaleIdAndReceiptType(sale.getSaleId(), FiscalReceiptType.FACTURA_C))
-                .toList();
+        List<Sale> unbilledApprovedSales = this.saleService.findUnbilledSales(
+                PaymentStatus.APROBADO,
+                FiscalReceiptType.FACTURA_C,
+                PageRequest.of(0, 20)
+        );
 
         if (unbilledApprovedSales.isEmpty()) return;
 
@@ -50,7 +47,7 @@ public class FiscalInvoiceRetryScheduler {
 
         for (Sale sale : unbilledApprovedSales) {
             try {
-                this.fiscalReceiptService.emitInvoiceForSale(sale.getSaleId(), null);
+                this.fiscalReceiptService.tryEmitInvoiceSafely(sale.getSaleId(), null);
                 log.info("Scheduler Fiscal: Factura C emitida con éxito para Venta ID: {}", sale.getSaleId());
             } catch (Exception ex) {
                 log.warn("Scheduler Fiscal: No se pudo emitir Factura C para Venta ID {}. Motivo: {}", sale.getSaleId(), ex.getMessage());

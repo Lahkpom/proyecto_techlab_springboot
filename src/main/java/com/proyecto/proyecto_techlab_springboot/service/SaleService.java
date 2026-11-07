@@ -9,11 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.exception.sale.EmptySaleItemsExc
 import com.proyecto.proyecto_techlab_springboot.exception.sale.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.exception.variant.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.*;
-import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentMethod;
-import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
-import com.proyecto.proyecto_techlab_springboot.model.enums.TaxIdType;
-import com.proyecto.proyecto_techlab_springboot.model.enums.UserRole;
+import com.proyecto.proyecto_techlab_springboot.model.enums.*;
 import com.proyecto.proyecto_techlab_springboot.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.service.policy.SaleCalculationResult;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -454,8 +449,8 @@ public class SaleService {
         this.variantService.restoreStock(stockMap);
     }
 
-    public Page<Sale> getAllByPaymentStatus(PaymentStatus paymentStatus, Pageable pageable) {
-        return this.iSaleRepository.findAllByPaymentStatusOrderByCreatedAtAsc(paymentStatus, pageable);
+    public List<Sale> findUnbilledSales(PaymentStatus paymentStatus, FiscalReceiptType receiptType, Pageable pageable) {
+        return this.iSaleRepository.findUnbilledSalesByPaymentStatus(paymentStatus, receiptType, pageable);
     }
 
     private SaleResponse mapToSaleResponse(Sale sale, String mpInitPoint) {

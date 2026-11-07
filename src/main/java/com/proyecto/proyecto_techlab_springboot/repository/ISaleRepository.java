@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.repository;
 
 import com.proyecto.proyecto_techlab_springboot.model.Sale;
+import com.proyecto.proyecto_techlab_springboot.model.enums.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,26 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
 
     // Trae por estado de pago, se crea para ser usado por el scheduler de reintento de facturación (Paginado)
     Page<Sale> findAllByPaymentStatusOrderByCreatedAtAsc(PaymentStatus paymentStatus, Pageable pageable);
+
+    /**
+     * Trae las ventas con estado de pago aprobado que no tienen aún su registro en fiscal_receipt.
+     * Es utilizada por el scheduler encargado de reintentar las emisiones de facturas
+     */
+    @Query("""
+        SELECT s FROM Sale s
+        WHERE s.paymentStatus = :paymentStatus
+          AND NOT EXISTS (
+              SELECT 1 FROM FiscalReceipt fr
+              WHERE fr.sale = s
+                AND fr.receiptType = :receiptType
+          )
+        ORDER BY s.createdAt ASC
+    """)
+    List<Sale> findUnbilledSalesByPaymentStatus(
+            @Param("paymentStatus") PaymentStatus       paymentStatus,
+            @Param("receiptType")   FiscalReceiptType   receiptType,
+            Pageable pageable
+    );
 
     // Reconciliación con Mercado Pago (Webhooks y Redirecciones)
     Optional<Sale> findByMpPreferenceId(String mpPreferenceId);
