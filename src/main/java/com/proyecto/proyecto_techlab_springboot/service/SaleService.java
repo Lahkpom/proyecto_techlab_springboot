@@ -423,7 +423,7 @@ public class SaleService {
         log.info("Venta { ID: {} } liquidada financieramente: PaymentStatus=REEMBOLSADO, SaleStatus=CERRADO_CON_DEVOLUCION", saleId);
     }
 
-    private Sale getSaleByIdOrElseThrow(UUID saleId) {
+    public Sale getSaleByIdOrElseThrow(UUID saleId) {
         return this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
     }

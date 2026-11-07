@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.service;
 
 import com.proyecto.proyecto_techlab_springboot.dto.salereturn.*;
 import com.proyecto.proyecto_techlab_springboot.exception.salereturn.*;
+import com.proyecto.proyecto_techlab_springboot.exception.user.UserNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.model.SaleReturn;
@@ -90,6 +91,11 @@ public class SaleReturnService {
         return this.iSaleReturnRepository
                 .findAllBySale_User_UserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::mapToReturnSummaryResponse);
+    }
+
+    public SaleReturn getSaleReturnByIdOrThrow(UUID returnId) {
+        return this.iSaleReturnRepository.findById(returnId)
+                .orElseThrow(() -> new SaleReturnNotFoundException("{ ID: %s }".formatted(returnId)));
     }
 
     // =========================================================================
