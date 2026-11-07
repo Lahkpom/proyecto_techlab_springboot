@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -451,6 +452,10 @@ public class SaleService {
                 );
 
         this.variantService.restoreStock(stockMap);
+    }
+
+    public Page<Sale> getAllByPaymentStatus(PaymentStatus paymentStatus, Pageable pageable) {
+        return this.iSaleRepository.findAllByPaymentStatusOrderByCreatedAtAsc(paymentStatus, pageable);
     }
 
     private SaleResponse mapToSaleResponse(Sale sale, String mpInitPoint) {

@@ -65,7 +65,7 @@ public class FiscalReceiptService {
         if (sale.getPaymentStatus() != PaymentStatus.APROBADO)
             throw new IllegalStateException("Solo se pueden facturar ventas con pago APROBADO.");
 
-        if (this.fiscalReceiptRepository.existsBySale_SaleIdAndReceiptType(saleId, FiscalReceiptType.FACTURA_C))
+        if (this.existsBySaleIdAndReceiptType(saleId, FiscalReceiptType.FACTURA_C))
             throw new IllegalStateException("La venta " + saleId + " ya cuenta con una Factura C emitida.");
 
         Users       operator    = getOperator(operatorId);
@@ -282,5 +282,9 @@ public class FiscalReceiptService {
             log.warn("No se pudo armar el payload QR para comprobante #{}: {}", nro, ex.getMessage());
             return "";
         }
+    }
+
+    public boolean existsBySaleIdAndReceiptType(UUID saleId, FiscalReceiptType receiptType) {
+        return this.fiscalReceiptRepository.existsBySale_SaleIdAndReceiptType(saleId, receiptType);
     }
 }

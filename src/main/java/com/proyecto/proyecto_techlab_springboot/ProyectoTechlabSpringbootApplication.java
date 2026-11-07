@@ -10,6 +10,8 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
+     *  - Agregar en /service subcarpetas /mercadoPago /supabas 
+     * TODO
      *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
      * TODO
      *  - Ver en SaleAdminService, si una venta no puede ser reembolsada después de aprobado el pago, que pasa entonces cuando ya pagó y quiere hacer una devolución?
