@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.scheduler;
 
+import com.proyecto.proyecto_techlab_springboot.exception.fiscal.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.model.enums.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
@@ -48,7 +49,11 @@ public class FiscalInvoiceRetryScheduler {
         for (Sale sale : unbilledApprovedSales) {
             try {
                 this.fiscalReceiptService.tryEmitInvoiceSafely(sale.getSaleId(), null);
+                // TODO - Me parece que este log ya lo hace el método de emisión, habría que sacarlo si es así
                 log.info("Scheduler Fiscal: Factura C emitida con éxito para Venta ID: {}", sale.getSaleId());
+            } catch (ArcaUnavailableException ex) {
+                log.error("Scheduler Fiscal: ARCA se encuentra fuera de servicio. Se suspende el procesamiento del lote hasta la próxima ventana.");
+                break; // Corta el bucle for de inmediato para no saturar al servidor caído
             } catch (Exception ex) {
                 log.warn("Scheduler Fiscal: No se pudo emitir Factura C para Venta ID {}. Motivo: {}", sale.getSaleId(), ex.getMessage());
             }
