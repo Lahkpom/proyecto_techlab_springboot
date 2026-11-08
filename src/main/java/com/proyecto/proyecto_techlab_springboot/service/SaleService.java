@@ -419,6 +419,20 @@ public class SaleService {
         log.info("Venta { ID: {} } liquidada financieramente: PaymentStatus=REEMBOLSADO, SaleStatus=CERRADO_CON_DEVOLUCION", saleId);
     }
 
+    @Transactional
+    public void markSaleAsFiscalRejected(UUID saleId, String rejectionReason) {
+        Sale sale = this.getSaleByIdOrElseThrow(saleId);
+
+        sale.setFiscalRejection(true);
+        sale.setUpdatedAt(Instant.now());
+
+        String auditNote    = "\n[ALERTA FISCAL - RECHAZO ARCA]: El comprobante fue rechazado formalmente: " + rejectionReason;
+        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
+        sale.setInternalNotes(currentNotes + auditNote);
+
+        log.warn("Venta ID {} marcada con fiscalRejection = true. Motivo: {}", saleId, rejectionReason);
+    }
+
     public Sale getSaleByIdOrElseThrow(UUID saleId) {
         return this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
