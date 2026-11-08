@@ -41,6 +41,7 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
     @Query("""
         SELECT s FROM Sale s
         WHERE s.paymentStatus = :paymentStatus
+          AND s.fiscalRejection = false
           AND NOT EXISTS (
               SELECT 1 FROM FiscalReceipt fr
               WHERE fr.sale = s
