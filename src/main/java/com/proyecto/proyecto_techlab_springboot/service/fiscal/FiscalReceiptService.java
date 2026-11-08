@@ -1,6 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.service.fiscal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.proyecto.proyecto_techlab_springboot.exception.fiscal.ArcaBusinessRejectionException;
+import com.proyecto.proyecto_techlab_springboot.exception.fiscal.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.model.*;
 import com.proyecto.proyecto_techlab_springboot.model.enums.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
@@ -38,11 +40,9 @@ import java.util.UUID;
 public class FiscalReceiptService {
 
     private final IFiscalReceiptRepository  fiscalReceiptRepository;
-    private final SaleService saleService;
-    private final ISaleReturnRepository     saleReturnRepository;
-    private final SaleReturnService saleReturnService;
-    private final IUserRepository           userRepository;
-    private final UserService userService;
+    private final SaleService               saleService;
+    private final SaleReturnService         saleReturnService;
+    private final UserService               userService;
     private final WsfeSoapService           wsfeSoapService;
     private final ObjectMapper              objectMapper;
 
@@ -56,15 +56,21 @@ public class FiscalReceiptService {
     private boolean mockMode;
 
     /**
-     * Intenta emitir la factura sin interrumpir transacciones de cobro en caso de caída temporal de ARCA.
+     * Intenta emitir la factura. Si es rechazo formal de datos por ARCA, marca la venta con fiscalRejection=true.
+     * Si es caída de ARCA, relanza ArcaUnavailableException para que el scheduler pueda frenar.
      */
     @Transactional
     public void tryEmitInvoiceSafely(UUID saleId, UUID operatorId) {
         try {
             this.emitInvoiceForSale(saleId, operatorId);
+        } catch (ArcaBusinessRejectionException ex) {
+            log.error("[RECHAZO FISCAL]: Venta ID {} rechazada por ARCA. Detalle: {}", saleId, ex.getMessage());
+            this.saleService.markSaleAsFiscalRejected(saleId, ex.getMessage());
+        } catch (ArcaUnavailableException ex) {
+            log.warn("[ARCA NO DISPONIBLE]: Infraestructura de ARCA inaccesible al intentar facturar Venta ID {}.", saleId);
+            throw ex; // Relanza para que el Scheduler corte el bucle de inmediato
         } catch (Exception ex) {
-            log.warn("[ALERTA FISCAL]: No se pudo emitir Factura C en ARCA de forma inmediata para Venta ID {}. Reintentará el Scheduler. Motivo: {}",
-                    saleId, ex.getMessage());
+            log.warn("[ALERTA FISCAL]: Error inesperado al emitir Factura C para Venta ID {}: {}", saleId, ex.getMessage());
         }
     }
 

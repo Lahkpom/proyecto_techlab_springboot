@@ -149,7 +149,7 @@ public class SaleService {
                 calc.total()
         );
 
-        // Determinar estado inicial según método de pago:
+        // Determinar estado inicial según forma de pago:
         // Efectivo contraentrega nace directamente en PREPARACION
         SaleStatus initialSaleStatus = (request.paymentMethod() == PaymentMethod.EFECTIVO)
                 ? SaleStatus.PREPARACION

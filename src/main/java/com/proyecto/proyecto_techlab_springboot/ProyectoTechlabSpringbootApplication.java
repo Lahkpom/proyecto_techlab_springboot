@@ -10,7 +10,13 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
-     *  - Agregar en /service subcarpetas /mercadoPago /supabas 
+     *  - Ver todos los que llamen a tryEmitInvoiceSafely y hacer que manejen el ArcaUnavailableException que vuelve a relanzarse
+     * TODO
+     *  - Revisar la cadena de logs entre el schudler fiscal y el tryEmit de FiscalReceiptService porque se curzan entre ellas
+     * TODO
+     *  - Agregar a las internal notes de las sale la hora del comentario y también quién lo hizo.
+     * TODO
+     *  - Agregar en /service subcarpetas /mercadoPago /supabase
      * TODO
      *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
      * TODO
