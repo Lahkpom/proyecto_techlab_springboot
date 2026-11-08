@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.service.fiscal;
 
+import com.proyecto.proyecto_techlab_springboot.exception.fiscal.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.model.enums.FiscalReceiptType;
 import lombok.Builder;
 import lombok.Getter;
@@ -270,10 +271,10 @@ public class WsfeSoapService {
         }
 
         String resultado = doc.getElementsByTagName("Resultado").item(0).getTextContent();
-        if ("R".equalsIgnoreCase(resultado)) {
+        if (resultado.equalsIgnoreCase("R")) {
             NodeList obs = doc.getElementsByTagName("Obs");
             String obsMsg = (obs.getLength() > 0) ? obs.item(0).getTextContent() : "Sin observaciones devueltas";
-            throw new RuntimeException("Comprobante RECHAZADO por ARCA. Motivo: " + obsMsg);
+            throw new ArcaBusinessRejectionException("Comprobante RECHAZADO por ARCA. Motivo: " + obsMsg);
         }
 
         String cae          = doc.getElementsByTagName("CAE").item(0).getTextContent();
