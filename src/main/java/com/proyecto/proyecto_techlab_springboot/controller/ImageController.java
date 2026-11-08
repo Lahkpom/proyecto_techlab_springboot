@@ -24,6 +24,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/variants/{variantId}/images")
 @RequiredArgsConstructor
+/**
+ * Hago que este módulo solo sea accesible por operadores y administradores ya que las imágenes que el usuario ve vienen en conjunto
+ * en su consulta a Variants
+  */
+// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class ImageController {
 
     private final ImageService imageService;
