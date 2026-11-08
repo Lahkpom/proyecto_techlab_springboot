@@ -104,6 +104,10 @@ public class Sale {
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PENDIENTE;
 
+    @Builder.Default
+    @Column(name = "fiscal_rejection", nullable = false)
+    private boolean fiscalRejection = false;
+
     @Column(name = "internal_notes", columnDefinition = "TEXT")
     private String internalNotes;
 
