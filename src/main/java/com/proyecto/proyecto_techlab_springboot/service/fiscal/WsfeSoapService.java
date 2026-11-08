@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.service.fiscal;
 
 import com.proyecto.proyecto_techlab_springboot.exception.fiscal.ArcaBusinessRejectionException;
+import com.proyecto.proyecto_techlab_springboot.exception.fiscal.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.model.enums.FiscalReceiptType;
 import lombok.Builder;
 import lombok.Getter;
@@ -75,16 +76,19 @@ public class WsfeSoapService {
             return 0L; // FiscalReceiptService resolverá el incremento con el máximo de la DB local
         }
 
-        WsaaTokenService.AccessTicket ticket = this.wsaaTokenService.getAccessTicket();
-        String soapRequest = buildLastNumberSoapEnvelope(ticket, pointOfSale, receiptType.getAfipCode());
-
         try {
+            WsaaTokenService.AccessTicket ticket = this.wsaaTokenService.getAccessTicket();
+            String soapRequest = buildLastNumberSoapEnvelope(ticket, pointOfSale, receiptType.getAfipCode());
+
             String soapResponse = callSoapHttp(soapRequest, "http://ar.gov.afip.dif.FEV1/FECompUltimoAutorizado");
             return parseLastNumberResponse(soapResponse);
+        } catch (ArcaBusinessRejectionException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Fallo al consultar FECompUltimoAutorizado en ARCA: {}", ex.getMessage(), ex);
-            throw new RuntimeException("Error al consultar último número en ARCA: " + ex.getMessage(), ex);
+            throw new ArcaUnavailableException("Error de comunicación/infraestructura en ARCA: " + ex.getMessage(), ex);
         }
+
     }
 
     /**
@@ -111,13 +115,13 @@ public class WsfeSoapService {
                     .build();
         }
 
-        WsaaTokenService.AccessTicket ticket = this.wsaaTokenService.getAccessTicket();
-        String soapRequest = buildAuthorizeSoapEnvelope(
-                ticket, pointOfSale, receiptType.getAfipCode(), nextNumber, issueDate,
-                docType, docNumber, totalAmount, associatedReceipt
-        );
-
         try {
+            WsaaTokenService.AccessTicket ticket = this.wsaaTokenService.getAccessTicket();
+            String soapRequest = buildAuthorizeSoapEnvelope(
+                    ticket, pointOfSale, receiptType.getAfipCode(), nextNumber, issueDate,
+                    docType, docNumber, totalAmount, associatedReceipt
+            );
+
             String soapResponse = callSoapHttp(soapRequest, "http://ar.gov.afip.dif.FEV1/FECAESolicitar");
             return parseAuthorizeResponse(soapResponse);
         } catch (Exception ex) {
@@ -240,7 +244,7 @@ public class WsfeSoapService {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200)
-            throw new RuntimeException("Respuesta HTTP no exitosa de WSFE [Status " + response.statusCode() + "]: " + response.body());
+            throw new ArcaUnavailableException("Respuesta HTTP anómala de ARCA WSFE [Status %d]: %s.".formatted(response.statusCode(), response.body()), null);
 
         return response.body();
     }
@@ -252,7 +256,7 @@ public class WsfeSoapService {
         NodeList errors = doc.getElementsByTagName("Err");
         if (errors.getLength() > 0) {
             String errMsg = errors.item(0).getTextContent();
-            throw new RuntimeException("ARCA reportó error en FECompUltimoAutorizado: " + errMsg);
+            throw new ArcaBusinessRejectionException("ARCA reportó error en FECompUltimoAutorizado: " + errMsg);
         }
 
         String cbteNro = doc.getElementsByTagName("CbteNro").item(0).getTextContent();
@@ -267,7 +271,7 @@ public class WsfeSoapService {
         NodeList errors = doc.getElementsByTagName("Err");
         if (errors.getLength() > 0) {
             String msg = errors.item(0).getTextContent();
-            throw new RuntimeException("ARCA rechazó el comprobante: " + msg);
+            throw new ArcaBusinessRejectionException("ARCA rechazó el comprobante por error de validación: " + msg);
         }
 
         String resultado = doc.getElementsByTagName("Resultado").item(0).getTextContent();
