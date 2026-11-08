@@ -106,7 +106,7 @@ public class Sale {
 
     @Builder.Default
     @Column(name = "fiscal_rejection", nullable = false)
-    private boolean fiscalRejection = false; 
+    private boolean fiscalRejection = false;
 
     @Column(name = "internal_notes", columnDefinition = "TEXT")
     private String internalNotes;
