@@ -9,8 +9,6 @@ import com.proyecto.proyecto_techlab_springboot.model.enums.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnResolution;
 import com.proyecto.proyecto_techlab_springboot.model.enums.ReturnStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IFiscalReceiptRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.ISaleReturnRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.IUserRepository;
 import com.proyecto.proyecto_techlab_springboot.service.SaleReturnService;
 import com.proyecto.proyecto_techlab_springboot.service.SaleService;
 import com.proyecto.proyecto_techlab_springboot.service.UserService;
@@ -56,8 +54,8 @@ public class FiscalReceiptService {
     private boolean mockMode;
 
     /**
-     * Intenta emitir la factura. Si es rechazo formal de datos por ARCA, marca la venta con fiscalRejection=true.
-     * Si es caída de ARCA, relanza ArcaUnavailableException para que el scheduler pueda frenar.
+     * Disparo seguro para flujos transaccionales de cobro (Mercado Pago / Admin).
+     * Garantiza que NINGUNA caída o rechazo de ARCA aborte el cobro de la orden.
      */
     @Transactional
     public void tryEmitInvoiceSafely(UUID saleId, UUID operatorId) {
@@ -65,13 +63,26 @@ public class FiscalReceiptService {
             this.emitInvoiceForSale(saleId, operatorId);
         } catch (ArcaBusinessRejectionException ex) {
             log.error("[RECHAZO FISCAL]: Venta ID {} rechazada por ARCA. Detalle: {}", saleId, ex.getMessage());
-            this.saleService.markSaleAsFiscalRejected(saleId, ex.getMessage());
         } catch (ArcaUnavailableException ex) {
-            log.warn("[ARCA NO DISPONIBLE]: Infraestructura de ARCA inaccesible al intentar facturar Venta ID {}.", saleId);
-            throw ex; // Relanza para que el Scheduler corte el bucle de inmediato
+            log.warn("[ARCA NO DISPONIBLE]: Servidor de ARCA inaccesible al cobrar Venta ID {}. La orden queda para reintento por Scheduler.", saleId);
         } catch (Exception ex) {
             log.warn("[ALERTA FISCAL]: Error inesperado al emitir Factura C para Venta ID {}: {}", saleId, ex.getMessage());
         }
+    }
+
+    /**
+     * Disparo específico para el Scheduler de reintentos.
+     * Relanza ArcaUnavailableException para que el bucle del scheduler se detenga de inmediato.
+     */
+    @Transactional
+    public void retryInvoiceFromScheduler(UUID saleId) {
+        try {
+            this.emitInvoiceForSale(saleId, null);
+        } catch (ArcaBusinessRejectionException ex) {
+            log.error("[SCHEDULER - RECHAZO FISCAL]: Venta ID {} rechazada por ARCA. Se excluye de futuros reintentos. Detalle: {}", saleId, ex.getMessage());
+        }
+        // Si lanza ArcaUnavailableException, NO se atrapa acá:
+        // sube directamente al catch(ArcaUnavailableException) del Scheduler para ejecutar el break.
     }
 
     /**
@@ -96,17 +107,23 @@ public class FiscalReceiptService {
         // Determinar número correlativo
         long nextNumber = resolveNextNumber(puntoVenta, FiscalReceiptType.FACTURA_C);
 
-        // Solicitar CAE a ARCA
-        WsfeSoapService.CaeAuthorizationResult arcaResult = this.wsfeSoapService.authorizeReceipt(
-                puntoVenta,
-                FiscalReceiptType.FACTURA_C,
-                nextNumber,
-                today,
-                docType,
-                docNumber,
-                sale.getSaleTotal(),
-                null // Sin comprobantes asociados
-        );
+        WsfeSoapService.CaeAuthorizationResult arcaResult;
+        try {
+            // Solicitar CAE a ARCA
+            arcaResult = this.wsfeSoapService.authorizeReceipt(
+                    puntoVenta,
+                    FiscalReceiptType.FACTURA_C,
+                    nextNumber,
+                    today,
+                    docType,
+                    docNumber,
+                    sale.getSaleTotal(),
+                    null // Sin comprobantes asociados
+            );
+        } catch (ArcaBusinessRejectionException ex) {
+            this.saleService.markSaleAsFiscalRejected(saleId, ex.getMessage());
+            throw ex;
+        }
 
         // Armar QR oficial de ARCA
         String qrPayload = generateQrPayload(

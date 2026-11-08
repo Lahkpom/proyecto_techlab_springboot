@@ -48,7 +48,7 @@ public class FiscalInvoiceRetryScheduler {
 
         for (Sale sale : unbilledApprovedSales) {
             try {
-                this.fiscalReceiptService.tryEmitInvoiceSafely(sale.getSaleId(), null);
+                this.fiscalReceiptService.retryInvoiceFromScheduler(sale.getSaleId());
                 // TODO - Me parece que este log ya lo hace el método de emisión, habría que sacarlo si es así
                 log.info("Scheduler Fiscal: Factura C emitida con éxito para Venta ID: {}", sale.getSaleId());
             } catch (ArcaUnavailableException ex) {
