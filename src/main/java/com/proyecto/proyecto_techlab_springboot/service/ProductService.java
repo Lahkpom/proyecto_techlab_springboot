@@ -13,10 +13,12 @@ import com.proyecto.proyecto_techlab_springboot.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -44,19 +46,15 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> getAllPublicProducts() {
-        return this.iProductRepository.findAllPublic()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+    public Page<ProductResponse> getAllPublicProducts(Pageable pageable) {
+        return this.iProductRepository.findAllPublic(pageable)
+                .map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> getAllAdminProducts() {
-        return this.iProductRepository.findAllForAdmin()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+    public Page<ProductResponse> getAllAdminProducts(Pageable pageable) {
+        return this.iProductRepository.findAllForAdmin(pageable)
+                .map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)

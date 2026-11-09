@@ -7,11 +7,14 @@ import com.proyecto.proyecto_techlab_springboot.dto.product.ProductUpdateRequest
 import com.proyecto.proyecto_techlab_springboot.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,8 +32,10 @@ public class ProductAdminController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductResponse>> getProducts() {
-        List<ProductResponse> res = this.productService.getAllAdminProducts();
+    public ResponseEntity<Page<ProductResponse>> getProducts(
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        Page<ProductResponse> res = this.productService.getAllAdminProducts(pageable);
         return ResponseEntity.ok(res);
     }
 
