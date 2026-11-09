@@ -64,7 +64,7 @@ public class ProductService {
         if (p.getRowStatus() != RowStatus.ACTIVE) 
             throw new ProductNoLongerAvailableException("{ ID: %s }".formatted(id));
 
-        return mapToResponse(this.findProductByIdOrThrow(id));
+        return mapToResponse(p);
     }
 
     @Transactional(readOnly = true)
