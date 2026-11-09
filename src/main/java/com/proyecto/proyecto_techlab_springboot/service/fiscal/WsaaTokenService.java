@@ -13,7 +13,7 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -39,7 +39,7 @@ import java.util.Collections;
 import java.util.UUID;
 
 @Slf4j
-@Service
+@Component 
 public class WsaaTokenService {
 
     @Value("${arca.mock-mode}")
