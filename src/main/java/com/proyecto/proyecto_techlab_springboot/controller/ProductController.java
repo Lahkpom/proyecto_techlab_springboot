@@ -16,16 +16,15 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // Hay que hacer que solo pueda consultar por productos ACTIVE
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getProducts() {
-        List<ProductResponse> res = productService.getAllProducts();
+        List<ProductResponse> res = this.productService.getAllPublicProducts();
         return ResponseEntity.ok(res);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable UUID id) {
-        ProductResponse res = this.productService.getProductById(id);
+        ProductResponse res = this.productService.getPublicProductById(id);
         return ResponseEntity.ok(res);
     }
 }

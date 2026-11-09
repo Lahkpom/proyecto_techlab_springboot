@@ -4,6 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.dto.common.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.product.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.dto.product.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.dto.product.ProductUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.exception.product.ProductNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.exception.product.ProductNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.model.Product;
 import com.proyecto.proyecto_techlab_springboot.model.enums.Category;
@@ -43,15 +44,33 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> getAllProducts() {
-        return iProductRepository.findAll()
+    public List<ProductResponse> getAllPublicProducts() {
+        return this.iProductRepository.findAllPublic()
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProductResponse getProductById(UUID id) {
+    public List<ProductResponse> getAllAdminProducts() {
+        return this.iProductRepository.findAllForAdmin()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResponse getPublicProductById(UUID id) {
+        Product p = this.findProductByIdOrThrow(id);
+
+        if (p.getRowStatus() != RowStatus.ACTIVE) 
+            throw new ProductNoLongerAvailableException("{ ID: %s }".formatted(id));
+
+        return mapToResponse(this.findProductByIdOrThrow(id));
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResponse getAdminProductById(UUID id) {
         return mapToResponse(this.findProductByIdOrThrow(id));
     }
 

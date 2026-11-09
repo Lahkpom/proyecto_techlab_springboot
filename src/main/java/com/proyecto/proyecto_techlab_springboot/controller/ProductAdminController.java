@@ -24,20 +24,19 @@ public class ProductAdminController {
 
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductCreateRequest req) {
-        ProductResponse res = productService.createProduct(req);
+        ProductResponse res = this.productService.createProduct(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
-    // Tiene que traer tanto ACTIVE como INACTIVE
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getProducts() {
-        List<ProductResponse> res = productService.getAllProducts();
+        List<ProductResponse> res = this.productService.getAllAdminProducts();
         return ResponseEntity.ok(res);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable UUID id) {
-        ProductResponse res = this.productService.getProductById(id);
+        ProductResponse res = this.productService.getAdminProductById(id);
         return ResponseEntity.ok(res);
     }
 
