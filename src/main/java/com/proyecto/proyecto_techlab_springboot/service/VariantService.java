@@ -174,6 +174,14 @@ public class VariantService {
             throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(variant.getVariantId()));
     }
 
+    public void inactivateVariantsByProductId(UUID productId) {
+        this.iVariantRepository.inactivateVariantsByProductId(productId);
+    }
+
+    public void deleteVariantsByProductId(UUID productId) {
+        this.iVariantRepository.deleteVariantsByProductId(productId);
+    }
+
     private VariantResponse mapToResponse(Variant v) {
         return new VariantResponse(
                 v.getVariantId(),

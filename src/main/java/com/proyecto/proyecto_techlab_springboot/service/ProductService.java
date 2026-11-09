@@ -10,7 +10,6 @@ import com.proyecto.proyecto_techlab_springboot.model.Product;
 import com.proyecto.proyecto_techlab_springboot.model.enums.Category;
 import com.proyecto.proyecto_techlab_springboot.model.enums.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.repository.IProductRepository;
-import com.proyecto.proyecto_techlab_springboot.repository.IVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,8 +25,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final IProductRepository iProductRepository;
-    private final IVariantRepository iVariantRepository;
+    private final IProductRepository    iProductRepository;
+    private final VariantService        variantService;
 
     @Transactional
     public ProductResponse createProduct(ProductCreateRequest request) {
@@ -93,10 +92,10 @@ public class ProductService {
 
         if (lastStatus == RowStatus.ACTIVE) {
             if (request.rowStatus() == RowStatus.INACTIVE)
-                this.iVariantRepository.inactivateVariantsByProductId(id);
+                this.variantService.inactivateVariantsByProductId(id);
 
             if (request.rowStatus() == RowStatus.DELETED)
-                this.iVariantRepository.deleteVariantsByProductId(id);
+                this.variantService.deleteVariantsByProductId(id);
         }
 
         log.info("Estado del Producto modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", product.getProductId(), lastStatus, product.getRowStatus());
