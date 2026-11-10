@@ -2,8 +2,8 @@ package com.proyecto.proyecto_techlab_springboot.sale.repository;
 
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

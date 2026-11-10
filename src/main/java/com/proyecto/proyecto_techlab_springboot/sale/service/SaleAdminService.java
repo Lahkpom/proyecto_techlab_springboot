@@ -4,9 +4,9 @@ import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleStatus
 import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentMethod;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.fiscal.service.FiscalReceiptService;

@@ -1,8 +1,5 @@
 package com.proyecto.proyecto_techlab_springboot.sale.model;
 
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentMethod;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import jakarta.persistence.*;

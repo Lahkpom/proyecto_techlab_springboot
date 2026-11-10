@@ -5,8 +5,8 @@ import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleInternalNoteRequest
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleResponse;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleSummaryResponse;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleAdminService;
 import com.proyecto.proyecto_techlab_springboot.auth.util.SecurityContextUtil;
 

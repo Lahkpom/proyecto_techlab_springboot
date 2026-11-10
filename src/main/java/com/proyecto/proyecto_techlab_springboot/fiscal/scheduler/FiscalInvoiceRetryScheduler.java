@@ -3,7 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.fiscal.scheduler;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;
 import com.proyecto.proyecto_techlab_springboot.fiscal.service.FiscalReceiptService;
 import lombok.RequiredArgsConstructor;

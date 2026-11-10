@@ -2,8 +2,8 @@ package com.proyecto.proyecto_techlab_springboot.sale.scheduler;
 
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;

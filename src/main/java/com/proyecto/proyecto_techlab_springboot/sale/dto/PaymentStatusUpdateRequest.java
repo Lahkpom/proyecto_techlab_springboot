@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.sale.dto;
 
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 

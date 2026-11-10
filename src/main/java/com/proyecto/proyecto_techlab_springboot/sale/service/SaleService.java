@@ -6,14 +6,13 @@ import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleStatus
 import com.proyecto.proyecto_techlab_springboot.sale.exception.MissingTaxIdentificationException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.sale.model.*;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.image.model.Image;
 import com.proyecto.proyecto_techlab_springboot.image.service.ImageService;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
-import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
-import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;

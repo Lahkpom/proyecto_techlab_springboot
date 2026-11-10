@@ -1,5 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.sale.dto;
 
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import lombok.Builder;
 
@@ -21,8 +24,8 @@ public record SaleSummaryResponse(
         String          customerTaxIdNumber,
         Integer         saleQuantity,
         BigDecimal      saleTotal,
-        SaleStatus      saleStatus,
-        PaymentMethod   paymentMethod,
-        PaymentStatus   paymentStatus,
+        SaleStatus saleStatus,
+        PaymentMethod paymentMethod,
+        PaymentStatus paymentStatus,
         Instant         createdAt
 ) {}

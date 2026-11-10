@@ -9,7 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.salereturn.model.SaleReturnItem;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnReason;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnResolution;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.salereturn.repository.ISaleReturnItemRepository;
 import com.proyecto.proyecto_techlab_springboot.salereturn.repository.ISaleReturnRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;

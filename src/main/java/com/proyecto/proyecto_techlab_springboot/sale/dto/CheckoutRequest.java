@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.sale.dto;
 
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;

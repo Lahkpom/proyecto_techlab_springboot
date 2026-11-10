@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.salereturn.exception;
 
-import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 
 import java.util.UUID;
 

@@ -6,7 +6,7 @@ import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailable
 import com.proyecto.proyecto_techlab_springboot.fiscal.client.WsfeSoapService;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceipt;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
-import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnResolution;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnStatus;
 import com.proyecto.proyecto_techlab_springboot.fiscal.repository.IFiscalReceiptRepository;
