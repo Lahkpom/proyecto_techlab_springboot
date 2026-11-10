@@ -1,0 +1,49 @@
+package com.proyecto.proyecto_techlab_springboot.image.model;
+
+import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.Instant;
+
+@Setter
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SuperBuilder
+@Entity
+@Table(name = "image")
+public class Image {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "image_id", nullable = false, updatable = false)
+    private Long imageId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", nullable = false)
+    private Variant variant;
+
+    @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
+    private String imageUrl;
+
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder;
+
+    @Column(name = "is_primary", nullable = false)
+    private boolean isPrimary = false;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    protected Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    protected Instant updatedAt;
+
+}
