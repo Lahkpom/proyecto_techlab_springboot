@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.auth.util;
 
-import com.proyecto.proyecto_techlab_springboot.common.exception.common.InvalidCredentialsException;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCredentialsException;
 import com.proyecto.proyecto_techlab_springboot.auth.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

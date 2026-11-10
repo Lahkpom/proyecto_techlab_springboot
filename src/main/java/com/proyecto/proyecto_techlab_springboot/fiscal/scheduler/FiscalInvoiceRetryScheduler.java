@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.scheduler;
 
-import com.proyecto.proyecto_techlab_springboot.common.exception.fiscal.ArcaUnavailableException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatus;

@@ -1,12 +1,12 @@
 package com.proyecto.proyecto_techlab_springboot.sale.service;
 
-import com.proyecto.proyecto_techlab_springboot.common.exception.common.AccessDeniedException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.common.InsufficientStockException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.sale.InvalidSaleStatusTransitionException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.sale.MissingTaxIdentificationException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.sale.EmptySaleItemsException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.sale.SaleNotFoundException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.variant.VariantNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InsufficientStockException;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.MissingTaxIdentificationException;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.EmptySaleItemsException;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.image.model.Image;
 import com.proyecto.proyecto_techlab_springboot.image.service.ImageService;

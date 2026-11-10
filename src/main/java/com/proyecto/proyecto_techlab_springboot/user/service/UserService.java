@@ -1,7 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.user.service;
 
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
-import com.proyecto.proyecto_techlab_springboot.common.exception.user.UserNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.user.exception.UserNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;

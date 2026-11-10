@@ -1,7 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.client;
 
-import com.proyecto.proyecto_techlab_springboot.common.exception.fiscal.ArcaBusinessRejectionException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.fiscal.ArcaUnavailableException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
 import lombok.Builder;
 import lombok.Getter;

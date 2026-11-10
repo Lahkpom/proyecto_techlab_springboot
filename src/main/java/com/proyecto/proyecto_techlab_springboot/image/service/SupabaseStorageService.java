@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.image.service;
 
-import com.proyecto.proyecto_techlab_springboot.common.exception.image.StorageOperationException;
+import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;

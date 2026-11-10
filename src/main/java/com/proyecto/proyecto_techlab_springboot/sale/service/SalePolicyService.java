@@ -1,7 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.sale.service;
 
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
-import com.proyecto.proyecto_techlab_springboot.common.exception.sale.MinimumWholesalerQuantityException;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.MinimumWholesalerQuantityException;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import org.springframework.stereotype.Service;
 

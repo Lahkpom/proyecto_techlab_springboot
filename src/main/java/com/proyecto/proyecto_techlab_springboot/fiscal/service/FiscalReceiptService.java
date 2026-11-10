@@ -1,8 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.proyecto.proyecto_techlab_springboot.common.exception.fiscal.ArcaBusinessRejectionException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.fiscal.ArcaUnavailableException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.client.WsfeSoapService;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceipt;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;

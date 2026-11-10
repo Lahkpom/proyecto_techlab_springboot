@@ -2,11 +2,11 @@ package com.proyecto.proyecto_techlab_springboot.auth.service;
 
 import com.proyecto.proyecto_techlab_springboot.auth.dto.*;
 import com.proyecto.proyecto_techlab_springboot.user.dto.UserResponse;
-import com.proyecto.proyecto_techlab_springboot.common.exception.auth.AccountLockedException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.auth.EmailNotVerifiedException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.auth.ExpiredPasswordException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.common.InvalidCredentialsException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.user.UserAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.auth.exception.AccountLockedException;
+import com.proyecto.proyecto_techlab_springboot.auth.exception.EmailNotVerifiedException;
+import com.proyecto.proyecto_techlab_springboot.auth.exception.ExpiredPasswordException;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCredentialsException;
+import com.proyecto.proyecto_techlab_springboot.user.exception.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.auth.model.UserSession;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;

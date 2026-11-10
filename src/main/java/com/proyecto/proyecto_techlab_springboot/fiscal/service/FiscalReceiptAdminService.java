@@ -1,7 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.service;
 
 import com.proyecto.proyecto_techlab_springboot.fiscal.dto.FiscalReceiptResponse;
-import com.proyecto.proyecto_techlab_springboot.common.exception.fiscal.FiscalReceiptNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.FiscalReceiptNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceipt;
 import com.proyecto.proyecto_techlab_springboot.fiscal.repository.IFiscalReceiptRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;

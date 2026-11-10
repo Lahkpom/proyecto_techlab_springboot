@@ -5,8 +5,8 @@ import com.proyecto.proyecto_techlab_springboot.image.dto.ImagePresignedUrlReque
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImagePresignedUrlResponse;
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImageReorderRequest;
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImageResponse;
-import com.proyecto.proyecto_techlab_springboot.common.exception.image.ImageNotFoundException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.image.InvalidImageReorderException;
+import com.proyecto.proyecto_techlab_springboot.image.exception.ImageNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.image.exception.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.image.model.Image;
 import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.image.repository.IImageRepository;

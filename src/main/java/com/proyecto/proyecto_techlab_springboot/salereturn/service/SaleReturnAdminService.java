@@ -1,7 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.salereturn.service;
 
-import com.proyecto.proyecto_techlab_springboot.common.exception.salereturn.InvalidReturnStatusTransitionException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.salereturn.SaleReturnNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.salereturn.exception.SaleReturnNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.dto.*;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnReason;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnResolution;
