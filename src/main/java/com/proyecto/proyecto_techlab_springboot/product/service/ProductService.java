@@ -27,7 +27,7 @@ import java.util.UUID;
 public class ProductService {
 
     private final IProductRepository    iProductRepository;
-    private final VariantService variantService;
+    private final VariantService        variantService;
 
     @Transactional
     public ProductResponse createProduct(ProductCreateRequest request) {
@@ -38,7 +38,7 @@ public class ProductService {
                 .productLongDesc(request.longDesc())
                 .build();
 
-        Product saved = iProductRepository.save(product);
+        Product saved = this.iProductRepository.save(product);
 
         log.info("Producto creado exitosamente { ID: {}, categoría: {}, nombre: {} }", saved.getProductId(), saved.getProductCategory(), saved.getProductName());
 
