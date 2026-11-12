@@ -10,8 +10,6 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
-     *  - Ver todos los que llamen a tryEmitInvoiceSafely y hacer que manejen el ArcaUnavailableException que vuelve a relanzarse
-     * TODO
      *  - Revisar la cadena de logs entre el schudler fiscal y el tryEmit de FiscalReceiptService porque se curzan entre ellas
      * TODO
      *  - Agregar a las internal notes de las sale la hora del comentario y también quién lo hizo.
