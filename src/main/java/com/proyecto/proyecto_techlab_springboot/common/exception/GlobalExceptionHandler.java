@@ -3,6 +3,9 @@ package com.proyecto.proyecto_techlab_springboot.common.exception;
 import com.proyecto.proyecto_techlab_springboot.auth.exception.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.auth.exception.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.auth.exception.ExpiredPasswordException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.InvalidFiscalOperationException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperationException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.ActiveReturnAlreadyExistsException;
@@ -271,6 +274,28 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Maneja 422: Violación de precondiciones operativas para emitir comprobantes fiscales
+    @ExceptionHandler(InvalidFiscalOperationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidFiscalOperation(InvalidFiscalOperationException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_FISCAL_OPERATION",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: Rechazo formal de datos fiscales por parte de ARCA (WSFE)
+    @ExceptionHandler(ArcaBusinessRejectionException.class)
+    public ResponseEntity<ErrorResponse> handleArcaBusinessRejection(ArcaBusinessRejectionException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "ARCA_BUSINESS_REJECTION",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja 423 (Cuenta bloqueada por fuerza bruta)
     @ExceptionHandler(AccountLockedException.class)
     public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex, HttpServletRequest request) {
@@ -321,6 +346,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_GATEWAY, 
                 "MERCADO_PAGO_INTEGRATION_ERROR",
                 ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 502: Caída o indisponibilidad de los servidores de ARCA (WSAA / WSFE)
+    @ExceptionHandler(ArcaUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleArcaUnavailable(ArcaUnavailableException ex, HttpServletRequest request) {
+        log.error("Fallo de comunicación con ARCA: {}", ex.getMessage());
+        return buildResponse(
+                HttpStatus.BAD_GATEWAY,
+                "ARCA_SERVICE_UNAVAILABLE",
+                "El servicio de facturación electrónica (ARCA) no se encuentra disponible temporalmente.",
                 request
         );
     }

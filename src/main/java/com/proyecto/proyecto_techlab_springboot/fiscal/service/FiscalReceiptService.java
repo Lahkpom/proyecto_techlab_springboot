@@ -5,6 +5,8 @@ import com.proyecto.proyecto_techlab_springboot.fiscal.client.IWsfeSoapClient;
 import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.FiscalReceiptAlreadyExistsException;
+import com.proyecto.proyecto_techlab_springboot.fiscal.exception.InvalidFiscalOperationException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceipt;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.fiscal.repository.IFiscalReceiptRepository;
@@ -41,13 +43,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FiscalReceiptService {
 
-    private final IFiscalReceiptRepository iIiscalReceiptRepository;
+    private final IFiscalReceiptRepository iFiscalReceiptRepository;
 
     private final SaleService       saleService;
     private final SaleReturnService saleReturnService;
     private final UserService       userService;
     private final IWsfeSoapClient   wsfeSoapClient;
-    private final ObjectMapper      objectMapper;    
+    private final ObjectMapper      objectMapper;
     private final ArcaProperties    arcaProperties;
 
     /**
@@ -89,10 +91,10 @@ public class FiscalReceiptService {
         Sale sale = this.saleService.getSaleByIdOrElseThrow(saleId);
 
         if (sale.getPaymentStatus() != PaymentStatus.APROBADO)
-            throw new IllegalStateException("Solo se pueden facturar ventas con pago APROBADO.");
+            throw new InvalidFiscalOperationException("Solo se pueden facturar ventas con pago APROBADO. Estado actual: " + sale.getPaymentStatus());
 
         if (this.existsBySaleIdAndReceiptType(saleId, FiscalReceiptType.FACTURA_C))
-            throw new IllegalStateException("La venta " + saleId + " ya cuenta con una Factura C emitida.");
+            throw new FiscalReceiptAlreadyExistsException("{ Venta ID: %s, Tipo: %s }".formatted(saleId, FiscalReceiptType.FACTURA_C));
 
         Users     operator = getOperator(operatorId);
         LocalDate today    = LocalDate.now();
@@ -153,7 +155,7 @@ public class FiscalReceiptService {
                 .createdBy(operator)
                 .build();
 
-        FiscalReceipt saved = this.iIiscalReceiptRepository.save(receipt);
+        FiscalReceipt saved = this.iFiscalReceiptRepository.save(receipt);
         log.info("Factura C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", arcaProperties.puntoVenta(), saved.getReceiptNumber(), saved.getCae());
         return saved;
     }
@@ -172,21 +174,21 @@ public class FiscalReceiptService {
         SaleReturn saleReturn = this.saleReturnService.getSaleReturnByIdOrThrow(returnId);
 
         if (saleReturn.getReturnStatus() != ReturnStatus.APROBADA)
-            throw new IllegalStateException("Solo se pueden emitir notas de crédito para devoluciones APROBADAS.");
+            throw new InvalidFiscalOperationException("Solo se pueden emitir notas de crédito para devoluciones APROBADAS. Estado actual: " + saleReturn.getReturnStatus());
 
         if (saleReturn.getReturnResolution() != ReturnResolution.REEMBOLSO_DINERO)
-            throw new IllegalStateException("La devolución no tiene resolución monetaria (REEMBOLSO_DINERO).");
+            throw new InvalidFiscalOperationException("La devolución no tiene resolución monetaria (REEMBOLSO_DINERO). Resolución actual: " + saleReturn.getReturnResolution());
 
-        if (this.iIiscalReceiptRepository.findBySaleReturn_ReturnId(returnId).isPresent())
-            throw new IllegalStateException("Ya existe una Nota de Crédito emitida para la devolución " + returnId);
+        if (this.iFiscalReceiptRepository.findBySaleReturn_ReturnId(returnId).isPresent())
+            throw new FiscalReceiptAlreadyExistsException("{ Devolución ID: %s, Tipo: %s }".formatted(returnId, FiscalReceiptType.NOTA_CREDITO_C));
 
         Sale sale = saleReturn.getSale();
 
         // Recuperar la Factura C original para asociarla ante ARCA
-        FiscalReceipt originalInvoice = this.iIiscalReceiptRepository
+        FiscalReceipt originalInvoice = this.iFiscalReceiptRepository
                 .findBySale_SaleIdAndReceiptType(sale.getSaleId(), FiscalReceiptType.FACTURA_C)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No se encontró la Factura C original para la venta " + sale.getSaleId() + ". No se puede asociar la Nota de Crédito en ARCA."
+                .orElseThrow(() -> new InvalidFiscalOperationException(
+                        "No se encontró la Factura C original para la venta %s. No se puede asociar la Nota de Crédito en ARCA.".formatted(sale.getSaleId())
                 ));
 
         Users     operator   = getOperator(operatorId);
@@ -247,7 +249,7 @@ public class FiscalReceiptService {
                 .createdBy(operator)
                 .build();
 
-        FiscalReceipt saved = this.iIiscalReceiptRepository.save(creditNote);
+        FiscalReceipt saved = this.iFiscalReceiptRepository.save(creditNote);
         log.info("Nota de Crédito C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", arcaProperties.puntoVenta(), saved.getReceiptNumber(), saved.getCae());
         return saved;
     }
@@ -270,32 +272,32 @@ public class FiscalReceiptService {
     }
 
     private String generateQrPayload(
-            LocalDate   date,
-            int         pos,
-            int         cbteTipo,
-            long        nro,
-            BigDecimal  importe,
-            int         docTipo,
-            String      docNro,
-            String      cae
+            LocalDate  date,
+            int        pos,
+            int        cbteTipo,
+            long       nro,
+            BigDecimal importe,
+            int        docTipo,
+            String     docNro,
+            String     cae
     ) {
         try {
             long numericDocNro = parseLongOrDefault(docNro, 0L);
 
             Map<String, Object> qrData = Map.ofEntries(
-                    Map.entry("ver"         , 1),
-                    Map.entry("fecha"       , date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))),
-                    Map.entry("cuit"        , Long.parseLong(arcaProperties.cuit().replaceAll("[^0-9]", ""))),
-                    Map.entry("ptoVta"      , pos),
-                    Map.entry("tipoCmp"     , cbteTipo),
-                    Map.entry("nroCmp"      , nro),
-                    Map.entry("importe"     , importe.doubleValue()),
-                    Map.entry("moneda"      , "PES"),
-                    Map.entry("ctz"         , 1),
-                    Map.entry("tipoDocRec"  , docTipo),
-                    Map.entry("nroDocRec"   , numericDocNro),
-                    Map.entry("tipoCodAut"  , "E"),
-                    Map.entry("codAut"      , Long.parseLong(cae.trim()))
+                    Map.entry("ver"       , 1),
+                    Map.entry("fecha"     , date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))),
+                    Map.entry("cuit"      , Long.parseLong(arcaProperties.cuit().replaceAll("[^0-9]", ""))),
+                    Map.entry("ptoVta"    , pos),
+                    Map.entry("tipoCmp"   , cbteTipo),
+                    Map.entry("nroCmp"    , nro),
+                    Map.entry("importe"   , importe.doubleValue()),
+                    Map.entry("moneda"    , "PES"),
+                    Map.entry("ctz"       , 1),
+                    Map.entry("tipoDocRec", docTipo),
+                    Map.entry("nroDocRec" , numericDocNro),
+                    Map.entry("tipoCodAut", "E"),
+                    Map.entry("codAut"    , Long.parseLong(cae.trim()))
             );
 
             String json    = objectMapper.writeValueAsString(qrData);
@@ -309,7 +311,7 @@ public class FiscalReceiptService {
 
     private long parseLongOrDefault(String value, long defaultValue) {
         if (value == null || value.isBlank()) return defaultValue;
-        
+
         try {
             return Long.parseLong(value.trim());
         } catch (NumberFormatException ex) {
@@ -318,6 +320,6 @@ public class FiscalReceiptService {
     }
 
     public boolean existsBySaleIdAndReceiptType(UUID saleId, FiscalReceiptType receiptType) {
-        return this.iIiscalReceiptRepository.existsBySale_SaleIdAndReceiptType(saleId, receiptType);
+        return this.iFiscalReceiptRepository.existsBySale_SaleIdAndReceiptType(saleId, receiptType);
     }
 }
