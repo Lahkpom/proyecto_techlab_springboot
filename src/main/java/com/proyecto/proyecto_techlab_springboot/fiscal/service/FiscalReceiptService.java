@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.fiscal.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.fiscal.client.IWsfeSoapClient;
+import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceipt;
@@ -18,7 +19,6 @@ import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,13 +47,8 @@ public class FiscalReceiptService {
     private final SaleReturnService saleReturnService;
     private final UserService       userService;
     private final IWsfeSoapClient   wsfeSoapClient;
-    private final ObjectMapper      objectMapper;
-
-    @Value("${arca.punto-venta}")
-    private int puntoVenta;
-
-    @Value("${arca.cuit}")
-    private String cuitEmisor;
+    private final ObjectMapper      objectMapper;    
+    private final ArcaProperties    arcaProperties;
 
     /**
      * Disparo seguro para flujos transaccionales de cobro (Mercado Pago / Admin).
@@ -107,13 +102,13 @@ public class FiscalReceiptService {
         String docNumber  = resolveDocNumber(sale, docType);
 
         // Determinar número correlativo
-        long   nextNumber = resolveNextNumber(puntoVenta, FiscalReceiptType.FACTURA_C);
+        long   nextNumber = resolveNextNumber(arcaProperties.puntoVenta(), FiscalReceiptType.FACTURA_C);
 
         IWsfeSoapClient.CaeAuthorizationResult arcaResult;
         try {
             // Solicitar CAE a ARCA
             arcaResult = this.wsfeSoapClient.authorizeReceipt(
-                    puntoVenta,
+                    arcaProperties.puntoVenta(),
                     FiscalReceiptType.FACTURA_C,
                     nextNumber,
                     today,
@@ -130,7 +125,7 @@ public class FiscalReceiptService {
         // Armar QR oficial de ARCA
         String qrPayload = generateQrPayload(
                 today,
-                puntoVenta,
+                arcaProperties.puntoVenta(),
                 FiscalReceiptType.FACTURA_C.getAfipCode(),
                 arcaResult.getReceiptNumber(),
                 sale.getSaleTotal(),
@@ -144,7 +139,7 @@ public class FiscalReceiptService {
                 .sale(sale)
                 .receiptType(FiscalReceiptType.FACTURA_C)
                 .afipCbteTipo(FiscalReceiptType.FACTURA_C.getAfipCode())
-                .pointOfSale(puntoVenta)
+                .pointOfSale(arcaProperties.puntoVenta())
                 .receiptNumber(arcaResult.getReceiptNumber())
                 .cae(arcaResult.getCae())
                 .caeDueDate(arcaResult.getCaeDueDate())
@@ -159,7 +154,7 @@ public class FiscalReceiptService {
                 .build();
 
         FiscalReceipt saved = this.iIiscalReceiptRepository.save(receipt);
-        log.info("Factura C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", puntoVenta, saved.getReceiptNumber(), saved.getCae());
+        log.info("Factura C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", arcaProperties.puntoVenta(), saved.getReceiptNumber(), saved.getCae());
         return saved;
     }
 
@@ -200,7 +195,7 @@ public class FiscalReceiptService {
         // Resolver receptor y número
         int       docType    = originalInvoice.getDocType();
         String    docNumber  = originalInvoice.getDocNumber();
-        long      nextNumber = resolveNextNumber(puntoVenta, FiscalReceiptType.NOTA_CREDITO_C);
+        long      nextNumber = resolveNextNumber(arcaProperties.puntoVenta(), FiscalReceiptType.NOTA_CREDITO_C);
 
         IWsfeSoapClient.AssociatedReceiptInfo associatedReceipt = IWsfeSoapClient.AssociatedReceiptInfo.builder()
                 .receiptType(originalInvoice.getAfipCbteTipo())
@@ -210,7 +205,7 @@ public class FiscalReceiptService {
 
         // Solicitar CAE a ARCA
         IWsfeSoapClient.CaeAuthorizationResult arcaResult = this.wsfeSoapClient.authorizeReceipt(
-                puntoVenta,
+                arcaProperties.puntoVenta(),
                 FiscalReceiptType.NOTA_CREDITO_C,
                 nextNumber,
                 today,
@@ -223,7 +218,7 @@ public class FiscalReceiptService {
         // Armar QR oficial
         String qrPayload = generateQrPayload(
                 today,
-                puntoVenta,
+                arcaProperties.puntoVenta(),
                 FiscalReceiptType.NOTA_CREDITO_C.getAfipCode(),
                 arcaResult.getReceiptNumber(),
                 saleReturn.getRefundAmount(),
@@ -238,7 +233,7 @@ public class FiscalReceiptService {
                 .saleReturn(saleReturn)
                 .receiptType(FiscalReceiptType.NOTA_CREDITO_C)
                 .afipCbteTipo(FiscalReceiptType.NOTA_CREDITO_C.getAfipCode())
-                .pointOfSale(puntoVenta)
+                .pointOfSale(arcaProperties.puntoVenta())
                 .receiptNumber(arcaResult.getReceiptNumber())
                 .cae(arcaResult.getCae())
                 .caeDueDate(arcaResult.getCaeDueDate())
@@ -253,7 +248,7 @@ public class FiscalReceiptService {
                 .build();
 
         FiscalReceipt saved = this.iIiscalReceiptRepository.save(creditNote);
-        log.info("Nota de Crédito C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", puntoVenta, saved.getReceiptNumber(), saved.getCae());
+        log.info("Nota de Crédito C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", arcaProperties.puntoVenta(), saved.getReceiptNumber(), saved.getCae());
         return saved;
     }
 
@@ -290,7 +285,7 @@ public class FiscalReceiptService {
             Map<String, Object> qrData = Map.ofEntries(
                     Map.entry("ver"         , 1),
                     Map.entry("fecha"       , date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))),
-                    Map.entry("cuit"        , Long.parseLong(cuitEmisor.replaceAll("[^0-9]", ""))),
+                    Map.entry("cuit"        , Long.parseLong(arcaProperties.cuit().replaceAll("[^0-9]", ""))),
                     Map.entry("ptoVta"      , pos),
                     Map.entry("tipoCmp"     , cbteTipo),
                     Map.entry("nroCmp"      , nro),
