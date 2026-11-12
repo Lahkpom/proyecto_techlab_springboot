@@ -1,21 +1,21 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.proyecto.proyecto_techlab_springboot.fiscal.client.IWsfeSoapClient;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
-import com.proyecto.proyecto_techlab_springboot.fiscal.client.WsfeSoapService;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceipt;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
+import com.proyecto.proyecto_techlab_springboot.fiscal.repository.IFiscalReceiptRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
+import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
+import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnResolution;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnStatus;
-import com.proyecto.proyecto_techlab_springboot.fiscal.repository.IFiscalReceiptRepository;
-import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.SaleReturn;
 import com.proyecto.proyecto_techlab_springboot.salereturn.service.SaleReturnService;
-import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;
-import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
+import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,21 +41,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FiscalReceiptService {
 
-    private final IFiscalReceiptRepository  fiscalReceiptRepository;
-    private final SaleService               saleService;
-    private final SaleReturnService         saleReturnService;
-    private final UserService               userService;
-    private final WsfeSoapService wsfeSoapService;
-    private final ObjectMapper              objectMapper;
+    private final IFiscalReceiptRepository iIiscalReceiptRepository;
+
+    private final SaleService       saleService;
+    private final SaleReturnService saleReturnService;
+    private final UserService       userService;
+    private final IWsfeSoapClient   wsfeSoapClient;
+    private final ObjectMapper      objectMapper;
 
     @Value("${arca.punto-venta}")
     private int puntoVenta;
 
     @Value("${arca.cuit}")
     private String cuitEmisor;
-
-    @Value("${arca.mock-mode}")
-    private boolean mockMode;
 
     /**
      * Disparo seguro para flujos transaccionales de cobro (Mercado Pago / Admin).
@@ -101,20 +99,20 @@ public class FiscalReceiptService {
         if (this.existsBySaleIdAndReceiptType(saleId, FiscalReceiptType.FACTURA_C))
             throw new IllegalStateException("La venta " + saleId + " ya cuenta con una Factura C emitida.");
 
-        Users operator    = getOperator(operatorId);
-        LocalDate   today       = LocalDate.now();
+        Users     operator = getOperator(operatorId);
+        LocalDate today    = LocalDate.now();
 
         // Resolver receptor fiscal
-        int     docType     = resolveDocType(sale);
-        String  docNumber   = resolveDocNumber(sale, docType);
+        int    docType    = resolveDocType(sale);
+        String docNumber  = resolveDocNumber(sale, docType);
 
         // Determinar número correlativo
-        long nextNumber = resolveNextNumber(puntoVenta, FiscalReceiptType.FACTURA_C);
+        long   nextNumber = resolveNextNumber(puntoVenta, FiscalReceiptType.FACTURA_C);
 
-        WsfeSoapService.CaeAuthorizationResult arcaResult;
+        IWsfeSoapClient.CaeAuthorizationResult arcaResult;
         try {
             // Solicitar CAE a ARCA
-            arcaResult = this.wsfeSoapService.authorizeReceipt(
+            arcaResult = this.wsfeSoapClient.authorizeReceipt(
                     puntoVenta,
                     FiscalReceiptType.FACTURA_C,
                     nextNumber,
@@ -122,7 +120,7 @@ public class FiscalReceiptService {
                     docType,
                     docNumber,
                     sale.getSaleTotal(),
-                    null // Sin comprobantes asociados
+                    null
             );
         } catch (ArcaBusinessRejectionException ex) {
             this.saleService.markSaleAsFiscalRejected(saleId, ex.getMessage());
@@ -160,7 +158,7 @@ public class FiscalReceiptService {
                 .createdBy(operator)
                 .build();
 
-        FiscalReceipt saved = this.fiscalReceiptRepository.save(receipt);
+        FiscalReceipt saved = this.iIiscalReceiptRepository.save(receipt);
         log.info("Factura C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", puntoVenta, saved.getReceiptNumber(), saved.getCae());
         return saved;
     }
@@ -184,34 +182,34 @@ public class FiscalReceiptService {
         if (saleReturn.getReturnResolution() != ReturnResolution.REEMBOLSO_DINERO)
             throw new IllegalStateException("La devolución no tiene resolución monetaria (REEMBOLSO_DINERO).");
 
-        if (this.fiscalReceiptRepository.findBySaleReturn_ReturnId(returnId).isPresent())
+        if (this.iIiscalReceiptRepository.findBySaleReturn_ReturnId(returnId).isPresent())
             throw new IllegalStateException("Ya existe una Nota de Crédito emitida para la devolución " + returnId);
 
         Sale sale = saleReturn.getSale();
 
         // Recuperar la Factura C original para asociarla ante ARCA
-        FiscalReceipt originalInvoice = this.fiscalReceiptRepository
+        FiscalReceipt originalInvoice = this.iIiscalReceiptRepository
                 .findBySale_SaleIdAndReceiptType(sale.getSaleId(), FiscalReceiptType.FACTURA_C)
                 .orElseThrow(() -> new IllegalStateException(
                         "No se encontró la Factura C original para la venta " + sale.getSaleId() + ". No se puede asociar la Nota de Crédito en ARCA."
                 ));
 
-        Users       operator    = getOperator(operatorId);
-        LocalDate   today       = LocalDate.now();
+        Users     operator   = getOperator(operatorId);
+        LocalDate today      = LocalDate.now();
 
         // Resolver receptor y número
-        int     docType     = originalInvoice.getDocType();
-        String  docNumber   = originalInvoice.getDocNumber();
-        long    nextNumber  = resolveNextNumber(puntoVenta, FiscalReceiptType.NOTA_CREDITO_C);
+        int       docType    = originalInvoice.getDocType();
+        String    docNumber  = originalInvoice.getDocNumber();
+        long      nextNumber = resolveNextNumber(puntoVenta, FiscalReceiptType.NOTA_CREDITO_C);
 
-        WsfeSoapService.AssociatedReceiptInfo associatedReceipt = WsfeSoapService.AssociatedReceiptInfo.builder()
+        IWsfeSoapClient.AssociatedReceiptInfo associatedReceipt = IWsfeSoapClient.AssociatedReceiptInfo.builder()
                 .receiptType(originalInvoice.getAfipCbteTipo())
                 .pointOfSale(originalInvoice.getPointOfSale())
                 .receiptNumber(originalInvoice.getReceiptNumber())
                 .build();
 
         // Solicitar CAE a ARCA
-        WsfeSoapService.CaeAuthorizationResult arcaResult = this.wsfeSoapService.authorizeReceipt(
+        IWsfeSoapClient.CaeAuthorizationResult arcaResult = this.wsfeSoapClient.authorizeReceipt(
                 puntoVenta,
                 FiscalReceiptType.NOTA_CREDITO_C,
                 nextNumber,
@@ -254,16 +252,15 @@ public class FiscalReceiptService {
                 .createdBy(operator)
                 .build();
 
-        FiscalReceipt saved = this.fiscalReceiptRepository.save(creditNote);
+        FiscalReceipt saved = this.iIiscalReceiptRepository.save(creditNote);
         log.info("Nota de Crédito C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", puntoVenta, saved.getReceiptNumber(), saved.getCae());
         return saved;
     }
 
     private int resolveDocType(Sale sale) {
-        if (sale.getCustomerTaxIdType() != null)
-            return sale.getCustomerTaxIdType().getAfipCode();
-
-        return 99; // Sin identificar / Consumidor Final
+        return (sale.getCustomerTaxIdType() != null)
+                ? sale.getCustomerTaxIdType().getAfipCode()
+                : 99; // Sin identificar / Consumidor Final
     }
 
     private String resolveDocNumber(Sale sale, int docType) {
@@ -274,11 +271,7 @@ public class FiscalReceiptService {
     }
 
     private long resolveNextNumber(int pos, FiscalReceiptType type) {
-        long lastNumber = (mockMode)
-                ? this.fiscalReceiptRepository.findMaxReceiptNumber(pos, type)
-                : this.wsfeSoapService.getLastAuthorizedNumber(pos, type);
-
-        return lastNumber + 1;
+        return this.wsfeSoapClient.getLastAuthorizedNumber(pos, type) + 1;
     }
 
     private String generateQrPayload(
@@ -291,12 +284,8 @@ public class FiscalReceiptService {
             String      docNro,
             String      cae
     ) {
-        // TODO - Ver este nested try-catch y mejorar el segundo
         try {
-            long numericDocNro = 0L;
-            try {
-                numericDocNro = Long.parseLong(docNro);
-            } catch (NumberFormatException ignored) {}
+            long numericDocNro = parseLongOrDefault(docNro, 0L);
 
             Map<String, Object> qrData = Map.ofEntries(
                     Map.entry("ver"         , 1),
@@ -314,7 +303,7 @@ public class FiscalReceiptService {
                     Map.entry("codAut"      , Long.parseLong(cae.trim()))
             );
 
-            String json = objectMapper.writeValueAsString(qrData);
+            String json    = objectMapper.writeValueAsString(qrData);
             String encoded = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
             return "https://www.afip.gob.ar/fe/qr/?p=" + encoded;
         } catch (Exception ex) {
@@ -323,7 +312,17 @@ public class FiscalReceiptService {
         }
     }
 
+    private long parseLongOrDefault(String value, long defaultValue) {
+        if (value == null || value.isBlank()) return defaultValue;
+        
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
+    }
+
     public boolean existsBySaleIdAndReceiptType(UUID saleId, FiscalReceiptType receiptType) {
-        return this.fiscalReceiptRepository.existsBySale_SaleIdAndReceiptType(saleId, receiptType);
+        return this.iIiscalReceiptRepository.existsBySale_SaleIdAndReceiptType(saleId, receiptType);
     }
 }
