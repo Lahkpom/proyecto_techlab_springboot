@@ -17,6 +17,7 @@ public interface IWsaaTokenClient {
         private String  sign;
         private Instant expiration;
 
+        // Se considera válido si le quedan más de 10 minutos de vigencia
         public boolean isValid() {
             return expiration != null && Instant.now().plus(10, ChronoUnit.MINUTES).isBefore(expiration);
         }

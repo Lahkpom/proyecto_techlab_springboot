@@ -28,13 +28,13 @@ public interface IWsfeSoapClient {
         private String      cae;
         private LocalDate   caeDueDate;
         private Long        receiptNumber;
-        private String      result;
+        private String      result; // "A" = Aprobado, "R" = Rechazado
     }
 
     @Getter
     @Builder
     class AssociatedReceiptInfo {
-        private Integer receiptType;
+        private Integer receiptType; // Ej: 11 (Factura C)
         private Integer pointOfSale;
         private Long    receiptNumber;
     }

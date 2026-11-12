@@ -3,11 +3,10 @@ package com.proyecto.proyecto_techlab_springboot.fiscal.client;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -16,6 +15,7 @@ import org.xml.sax.InputSource;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -23,24 +23,14 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Este servicio abstrae las llamadas HTTP/SOAP contra el Web Service wsfev1:
- *     - Consulta del último comprobante autorizado (FECompUltimoAutorizado).
- *     - Solicitud de autorización de comprobante (FECAESolicitar).
- *     - Parseo de respuestas XML (Resultado == "A" para Aprobado, captura de errores y observaciones de ARCA).
- *     - Simulación local cuando arca.mock-mode=true.
- */
 @Slf4j
 @Component
+@Profile("prod")
 @RequiredArgsConstructor
-public class WsfeSoapService {
+public class WsfeSoapService implements IWsfeSoapClient {
 
-    private final WsaaTokenService wsaaTokenService;
-
-    @Value("${arca.mock-mode}")
-    private boolean mockMode;
+    private final IWsaaTokenClient wsaaTokenClient;
 
     @Value("${arca.wsfe-url}")
     private String wsfeUrl;
@@ -50,36 +40,14 @@ public class WsfeSoapService {
 
     private static final DateTimeFormatter AFIP_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    @Getter
-    @Builder
-    public static class CaeAuthorizationResult {
-        private String      cae;
-        private LocalDate   caeDueDate;
-        private Long        receiptNumber;
-        private String      result; // "A" = Aprobado, "R" = Rechazado
-    }
-
-    @Getter
-    @Builder
-    public static class AssociatedReceiptInfo {
-        private Integer receiptType; // Ej: 11 (Factura C)
-        private Integer pointOfSale;
-        private Long    receiptNumber;
-    }
-
     /**
      * Consulta a ARCA el último número de comprobante autorizado para el punto de venta y tipo.
      */
+    @Override
     public long getLastAuthorizedNumber(int pointOfSale, FiscalReceiptType receiptType) {
-        if (mockMode) {
-            log.info("[ARCA MOCK] Consulta de último número para POS: {}, Tipo: {}", pointOfSale, receiptType);
-            return 0L; // FiscalReceiptService resolverá el incremento con el máximo de la DB local
-        }
-
         try {
-            WsaaTokenService.AccessTicket ticket = this.wsaaTokenService.getAccessTicket();
-            String soapRequest = buildLastNumberSoapEnvelope(ticket, pointOfSale, receiptType.getAfipCode());
-
+            IWsaaTokenClient.AccessTicket ticket = this.wsaaTokenClient.getAccessTicket();
+            String soapRequest  = buildLastNumberSoapEnvelope(ticket, pointOfSale, receiptType.getAfipCode());
             String soapResponse = callSoapHttp(soapRequest, "http://ar.gov.afip.dif.FEV1/FECompUltimoAutorizado");
             return parseLastNumberResponse(soapResponse);
         } catch (ArcaBusinessRejectionException ex) {
@@ -88,35 +56,24 @@ public class WsfeSoapService {
             log.error("Fallo al consultar FECompUltimoAutorizado en ARCA: {}", ex.getMessage(), ex);
             throw new ArcaUnavailableException("Error de comunicación/infraestructura en ARCA: " + ex.getMessage(), ex);
         }
-
     }
 
     /**
      * Solicita a ARCA la autorización (CAE) de un comprobante tipo C (Factura C o Nota de Crédito C).
      */
+    @Override
     public CaeAuthorizationResult authorizeReceipt(
-            int                     pointOfSale,
-            FiscalReceiptType       receiptType,
-            long                    nextNumber,
-            LocalDate               issueDate,
-            int                     docType,
-            String                  docNumber,
-            BigDecimal              totalAmount,
-            AssociatedReceiptInfo   associatedReceipt
+            int                   pointOfSale,
+            FiscalReceiptType     receiptType,
+            long                  nextNumber,
+            LocalDate             issueDate,
+            int                   docType,
+            String                docNumber,
+            BigDecimal            totalAmount,
+            AssociatedReceiptInfo associatedReceipt
     ) {
-        if (mockMode) {
-            log.info("[ARCA MOCK] Solicitando autorización simulada para cbte #{} (Tipo: {})", nextNumber, receiptType);
-            String mockCae = String.valueOf(ThreadLocalRandom.current().nextLong(10000000000000L, 99999999999999L));
-            return CaeAuthorizationResult.builder()
-                    .cae(mockCae)
-                    .caeDueDate(issueDate.plusDays(10))
-                    .receiptNumber(nextNumber)
-                    .result("A")
-                    .build();
-        }
-
         try {
-            WsaaTokenService.AccessTicket ticket = this.wsaaTokenService.getAccessTicket();
+            IWsaaTokenClient.AccessTicket ticket = this.wsaaTokenClient.getAccessTicket();
             String soapRequest = buildAuthorizeSoapEnvelope(
                     ticket, pointOfSale, receiptType.getAfipCode(), nextNumber, issueDate,
                     docType, docNumber, totalAmount, associatedReceipt
@@ -124,13 +81,15 @@ public class WsfeSoapService {
 
             String soapResponse = callSoapHttp(soapRequest, "http://ar.gov.afip.dif.FEV1/FECAESolicitar");
             return parseAuthorizeResponse(soapResponse);
+        } catch (ArcaBusinessRejectionException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Fallo al autorizar comprobante en ARCA WSFE: {}", ex.getMessage(), ex);
-            throw new RuntimeException("Error en comunicación con ARCA WSFE: " + ex.getMessage(), ex);
+            throw new ArcaUnavailableException("Error en comunicación con ARCA WSFE: " + ex.getMessage(), ex);
         }
     }
 
-    private String buildLastNumberSoapEnvelope(WsaaTokenService.AccessTicket ticket, int pos, int cbteTipo) {
+    private String buildLastNumberSoapEnvelope(IWsaaTokenClient.AccessTicket ticket, int pos, int cbteTipo) {
         return """
         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="http://ar.gov.afip.dif.FEV1/">
            <soapenv:Header/>
@@ -150,18 +109,18 @@ public class WsfeSoapService {
     }
 
     private String buildAuthorizeSoapEnvelope(
-            WsaaTokenService.AccessTicket   ticket,
-            int                             pos,
-            int                             cbteTipo,
-            long                            cbteNro,
-            LocalDate                       issueDate,
-            int                             docType,
-            String                          docNumber,
-            BigDecimal                      totalAmount,
-            AssociatedReceiptInfo           associatedReceipt
+            IWsaaTokenClient.AccessTicket ticket,
+            int                           pos,
+            int                           cbteTipo,
+            long                          cbteNro,
+            LocalDate                     issueDate,
+            int                           docType,
+            String                        docNumber,
+            BigDecimal                    totalAmount,
+            AssociatedReceiptInfo         associatedReceipt
     ) {
-        String formattedDate    = issueDate.format(AFIP_DATE_FORMATTER);
-        String formattedAmount  = totalAmount.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
+        String formattedDate   = issueDate.format(AFIP_DATE_FORMATTER);
+        String formattedAmount = totalAmount.setScale(2, RoundingMode.HALF_UP).toPlainString();
 
         String cbtesAsocNode = "";
         if (associatedReceipt != null) {
@@ -281,9 +240,9 @@ public class WsfeSoapService {
             throw new ArcaBusinessRejectionException("Comprobante RECHAZADO por ARCA. Motivo: " + obsMsg);
         }
 
-        String cae          = doc.getElementsByTagName("CAE").item(0).getTextContent();
-        String caeFchVto    = doc.getElementsByTagName("CAEFchVto").item(0).getTextContent();
-        String cbteDesde    = doc.getElementsByTagName("CbteDesde").item(0).getTextContent();
+        String cae       = doc.getElementsByTagName("CAE").item(0).getTextContent();
+        String caeFchVto = doc.getElementsByTagName("CAEFchVto").item(0).getTextContent();
+        String cbteDesde = doc.getElementsByTagName("CbteDesde").item(0).getTextContent();
 
         return CaeAuthorizationResult.builder()
                 .cae(cae.trim())
