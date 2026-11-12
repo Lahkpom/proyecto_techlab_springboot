@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.client;
 
+import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
@@ -30,15 +31,10 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class WsfeSoapService implements IWsfeSoapClient {
 
-    private final IWsaaTokenClient wsaaTokenClient;
-
-    @Value("${arca.wsfe-url}")
-    private String wsfeUrl;
-
-    @Value("${arca.cuit}")
-    private String cuitEmisor;
-
     private static final DateTimeFormatter AFIP_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    private final IWsaaTokenClient  wsaaTokenClient;
+    private final ArcaProperties    arcaProperties;
 
     /**
      * Consulta a ARCA el último número de comprobante autorizado para el punto de venta y tipo.
@@ -105,7 +101,7 @@ public class WsfeSoapService implements IWsfeSoapClient {
               </ar:FECompUltimoAutorizado>
            </soapenv:Body>
         </soapenv:Envelope>
-        """.formatted(ticket.getToken(), ticket.getSign(), cuitEmisor, pos, cbteTipo);
+        """.formatted(ticket.getToken(), ticket.getSign(), arcaProperties.cuit(), pos, cbteTipo);
     }
 
     private String buildAuthorizeSoapEnvelope(
@@ -179,7 +175,7 @@ public class WsfeSoapService implements IWsfeSoapClient {
            </soapenv:Body>
         </soapenv:Envelope>
         """.formatted(
-                ticket.getToken(), ticket.getSign(), cuitEmisor,
+                ticket.getToken(), ticket.getSign(), arcaProperties.cuit(),
                 pos, cbteTipo,
                 docType, docNumber, cbteNro, cbteNro, formattedDate,
                 formattedAmount, formattedAmount,
@@ -193,7 +189,7 @@ public class WsfeSoapService implements IWsfeSoapClient {
                 .build();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(wsfeUrl))
+                .uri(URI.create(arcaProperties.wsfeUrl()))
                 .timeout(Duration.ofSeconds(20))
                 .header("Content-Type", "text/xml; charset=UTF-8")
                 .header("SOAPAction", soapAction)

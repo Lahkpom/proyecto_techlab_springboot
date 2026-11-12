@@ -1,6 +1,9 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.client;
 
+import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
@@ -11,7 +14,6 @@ import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -41,16 +43,10 @@ import java.util.Collections;
 @Slf4j
 @Component
 @Profile("prod")
+@RequiredArgsConstructor
 public class WsaaTokenService implements IWsaaTokenClient {
 
-    @Value("${arca.wsaa-url}")
-    private String wsaaUrl;
-
-    @Value("${arca.cert-path}")
-    private String certPath;
-
-    @Value("${arca.key-path}")
-    private String keyPath;
+    private final ArcaProperties arcaProperties;
 
     private AccessTicket cachedTicket;
 
@@ -61,7 +57,7 @@ public class WsaaTokenService implements IWsaaTokenClient {
     public synchronized AccessTicket getAccessTicket() {
         if (cachedTicket != null && cachedTicket.isValid()) return cachedTicket;
 
-        log.info("Solicitando nuevo Ticket de Acceso a WSAA ({})", wsaaUrl);
+        log.info("Solicitando nuevo Ticket de Acceso a WSAA ({})", arcaProperties.wsaaUrl());
         try {
             String loginTicketRequest = buildLoginTicketRequestXml();
             byte[] signedCms          = signCms(loginTicketRequest.getBytes(StandardCharsets.UTF_8));
@@ -97,8 +93,8 @@ public class WsaaTokenService implements IWsaaTokenClient {
     }
 
     private byte[] signCms(byte[] contentToSign) throws Exception {
-        X509Certificate certificate = loadCertificate(certPath);
-        PrivateKey      privateKey  = loadPrivateKey(keyPath);
+        X509Certificate certificate = loadCertificate(arcaProperties.certPath());
+        PrivateKey      privateKey  = loadPrivateKey(arcaProperties.keyPath());
 
         CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
         ContentSigner          signer    = new JcaContentSignerBuilder("SHA256withRSA").build(privateKey);
@@ -156,7 +152,7 @@ public class WsaaTokenService implements IWsaaTokenClient {
                 .build();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(wsaaUrl))
+                .uri(URI.create(arcaProperties.wsaaUrl()))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "text/xml; charset=UTF-8")
                 .header("SOAPAction", "")
