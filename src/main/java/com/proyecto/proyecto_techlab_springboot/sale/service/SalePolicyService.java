@@ -1,15 +1,17 @@
 package com.proyecto.proyecto_techlab_springboot.sale.service;
 
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleAmountException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.MinimumWholesalerQuantityException;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
-import org.springframework.stereotype.Service;
+
+import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-@Service
+@Component 
 public class SalePolicyService {
 
     private static final int WHOLESALER_MINIMUM_QUANTITY    = 10;
@@ -37,7 +39,7 @@ public class SalePolicyService {
             UserRole    buyerRole
     ) {
         if (subtotal == null || subtotal.compareTo(BigDecimal.ZERO) <= 0)
-            throw new IllegalArgumentException("El subtotal debe ser un monto mayor a cero.");
+            throw new InvalidSaleAmountException("El subtotal debe ser un monto mayor a cero.");
 
         BigDecimal safeShippingCost = (shippingCost != null && shippingCost.compareTo(BigDecimal.ZERO) >= 0)
                 ? shippingCost.setScale(2, RoundingMode.HALF_UP)

@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.repository;
 
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import org.springframework.data.domain.Page;
@@ -87,8 +88,14 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
      */
     @Query("""
         SELECT s FROM Sale s
-        WHERE s.saleStatus = com.proyecto.proyecto_techlab_springboot.model.enums.SaleStatus.PENDIENTE
+        WHERE s.saleStatus = com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.PENDIENTE
           AND s.createdAt < :threshold
     """)
     List<Sale> findExpiredPendingSales(@Param("threshold") Instant threshold);
+
+    // Para simulación en perfil DEV: obtiene la última orden pendiente de Mercado Pago
+    Optional<Sale> findFirstByPaymentMethodAndPaymentStatusOrderByCreatedAtDesc(
+            PaymentMethod paymentMethod,
+            PaymentStatus paymentStatus
+    );
 }

@@ -12,6 +12,7 @@ import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
 import com.proyecto.proyecto_techlab_springboot.image.model.Image;
 import com.proyecto.proyecto_techlab_springboot.image.service.ImageService;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
+import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
@@ -50,7 +51,7 @@ public class SaleService {
 
     private final ISaleRepository iSaleRepository;
 
-    private final MercadoPagoService    mercadoPagoService;
+    private final IMercadoPagoClient    iMercadoPagoClient;
     private final SalePolicyService     salePolicyService;
     private final VariantService variantService;
     private final ImageService imageService;
@@ -192,7 +193,7 @@ public class SaleService {
         // Si es Mercado Pago, generar la preferencia (COMENTAR CUANDO SE HAGAN PRUEBAS PARA QUE NO MOLESTE)
         String mpInitPoint = null;
         if (request.paymentMethod() == PaymentMethod.MERCADO_PAGO) {
-            MercadoPagoPreferenceResult prefResult = this.mercadoPagoService.createPreference(savedSale);
+            MercadoPagoPreferenceResult prefResult = this.iMercadoPagoClient.createPreference(savedSale);
             savedSale.setMpPreferenceId(prefResult.preferenceId());
             mpInitPoint = prefResult.initPoint();
         }
@@ -264,7 +265,7 @@ public class SaleService {
             );
 
         // Crear nueva preferencia en MP y actualizar entidad administrada
-        MercadoPagoPreferenceResult prefResult = this.mercadoPagoService.createPreference(sale);
+        MercadoPagoPreferenceResult prefResult = this.iMercadoPagoClient.createPreference(sale);
         sale.setMpPreferenceId(prefResult.preferenceId());
 
         return mapToSaleResponse(sale, prefResult.initPoint());

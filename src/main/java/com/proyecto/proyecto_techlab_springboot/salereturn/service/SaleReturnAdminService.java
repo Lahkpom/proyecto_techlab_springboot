@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.salereturn.service;
 
+import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnRefundException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnStatusTransitionException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.SaleReturnNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.dto.*;
@@ -11,7 +12,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.salereturn.repository.ISaleReturnRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
-import com.proyecto.proyecto_techlab_springboot.sale.service.MercadoPagoService;
+import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.SaleReturn;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.SaleReturnItem;
@@ -43,10 +44,10 @@ import java.util.*;
 public class SaleReturnAdminService {
 
     private final ISaleReturnRepository iSaleReturnRepository;
-    private final SaleService saleService;
-    private final VariantService variantService;
-    private final UserService userService;
-    private final MercadoPagoService mercadoPagoService;
+    private final IMercadoPagoClient    iMercadoPagoService;
+    private final SaleService           saleService;
+    private final VariantService        variantService;
+    private final UserService           userService;
     private final FiscalReceiptService  fiscalReceiptService;
 
 
@@ -249,31 +250,31 @@ public class SaleReturnAdminService {
             );
 
         if (saleReturn.getReturnResolution() != ReturnResolution.REEMBOLSO_DINERO)
-            throw new IllegalStateException(
+            throw new InvalidReturnRefundException(
                     "Esta devolución tiene resolución '%s'. No requiere liquidación monetaria."
                             .formatted(saleReturn.getReturnResolution())
             );
 
         if (saleReturn.getRefundAmount().compareTo(BigDecimal.ZERO) <= 0)
-            throw new IllegalStateException("El monto liquidable para esta devolución es $0.00.");
+            throw new InvalidReturnRefundException("El monto liquidable para esta devolución es $0.00.");
 
         Sale sale = saleReturn.getSale();
 
         if (sale.getPaymentStatus() == PaymentStatus.REEMBOLSADO)
-            throw new IllegalStateException("El cobro de la orden vinculada ya figura como REEMBOLSADO.");
+            throw new InvalidReturnRefundException("El cobro de la orden vinculada ya figura como REEMBOLSADO.");
 
         String auditDetail;
 
         // Liquidación según forma de pago original
         if (sale.getPaymentMethod() == PaymentMethod.MERCADO_PAGO) {
             if (sale.getMpPaymentId() == null || sale.getMpPaymentId().isBlank())
-                throw new IllegalStateException(
+                throw new InvalidReturnRefundException(
                         "La orden { ID: %s } fue pagada con Mercado Pago pero no registra un mpPaymentId válido para ejecutar el reembolso."
                                 .formatted(sale.getSaleId())
                 );
 
             Long mpPayId    = Long.valueOf(sale.getMpPaymentId());
-            Long mpRefundId = this.mercadoPagoService.refundPayment(
+            Long mpRefundId = this.iMercadoPagoService.refundPayment(
                     mpPayId,
                     saleReturn.getRefundAmount(),
                     saleReturn.getReturnId()
@@ -284,7 +285,7 @@ public class SaleReturnAdminService {
         } else {
             // TRANSFERENCIA o EFECTIVO: Conciliación manual bancaria
             if (request == null || request.transactionReference() == null || request.transactionReference().isBlank())
-                throw new IllegalArgumentException(
+                throw new InvalidReturnRefundException(
                         "Para órdenes abonadas con %s es obligatorio ingresar el código o número de comprobante de la transferencia de reintegro."
                                 .formatted(sale.getPaymentMethod())
                 );

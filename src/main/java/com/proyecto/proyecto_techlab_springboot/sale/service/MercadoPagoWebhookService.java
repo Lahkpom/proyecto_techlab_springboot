@@ -1,11 +1,9 @@
 package com.proyecto.proyecto_techlab_springboot.sale.service;
 
-import com.mercadopago.resources.payment.Payment;
-import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
-import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.fiscal.service.FiscalReceiptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +19,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MercadoPagoWebhookService {
 
-    private final MercadoPagoService    mercadoPagoService;
-    private final FiscalReceiptService  fiscalReceiptService;
-    private final ISaleRepository       iSaleRepository;
+    private final IMercadoPagoClient   iMercadoPagoClient;
+    private final SaleService          saleService;
+    private final FiscalReceiptService fiscalReceiptService;
 
     @Transactional
     public void processNotification(String xSignature, String action, String topic, String dataId) {
@@ -34,7 +32,7 @@ public class MercadoPagoWebhookService {
         }
 
         // Validar firma criptográfica HMAC-SHA256
-        this.mercadoPagoService.validateWebhookSignature(xSignature, dataId);
+        this.iMercadoPagoClient.validateWebhookSignature(xSignature, dataId);
 
         // Solo procesamos eventos asociados a pagos
         if (!"payment".equalsIgnoreCase(topic) && !"payment.created".equalsIgnoreCase(action) && !"payment.updated".equalsIgnoreCase(action)) {
@@ -46,8 +44,8 @@ public class MercadoPagoWebhookService {
         String  stringPaymentId = String.valueOf(paymentId);
 
         // Consultar a la API de Mercado Pago para verificar autenticidad y montos
-        Payment payment             = this.mercadoPagoService.getPaymentDetails(paymentId);
-        String  externalReference   = payment.getExternalReference();
+        IMercadoPagoClient.MercadoPagoPaymentDetails payment = this.iMercadoPagoClient.getPaymentDetails(paymentId);
+        String externalReference = payment.externalReference();
 
         if (externalReference == null || externalReference.isBlank()) {
             log.error("El pago {} de MP no contiene externalReference vinculada a una orden.", paymentId);
@@ -55,19 +53,18 @@ public class MercadoPagoWebhookService {
         }
 
         UUID saleId = UUID.fromString(externalReference);
-        Sale sale   = this.iSaleRepository.findById(saleId)
-                .orElseThrow(() -> new SaleNotFoundException("Venta no encontrada para externalReference: " + saleId));
+        Sale sale   = this.saleService.getSaleByIdOrElseThrow(saleId);
 
         // Traducir el estado de MP a nuestro enum de dominio
-        PaymentStatus targetPaymentStatus = mapMercadoPagoStatus(payment.getStatus());
+        PaymentStatus targetPaymentStatus = mapMercadoPagoStatus(payment.status());
         if (targetPaymentStatus == null) {
-            log.warn("El pago MP ID: {} posee un estado no gestionable ('{}'). Se descarta.", paymentId, payment.getStatus());
+            log.warn("El pago MP ID: {} posee un estado no gestionable ('{}'). Se descarta.", paymentId, payment.status());
             return;
         }
 
         // VALIDACIÓN DE MONTO (Amount Tampering) para pagos aprobados
         if (targetPaymentStatus == PaymentStatus.APROBADO) {
-            BigDecimal paidAmount       = payment.getTransactionAmount();
+            BigDecimal paidAmount       = payment.transactionAmount();
             BigDecimal expectedAmount   = sale.getSaleTotal();
 
             if (paidAmount == null || expectedAmount.compareTo(paidAmount) != 0) {
@@ -76,14 +73,13 @@ public class MercadoPagoWebhookService {
                                 .formatted(paidAmount, expectedAmount, stringPaymentId);
                 log.error("Discrepancia financiera detectada en Venta ID: {}. Reteniendo en AUDITORIA. {}", saleId, warningMessage);
 
-                // Asignamos el estado de retención y la nota de alerta
                 sale.setSaleStatus(SaleStatus.AUDITORIA);
                 sale.setMpPaymentId(stringPaymentId);
                 sale.setUpdatedAt(Instant.now());
 
                 String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
                 sale.setInternalNotes(currentNotes + warningMessage);
-
+                
                 // Finalizamos la ejecución del webhook con éxito hacia MP, dejando la orden retenida en la BD
                 return;
             }
@@ -104,9 +100,7 @@ public class MercadoPagoWebhookService {
         sale.setUpdatedAt(Instant.now());
 
         // Transición cruzada a nivel logístico
-        if (targetPaymentStatus == PaymentStatus.APROBADO
-                && sale.getSaleStatus() == SaleStatus.PENDIENTE
-        ) {
+        if (targetPaymentStatus == PaymentStatus.APROBADO && sale.getSaleStatus() == SaleStatus.PENDIENTE) {
             sale.setSaleStatus(SaleStatus.PREPARACION);
             // DISPARO FISCAL: Emisión de Factura C ante pago aprobado en Mercado Pago
             this.fiscalReceiptService.tryEmitInvoiceSafely(saleId, null);

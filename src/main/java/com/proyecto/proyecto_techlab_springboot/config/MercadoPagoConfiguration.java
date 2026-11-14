@@ -5,11 +5,13 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 /**
  * Inicializa MercadoPagoConfig.setAccessToken() al iniciar el contenedor de Spring Boot.
  */
 @Configuration
+@Profile("prod")
 @Getter
 public class MercadoPagoConfiguration {
 
