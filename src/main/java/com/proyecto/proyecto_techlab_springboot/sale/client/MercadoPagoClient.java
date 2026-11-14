@@ -1,9 +1,9 @@
-package com.proyecto.proyecto_techlab_springboot.sale.service;
+package com.proyecto.proyecto_techlab_springboot.sale.client;
 
-import com.mercadopago.core.MPRequestOptions;
-import com.mercadopago.client.preference.*;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentRefundClient;
+import com.mercadopago.client.preference.*;
+import com.mercadopago.core.MPRequestOptions;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.payment.Payment;
@@ -18,7 +18,8 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -29,21 +30,24 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * Creación de Preferencias y Validación Criptográfica
  */
 @Slf4j
-@Service
+@Component
+@Profile("prod")
 @RequiredArgsConstructor
-public class MercadoPagoService {
+public class MercadoPagoClient implements IMercadoPagoClient {
 
     private final MercadoPagoConfiguration mpConfig;
 
     /**
      * Crea una preferencia de pago en Mercado Pago (Checkout Pro) con los datos congelados de la venta.
      */
+    @Override
     public MercadoPagoPreferenceResult createPreference(Sale sale) {
         try {
             PreferenceClient            client  = new PreferenceClient();
@@ -51,7 +55,7 @@ public class MercadoPagoService {
 
             // Agregar renglones de prendas
             for (SaleItem saleItem : sale.getItems()) {
-                PreferenceItemRequest item = PreferenceItemRequest.builder()
+                items.add(PreferenceItemRequest.builder()
                         .id(String.valueOf(saleItem.getSaleItemId()))
                         .title("%s - %s".formatted(saleItem.getProductName(), saleItem.getVariantDesc()))
                         .description("Talle: %s | Color: %s".formatted(saleItem.getVariantSize(), saleItem.getColorName()))
@@ -59,34 +63,29 @@ public class MercadoPagoService {
                         .quantity(saleItem.getQuantity())
                         .currencyId("ARS")
                         .unitPrice(saleItem.getUnitPrice())
-                        .build();
-
-                items.add(item);
+                        .build());
             }
 
             // Si hubo descuento de rol, agregarlo como ítem de crédito/descuento negativo
-            if (sale.getSaleDiscountAmount().compareTo(BigDecimal.ZERO) > 0)
-                items.add(
-                    PreferenceItemRequest.builder()
+            if (sale.getSaleDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                items.add(PreferenceItemRequest.builder()
                         .id("DISCOUNT")
                         .title("Descuento Comercial Aplicado")
                         .quantity(1)
                         .currencyId("ARS")
                         .unitPrice(sale.getSaleDiscountAmount().negate())
-                        .build()
-                    );
+                        .build());
+            }
 
             // Si hubo costo de envío, agregarlo como concepto
             if (sale.getShippingCost().compareTo(BigDecimal.ZERO) > 0) {
-                items.add(
-                        PreferenceItemRequest.builder()
-                                .id("SHIPPING")
-                                .title("Costo de Envío")
-                                .quantity(1)
-                                .currencyId("ARS")
-                                .unitPrice(sale.getShippingCost())
-                                .build()
-                );
+                items.add(PreferenceItemRequest.builder()
+                        .id("SHIPPING")
+                        .title("Costo de Envío")
+                        .quantity(1)
+                        .currencyId("ARS")
+                        .unitPrice(sale.getShippingCost())
+                        .build());
             }
 
             // Datos del pagador
@@ -115,28 +114,35 @@ public class MercadoPagoService {
                     .build();
 
             Preference preference = client.create(preferenceRequest);
-
             return new MercadoPagoPreferenceResult(preference.getId(), preference.getInitPoint());
+
         } catch (MPApiException apiEx) {
-            log.error("Error API Mercado Pago [Status: {}]: {}", apiEx.getStatusCode(), apiEx.getApiResponse().getContent());
-            throw new MercadoPagoIntegrationException("Fallo en la comunicación con Mercado Pago: " + apiEx.getMessage(), apiEx);
+            throw new MercadoPagoIntegrationException(
+                    "Error API Mercado Pago [Status %d]: %s".formatted(apiEx.getStatusCode(), apiEx.getApiResponse().getContent()), apiEx
+            );
         } catch (MPException ex) {
-            log.error("Excepción interna SDK Mercado Pago: {}", ex.getMessage());
-            throw new MercadoPagoIntegrationException("Error interno al generar preferencia de Mercado Pago.", ex);
+            throw new MercadoPagoIntegrationException("Error interno SDK Mercado Pago al generar preferencia.", ex);
         }
     }
 
     /**
      * Consulta el estado del pago directamente en la API de Mercado Pago.
      */
-    public Payment getPaymentDetails(Long paymentId) {
+    @Override
+    public MercadoPagoPaymentDetails getPaymentDetails(Long paymentId) {
         try {
-            return new PaymentClient().get(paymentId);
+            Payment payment = new PaymentClient().get(paymentId);
+            return new MercadoPagoPaymentDetails(
+                    payment.getId(),
+                    payment.getStatus(),
+                    payment.getExternalReference(),
+                    payment.getTransactionAmount()
+            );
         } catch (MPApiException apiEx) {
             if (apiEx.getStatusCode() == 404)
                 throw new PaymentNotFoundException("No se encontró el pago en Mercado Pago ID: " + paymentId);
             
-            throw new MercadoPagoIntegrationException("Error al consultar el pago en Mercado Pago: " + apiEx.getMessage(), apiEx);
+            throw new MercadoPagoIntegrationException("Error al consultar pago en Mercado Pago: " + apiEx.getMessage(), apiEx);
         } catch (MPException ex) {
             throw new MercadoPagoIntegrationException("Error SDK al recuperar detalle del pago.", ex);
         }
@@ -145,6 +151,7 @@ public class MercadoPagoService {
     /**
      * Valida la firma criptográfica HMAC-SHA256 provista en el header x-signature de Mercado Pago.
      */
+    @Override
     public void validateWebhookSignature(String xSignatureHeader, String dataId) {
         if (xSignatureHeader == null || !xSignatureHeader.contains("ts=") || !xSignatureHeader.contains("v1="))
             throw new InvalidWebhookSignatureException("Encabezado x-signature ausente o con formato no reconocido.");
@@ -156,7 +163,6 @@ public class MercadoPagoService {
 
             for (String part : parts) {
                 String[] keyValue = part.trim().split("=", 2);
-
                 if (keyValue.length == 2) {
                     if ("ts".equals(keyValue[0])) ts = keyValue[1];
                     if ("v1".equals(keyValue[0])) v1 = keyValue[1];
@@ -171,11 +177,11 @@ public class MercadoPagoService {
 
             Mac             hmac        = Mac.getInstance("HmacSHA256");
             SecretKeySpec   secretKey   = new SecretKeySpec(mpConfig.getWebhookSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-
+            
             hmac.init(secretKey);
 
-            byte[] hash = hmac.doFinal(manifest.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
+            byte[]          hash        = hmac.doFinal(manifest.getBytes(StandardCharsets.UTF_8));
+            StringBuilder   hexString   = new StringBuilder();
             for (byte b : hash) {
                 hexString.append(String.format("%02x", b));
             }
@@ -198,36 +204,30 @@ public class MercadoPagoService {
      * @param returnId Identificador de la devolución (utilizado como clave de idempotencia).
      * @return Identificador del reembolso generado por Mercado Pago.
      */
+    @Override
     public Long refundPayment(Long mpPaymentId, BigDecimal amountToRefund, UUID returnId) {
         try {
-            PaymentRefundClient refundClient =
-                    new PaymentRefundClient();
-
+            PaymentRefundClient refundClient = new PaymentRefundClient();
+            
             MPRequestOptions requestOptions = MPRequestOptions.builder()
-                    .customHeaders(java.util.Map.of("X-Idempotency-Key", "refund-" + returnId.toString()))
+                    .customHeaders(Map.of("X-Idempotency-Key", "refund-" + returnId))
                     .build();
 
-            PaymentRefund refund;
+            PaymentRefund refund = (amountToRefund != null)
+                    ? refundClient.refund(mpPaymentId, amountToRefund, requestOptions)
+                    : refundClient.refund(mpPaymentId, requestOptions);
 
-            if (amountToRefund != null) {
-                refund = refundClient.refund(mpPaymentId, amountToRefund, requestOptions);
-            } else {
-                refund = refundClient.refund(mpPaymentId, requestOptions);
-            }
-
-            log.info("Reembolso ejecutado exitosamente en Mercado Pago { refundId: {}, paymentId: {}, monto: ${} }",
+            log.info("Reembolso ejecutado en Mercado Pago { refundId: {}, paymentId: {}, monto: ${} }",
                     refund.getId(), mpPaymentId, amountToRefund);
 
             return refund.getId();
 
         } catch (MPApiException apiEx) {
-            log.error("Error API Mercado Pago al reembolsar [Status: {}]: {}", apiEx.getStatusCode(), apiEx.getApiResponse().getContent());
             throw new MercadoPagoIntegrationException(
-                    "Fallo al procesar el reembolso en Mercado Pago: " + apiEx.getMessage(), apiEx
+                    "Fallo API Mercado Pago al reembolsar [Status %d]: %s".formatted(apiEx.getStatusCode(), apiEx.getApiResponse().getContent()), apiEx
             );
         } catch (MPException ex) {
-            log.error("Excepción SDK Mercado Pago en reembolso: {}", ex.getMessage());
-            throw new MercadoPagoIntegrationException("Error interno al solicitar reembolso en Mercado Pago.", ex);
+            throw new MercadoPagoIntegrationException("Error interno SDK Mercado Pago al solicitar reembolso.", ex);
         }
     }
 }
