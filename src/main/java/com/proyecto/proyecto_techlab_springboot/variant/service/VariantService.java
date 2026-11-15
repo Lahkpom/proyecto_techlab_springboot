@@ -1,6 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.variant.service;
 
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.color.model.Color;
 import com.proyecto.proyecto_techlab_springboot.color.service.ColorService;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantResponse;
@@ -8,16 +10,17 @@ import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantUpdateRequest
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
-import com.proyecto.proyecto_techlab_springboot.color.model.Color;
-import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
-import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
-import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
 import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepository;
+import com.proyecto.proyecto_techlab_springboot.product.model.Product;
+import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
+import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEvent;
+import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.event.EventListener;
 
 import java.util.List;
 import java.util.Map;
@@ -160,6 +163,16 @@ public class VariantService {
         }
     }
 
+    @EventListener
+    public void onProductInactivated(ProductInactivatedEvent event) {
+        this.iVariantRepository.inactivateVariantsByProductId(event.productId());
+    }
+
+    @EventListener
+    public void onProductDeleted(ProductDeletedEvent event) {
+        this.iVariantRepository.deleteVariantsByProductId(event.productId());
+    }
+
     public Variant findVariantByIdOrThrow(Long id) {
         return iVariantRepository.findById(id)
                 .orElseThrow(() -> new VariantNotFoundException("{ ID: %s }".formatted(id)));
@@ -181,14 +194,6 @@ public class VariantService {
                 colorId,
                 RowStatus.ACTIVE
         ) > 0;
-    }
-
-    public void inactivateVariantsByProductId(UUID productId) {
-        this.iVariantRepository.inactivateVariantsByProductId(productId);
-    }
-
-    public void deleteVariantsByProductId(UUID productId) {
-        this.iVariantRepository.deleteVariantsByProductId(productId);
     }
 
     private VariantResponse mapToResponse(Variant v) {

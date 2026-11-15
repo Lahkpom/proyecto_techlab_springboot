@@ -40,7 +40,7 @@ public class AuthController {
 
     @PostMapping("/register/wholesalers")
     // TODO Descomentar cuando active Spring Security:
-    // @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERADMIN')")
+    // @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     public ResponseEntity<UserResponse> createWholesaler(@Valid @RequestBody WholesalerCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.createWholesaler(request));
     }

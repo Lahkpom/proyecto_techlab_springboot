@@ -233,7 +233,7 @@ public class SaleAdminService {
     private void validatePaymentTransition(Sale sale, PaymentStatus current, PaymentStatus target) {
         PaymentMethod method = sale.getPaymentMethod();
 
-        // Protección de pasarela: Mercado Pago solo admite REEMBOLSADO manual por admin
+        // Protección de pasarela: Mercado Pago solo admite REEMBOLSADO manual por operador
         if (method == PaymentMethod.MERCADO_PAGO && target != PaymentStatus.REEMBOLSADO)
             throw new InvalidSaleStatusTransitionException(
                     "Los pagos con Mercado Pago son conciliados automáticamente por Webhook. Solo se permite registrar REEMBOLSADO de forma manual."

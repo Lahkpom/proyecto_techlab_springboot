@@ -3,7 +3,6 @@ package com.proyecto.proyecto_techlab_springboot.image.controller;
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImageCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImagePresignedUrlRequest;
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImagePresignedUrlResponse;
-import com.proyecto.proyecto_techlab_springboot.image.dto.ImageReorderRequest;
 import com.proyecto.proyecto_techlab_springboot.image.dto.ImageResponse;
 import com.proyecto.proyecto_techlab_springboot.image.service.ImageService;
 import jakarta.validation.Valid;
@@ -18,7 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/products/{productId}/colors/{colorId}/images")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
+// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class ImageController {
 
     private final ImageService imageService;
@@ -57,15 +56,6 @@ public class ImageController {
             @PathVariable Long imageId
     ) {
         return ResponseEntity.ok(imageService.setPrimaryImage(productId, colorId, imageId));
-    }
-
-    @PatchMapping("/reorder")
-    public ResponseEntity<List<ImageResponse>> reorderImages(
-            @PathVariable UUID productId,
-            @PathVariable Long colorId,
-            @Valid @RequestBody ImageReorderRequest request
-    ) {
-        return ResponseEntity.ok(imageService.reorderImages(productId, colorId, request));
     }
 
     @DeleteMapping("/{imageId}")

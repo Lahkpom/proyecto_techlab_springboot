@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.product.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
 import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;

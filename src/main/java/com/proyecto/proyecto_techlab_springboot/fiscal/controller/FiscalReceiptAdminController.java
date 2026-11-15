@@ -12,7 +12,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/fiscal")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPER_ADMIN')")
+// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
 public class FiscalReceiptAdminController {
 
     private final FiscalReceiptAdminService fiscalReceiptAdminService;

@@ -17,23 +17,14 @@ public interface IImageRepository extends JpaRepository<Image, Long> {
         FROM Image i
         WHERE i.product.productId = :productId
           AND i.color.colorId = :colorId
-        ORDER BY i.isPrimary DESC, i.displayOrder ASC, i.createdAt ASC
+        ORDER BY i.isPrimary DESC, i.createdAt ASC
     """)
-    List<Image> findAllByProductIdAndColorIdOrdered(
+    List<Image> findGalleryImagesByProductIdAndColorId(
             @Param("productId") UUID productId,
             @Param("colorId") Long colorId
     );
 
-    @Query("""
-        SELECT COALESCE(MAX(i.displayOrder), -1)
-        FROM Image i
-        WHERE i.product.productId = :productId
-          AND i.color.colorId = :colorId
-    """)
-    int findMaxDisplayOrderByProductIdAndColorId(
-            @Param("productId") UUID productId,
-            @Param("colorId") Long colorId
-    );
+    boolean existsByProduct_ProductIdAndColor_ColorId(UUID productId, Long colorId);
 
     Optional<Image> findByImageIdAndProduct_ProductIdAndColor_ColorId(
             Long imageId,

@@ -6,7 +6,6 @@ import com.proyecto.proyecto_techlab_springboot.auth.exception.ExpiredPasswordEx
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailableException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.InvalidFiscalOperationException;
-import com.proyecto.proyecto_techlab_springboot.image.exception.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperationException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
@@ -243,17 +242,6 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.GONE,
                 "RESOURCE_NO_LONGER_AVAILABLE",
-                ex.getMessage(),
-                request
-        );
-    }
-
-    // Maneja 422: sintácticamente correcto, semánticamente inválido
-    @ExceptionHandler(InvalidImageReorderException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidImageReorder(InvalidImageReorderException ex, HttpServletRequest request) {
-        return buildResponse(
-                HttpStatus.UNPROCESSABLE_CONTENT,
-                "INVALID_REORDER_SEQUENCE",
                 ex.getMessage(),
                 request
         );

@@ -108,7 +108,7 @@ Authorization: Bearer <accessToken>
 
 **Límite importante de la implementación actual:** `SecurityConfig` solo registra `BCryptPasswordEncoder`. No se configura `SecurityFilterChain`, filtro JWT ni reglas de autorización por rol. Las anotaciones `@PreAuthorize` de varios controladores están comentadas. En consecuencia:
 
-- No hay protección efectiva por `CUSTOMER`, `WHOLESALER`, `ADMIN` o `SUPER_ADMIN` en el framework.
+- No hay protección efectiva por `CUSTOMER`, `WHOLESALER`, `OPERATOR` o `ADMIN` en el framework.
 - Algunos controladores llaman manualmente a `SecurityContextUtil` y exigen un JWT válido, pero no verifican el rol del claim.
 - Hay rutas `/admin/...`, escritura de variantes/imágenes y operaciones de usuario que hoy no aplican autenticación ni autorización en el controlador.
 - `/auth/register/wholesalers` está comentada como ruta prevista para administradores, pero no aplica esa restricción.
@@ -179,7 +179,7 @@ Los valores se envían como strings JSON, respetando mayúsculas y guiones bajos
 
 | Enum | Valores exactos |
 |---|---|
-| `UserRole` | `SUPER_ADMIN`, `ADMIN`, `WHOLESALER`, `CUSTOMER` |
+| `UserRole` | `ADMIN`, `OPERATOR`, `WHOLESALER`, `CUSTOMER` |
 | `TaxIdType` | `DNI`, `CUIL`, `CUIT`, `PASAPORTE` |
 | `Category` | `CALZADO` |
 | `RowStatus` | `ACTIVE`, `INACTIVE`, `DELETED` |
@@ -193,7 +193,7 @@ Los valores se envían como strings JSON, respetando mayúsculas y guiones bajos
 | `ReturnResolution` | `REEMBOLSO_DINERO`, `CAMBIO_PRODUCTO`, `CREDITO_TIENDA` |
 | `FiscalReceiptType` | `FACTURA_C`, `NOTA_DEBITO_C`, `NOTA_CREDITO_C` |
 
-**Inconsistencia a atender:** `UserRole` declara `SUPER_ADMIN`, mientras varios comentarios `@PreAuthorize` escriben `SUPERADMIN`. Al habilitar autorización, alinear los nombres con el enum.
+Los valores de `UserRole` y las anotaciones `@PreAuthorize` comentadas usan `ADMIN` y `OPERATOR`; las rutas todavía no aplican autorización efectiva.
 
 ## 4. Referencia detallada de endpoints
 
@@ -231,7 +231,7 @@ Rutas de usuario; aunque funcionalmente se orientan al perfil propio, los métod
 
 #### Administrativos (`/admin/...`)
 
-No hay verificación efectiva de rol ADMIN en estos métodos; `@PreAuthorize` del controlador está comentado.
+No hay verificación efectiva de roles OPERATOR o ADMIN en estos métodos; `@PreAuthorize` del controlador está comentado.
 
 | Método y ruta | Propósito | Seguridad / roles | Path y query | Request body | Éxito | Errores específicos |
 |---|---|---|---|---|---|---|
@@ -280,9 +280,8 @@ Flujo de alta de imagen: pedir URL firmada, cargar el binario directamente a Sup
 |---|---|---|---|---|---|---|
 | `POST /products/{productId}/colors/{colorId}/images/presigned-url` | Genera URLs de subida temporal y pública para la galería compartida (vigencia de 10 minutos). Requiere producto, color y al menos una variante activos. | Intención administrativa; actualmente sin control de rol/token. | `productId`: UUID; `colorId`: Long. | `ImagePresignedUrlRequest` (**@Valid**). | `200 ImagePresignedUrlResponse`. | `400` validación/ID; `404` producto/color inexistente; `410` combinación no disponible; `502` error de Storage. |
 | `POST /products/{productId}/colors/{colorId}/images` | Persiste referencia a una imagen ya subida; requiere producto, color y al menos una variante activos. | Intención administrativa; actualmente sin control efectivo. | `productId`: UUID; `colorId`: Long. | `ImageCreateRequest` (**@Valid**). | `201 ImageResponse`. | `400` validación/ID; `404` producto/color inexistente; `409` conflicto de imagen principal; `410` combinación no disponible. |
-| `GET /products/{productId}/colors/{colorId}/images` | Lista la galería compartida ordenada por principal y display order. | Sin control de rol en el controlador. | `productId`: UUID; `colorId`: Long. | — | `200 List<ImageResponse>`. | `400` ID inválido; `404` producto/color inexistente. |
+| `GET /products/{productId}/colors/{colorId}/images` | Lista la galería compartida con la portada primero. | Sin control de rol en el controlador. | `productId`: UUID; `colorId`: Long. | — | `200 List<ImageResponse>`. | `400` ID inválido; `404` producto/color inexistente. |
 | `PATCH /products/{productId}/colors/{colorId}/images/{imageId}/primary` | Marca una imagen principal para el producto/color y desmarca la anterior. | Intención administrativa; actualmente sin control efectivo. | `productId`: UUID; `colorId`, `imageId`: Long. | — | `200 ImageResponse`. | `400` ID inválido; `404` producto/color/imagen inexistente; `409` conflicto de concurrencia. |
-| `PATCH /products/{productId}/colors/{colorId}/images/reorder` | Sincroniza el orden completo de la galería compartida. | Intención administrativa; actualmente sin control efectivo. | `productId`: UUID; `colorId`: Long. | `ImageReorderRequest` (**@Valid**). Debe incluir exactamente los IDs únicos de la galería. | `200 List<ImageResponse>`. | `400` validación/ID; `404` producto/color inexistente; `422` secuencia duplicada o incompleta. |
 | `DELETE /images/{imageId}` | Elimina una imagen por ID y borra su archivo de Storage; promueve otra imagen si era principal. | Intención administrativa; actualmente sin control efectivo. | `imageId`: Long. | — | `204` sin cuerpo. | `400` ID inválido; `404` imagen inexistente; `502` error de Storage. |
 
 ### Cart
@@ -493,7 +492,7 @@ Los dos DTOs tienen los mismos campos y restricciones.
 {"name":"Negro","desc":"Negro clásico","code":"#000000"}
 ```
 
-#### `ImagePresignedUrlRequest`, `ImageCreateRequest`, `ImageReorderRequest`
+#### `ImagePresignedUrlRequest` y `ImageCreateRequest`
 
 | DTO / campo | Tipo | Requerido | Validaciones |
 |---|---|---:|---|
@@ -501,7 +500,6 @@ Los dos DTOs tienen los mismos campos y restricciones.
 | `ImagePresignedUrlRequest.contentType` | string | Sí | `@NotBlank`, uno de `image/jpeg`, `image/png`, `image/webp`. |
 | `ImageCreateRequest.imageUrl` | string | Sí | `@NotBlank`, formato URL según Hibernate `@URL`. |
 | `ImageCreateRequest.isPrimary` | boolean | Sí | `@NotNull`. |
-| `ImageReorderRequest.orderedImageIds` | array de Long | Sí | `@NotEmpty`; cada elemento `@NotNull`; la regla de unicidad/completitud se valida en servicio. |
 
 ```json
 {"originalFileName":"frente.webp","contentType":"image/webp"}
@@ -509,10 +507,6 @@ Los dos DTOs tienen los mismos campos y restricciones.
 
 ```json
 {"imageUrl":"https://storage.example.com/products/550e8400-e29b-41d4-a716-446655440000/colors/12/frente.webp","isPrimary":true}
-```
-
-```json
-{"orderedImageIds":[101,102,103]}
 ```
 
 #### `CartItemRequest` y `CartItemUpdateRequest`
@@ -715,14 +709,14 @@ Los campos de record se serializan con los nombres indicados. Las fechas `Instan
 #### `ImagePresignedUrlResponse` / `ImageResponse`
 
 - `ImagePresignedUrlResponse`: `uploadUrl`, `publicUrl`, `storagePath` (string).
-- `ImageResponse`: `imageId` (Long), `productId` (UUID), `colorId` (Long), `imageUrl` (string), `displayOrder` (Integer), `isPrimary` (boolean), `createdAt`, `updatedAt` (Instant).
+- `ImageResponse`: `imageId` (Long), `productId` (UUID), `colorId` (Long), `imageUrl` (string), `isPrimary` (boolean), `createdAt`, `updatedAt` (Instant).
 
 ```json
 {"uploadUrl":"https://storage.example.com/signed-upload","publicUrl":"https://storage.example.com/public/products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp","storagePath":"products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp"}
 ```
 
 ```json
-{"imageId":101,"productId":"550e8400-e29b-41d4-a716-446655440000","colorId":12,"imageUrl":"https://storage.example.com/public/products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp","displayOrder":0,"isPrimary":true,"createdAt":"2026-11-11T12:00:00Z","updatedAt":"2026-11-11T12:00:00Z"}
+{"imageId":101,"productId":"550e8400-e29b-41d4-a716-446655440000","colorId":12,"imageUrl":"https://storage.example.com/public/products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp","isPrimary":true,"createdAt":"2026-11-11T12:00:00Z","updatedAt":"2026-11-11T12:00:00Z"}
 ```
 
 #### `CartResponse` / `CartItemResponse`
@@ -842,6 +836,6 @@ Campos: `fiscalReceiptId`, `saleId`, `returnId` (UUID); `receiptType` (`FiscalRe
 - **Serialización de página:** el endpoint devuelve `Page` de Spring Data, no un DTO propio; campos auxiliares pueden variar con la versión de Spring Data/Jackson.
 - **Prefijo `/api`:** está escrito como propiedad, pero los mappings observados son absolutos desde la raíz y no se encontró configuración que aplique el prefijo.
 - **Códigos de error:** no hay respuesta dedicada `503`; ARCA no cuenta con handler específico y puede producir `500`. El handler genérico revela actualmente el mensaje de excepción.
-- **Enums de rol:** unificar `SUPER_ADMIN` con los nombres mencionados en las anotaciones comentadas antes de activar `@PreAuthorize`.
+- **Autorización por rol:** comprobar que `ADMIN` y `OPERATOR` se traduzcan correctamente a authorities antes de activar `@PreAuthorize`.
 - **DTOs:** `AuthResponse.expiresAt` se construye con el vencimiento del refresh token (7 días), no con el TTL del access token (15 minutos); el cliente debe leer el vencimiento JWT del propio access token o evitar interpretar `expiresAt` como su expiración.
 - **Docker:** falta Dockerfile/Compose y la base de datos no se inicializa automáticamente; el esquema debe estar creado previamente.

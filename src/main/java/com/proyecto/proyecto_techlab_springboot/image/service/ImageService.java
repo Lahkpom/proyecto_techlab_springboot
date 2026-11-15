@@ -6,7 +6,6 @@ import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.image.dto.*;
 import com.proyecto.proyecto_techlab_springboot.image.exception.ImageCollectionNotAvailableException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.ImageNotFoundException;
-import com.proyecto.proyecto_techlab_springboot.image.exception.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.image.model.Image;
 import com.proyecto.proyecto_techlab_springboot.image.repository.IImageRepository;
 import com.proyecto.proyecto_techlab_springboot.image.repository.ImagePrimaryProjection;
@@ -22,7 +21,6 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -59,8 +57,8 @@ public class ImageService {
     @Transactional
     public ImageResponse addImage(UUID productId, Long colorId, ImageCreateRequest request) {
         Gallery gallery = requireAvailableGallery(productId, colorId);
-        int nextOrder = this.imageRepository.findMaxDisplayOrderByProductIdAndColorId(productId, colorId) + 1;
-        boolean shouldBePrimary = request.isPrimary() || nextOrder == 0;
+        boolean shouldBePrimary = request.isPrimary()
+                || !this.imageRepository.existsByProduct_ProductIdAndColor_ColorId(productId, colorId);
 
         if (shouldBePrimary)
             this.imageRepository.resetPrimaryByProductIdAndColorId(productId, colorId);
@@ -69,7 +67,6 @@ public class ImageService {
                 .product(gallery.product())
                 .color(gallery.color())
                 .imageUrl(request.imageUrl())
-                .displayOrder(nextOrder)
                 .isPrimary(shouldBePrimary)
                 .build();
 
@@ -79,7 +76,7 @@ public class ImageService {
     @Transactional(readOnly = true)
     public List<ImageResponse> getImages(UUID productId, Long colorId) {
         requireKnownGallery(productId, colorId);
-        return this.imageRepository.findAllByProductIdAndColorIdOrdered(productId, colorId)
+        return this.imageRepository.findGalleryImagesByProductIdAndColorId(productId, colorId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -100,35 +97,6 @@ public class ImageService {
     }
 
     @Transactional
-    public List<ImageResponse> reorderImages(UUID productId, Long colorId, ImageReorderRequest request) {
-        requireKnownGallery(productId, colorId);
-
-        List<Long> incomingIds = request.orderedImageIds();
-        Set<Long> uniqueIds = new HashSet<>(incomingIds);
-        if (uniqueIds.size() != incomingIds.size())
-            throw new InvalidImageReorderException("La lista de reordenamiento contiene identificadores duplicados.");
-
-        List<Image> existingImages = this.imageRepository.findAllByProductIdAndColorIdOrdered(productId, colorId);
-        Set<Long> existingIds = existingImages.stream()
-                .map(Image::getImageId)
-                .collect(Collectors.toSet());
-        if (!existingIds.equals(uniqueIds))
-            throw new InvalidImageReorderException(
-                    "Los IDs provistos no coinciden exactamente con las imágenes existentes del producto y color."
-            );
-
-        Map<Long, Image> imageMap = existingImages.stream()
-                .collect(Collectors.toMap(Image::getImageId, Function.identity()));
-        for (int i = 0; i < incomingIds.size(); i++)
-            imageMap.get(incomingIds.get(i)).setDisplayOrder(i);
-
-        return existingImages.stream()
-                .sorted(Comparator.comparing(Image::isPrimary).reversed().thenComparing(Image::getDisplayOrder))
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Transactional
     public void deleteImage(UUID productId, Long colorId, Long imageId) {
         Image image = findByGalleryAndIdOrThrow(productId, colorId, imageId);
         String storagePath = this.storageService.extractPathFromPublicUrl(image.getImageUrl());
@@ -137,7 +105,7 @@ public class ImageService {
         this.imageRepository.delete(image);
 
         if (image.isPrimary()) {
-            List<Image> remaining = this.imageRepository.findAllByProductIdAndColorIdOrdered(productId, colorId);
+            List<Image> remaining = this.imageRepository.findGalleryImagesByProductIdAndColorId(productId, colorId);
             if (!remaining.isEmpty()) {
                 remaining.getFirst().setPrimary(true);
                 this.imageRepository.flush();
@@ -223,7 +191,6 @@ public class ImageService {
                 image.getProduct().getProductId(),
                 image.getColor().getColorId(),
                 image.getImageUrl(),
-                image.getDisplayOrder(),
                 image.isPrimary(),
                 image.getCreatedAt(),
                 image.getUpdatedAt()

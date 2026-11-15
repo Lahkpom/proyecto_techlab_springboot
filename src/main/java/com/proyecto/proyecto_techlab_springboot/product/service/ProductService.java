@@ -1,14 +1,15 @@
 package com.proyecto.proyecto_techlab_springboot.product.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogImageResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivatedEvent;
 import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductAlreadyExistsException;
@@ -19,7 +20,6 @@ import com.proyecto.proyecto_techlab_springboot.product.model.Category;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
-import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -54,7 +54,6 @@ public class ProductService {
     );
 
     private final IProductRepository    iProductRepository;
-    private final VariantService        variantService;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -132,12 +131,10 @@ public class ProductService {
 
         if (lastStatus != request.rowStatus()) {
             if (request.rowStatus() == RowStatus.INACTIVE && lastStatus == RowStatus.ACTIVE)
-                this.variantService.inactivateVariantsByProductId(id);
+                this.eventPublisher.publishEvent(new ProductInactivatedEvent(id));
 
-            if (request.rowStatus() == RowStatus.DELETED) {
-                this.variantService.deleteVariantsByProductId(id);
+            if (request.rowStatus() == RowStatus.DELETED)
                 this.eventPublisher.publishEvent(new ProductDeletedEvent(id));
-            }
         }
         product.setRowStatus(request.rowStatus());
 
@@ -170,7 +167,7 @@ public class ProductService {
         List<ProductCatalogImageResponse> images;
         try {
             images = objectMapper.readValue(imagesJson, CATALOG_IMAGES_TYPE);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("No se pudo interpretar las imágenes de la view del catálogo.", ex);
         }
 
@@ -197,12 +194,16 @@ public class ProductService {
     private Pageable toCatalogPageable(Pageable pageable) {
         Sort sort = pageable.getSort().isUnsorted()
                 ? Sort.by("product_name").ascending().and(Sort.by("product_id").ascending())
-                : pageable.getSort().map(order -> {
-                    String column = CATALOG_SORT_COLUMNS.get(order.getProperty());
-                    if (column == null)
-                        throw new InvalidProductCatalogSortException(order.getProperty());
-                    return order.withProperty(column);
-                });
+                : Sort.by(
+                    pageable.getSort().stream()
+                            .map(order -> {
+                                String column = CATALOG_SORT_COLUMNS.get(order.getProperty());
+                                if (column == null)
+                                    throw new InvalidProductCatalogSortException(order.getProperty());
+                                return order.withProperty(column);
+                            })
+                            .toList()
+                );
 
         if (sort.getOrderFor("product_id") == null)
             sort = sort.and(Sort.by("product_id").ascending());

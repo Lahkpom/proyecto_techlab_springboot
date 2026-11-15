@@ -20,7 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/products")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
+// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class ProductAdminController {
 
     private final ProductService productService;

@@ -8,7 +8,6 @@ public record ImageResponse(
         UUID    productId,
         Long    colorId,
         String  imageUrl,
-        Integer displayOrder,
         boolean isPrimary,
         Instant createdAt,
         Instant updatedAt

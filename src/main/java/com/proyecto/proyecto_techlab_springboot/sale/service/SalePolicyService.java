@@ -19,8 +19,8 @@ public class SalePolicyService {
 
     private static final BigDecimal DISCOUNT_CUSTOMER_TIER  = new BigDecimal("5.00");
     private static final BigDecimal DISCOUNT_WHOLESALER     = new BigDecimal("10.00");
-    private static final BigDecimal DISCOUNT_ADMIN          = new BigDecimal("10.00");
-    private static final BigDecimal DISCOUNT_SUPERADMIN     = new BigDecimal("15.00");
+    private static final BigDecimal DISCOUNT_OPERATOR       = new BigDecimal("10.00");
+    private static final BigDecimal DISCOUNT_ADMIN          = new BigDecimal("15.00");
     private static final BigDecimal ONE_HUNDRED             = new BigDecimal("100.00");
 
     /**
@@ -79,16 +79,16 @@ public class SalePolicyService {
      * Aplica la política comercial acordada:
      * - CUSTOMER   : 5% a partir de la 3ra unidad inclusive (Incluye a los invitados/null).
      * - WHOLESALER : 10% fijo (requiere validación previa de >= 10 unidades).
-     * - ADMIN      : 10% plano sin mínimo.
-     * - SUPER_ADMIN: 15% plano sin mínimo.
+     * - OPERATOR   : 10% plano sin mínimo.
+     * - ADMIN      : 15% plano sin mínimo.
      */
     public BigDecimal resolveDiscountPercentage(UserRole buyerRole, int totalQuantity) {
         // Invitado (null) opera con las mismas reglas que un CUSTOMER
         UserRole effectiveRole = Objects.requireNonNullElse(buyerRole, UserRole.CUSTOMER);
 
         return switch (effectiveRole) {
-            case SUPER_ADMIN -> DISCOUNT_SUPERADMIN;
             case ADMIN       -> DISCOUNT_ADMIN;
+            case OPERATOR    -> DISCOUNT_OPERATOR;
             case WHOLESALER  -> DISCOUNT_WHOLESALER;
             case CUSTOMER    -> (totalQuantity >= CUSTOMER_DISCOUNT_THRESHOLD) 
                 ? DISCOUNT_CUSTOMER_TIER 

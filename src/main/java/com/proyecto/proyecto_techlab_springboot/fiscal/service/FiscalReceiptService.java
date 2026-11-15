@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.fiscal.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.fiscal.client.IWsfeSoapClient;
 import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaBusinessRejectionException;
@@ -53,7 +53,7 @@ public class FiscalReceiptService {
     private final ArcaProperties    arcaProperties;
 
     /**
-     * Disparo seguro para flujos transaccionales de cobro (Mercado Pago / Admin).
+     * Disparo seguro para flujos transaccionales de cobro (Mercado Pago / personal administrativo).
      * Garantiza que NINGUNA caída o rechazo de ARCA aborte el cobro de la orden.
      */
     @Transactional

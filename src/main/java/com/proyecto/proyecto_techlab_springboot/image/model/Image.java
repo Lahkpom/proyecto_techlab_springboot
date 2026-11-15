@@ -38,9 +38,6 @@ public class Image {
     @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
     private String imageUrl;
 
-    @Column(name = "display_order", nullable = false)
-    private Integer displayOrder;
-
     @Column(name = "is_primary", nullable = false)
     @Builder.Default
     private boolean isPrimary = false;

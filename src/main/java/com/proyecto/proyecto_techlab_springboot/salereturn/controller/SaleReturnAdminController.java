@@ -28,7 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/returns")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPER_ADMIN')") // TODO: Descomentar al habilitar Spring Security
+// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class SaleReturnAdminController {
 
     private final SaleReturnAdminService    saleReturnAdminService;
