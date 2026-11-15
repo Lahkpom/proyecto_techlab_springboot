@@ -184,7 +184,7 @@ Los valores se envían como strings JSON, respetando mayúsculas y guiones bajos
 | `Category` | `CALZADO` |
 | `RowStatus` | `ACTIVE`, `INACTIVE`, `DELETED` |
 | `NumericSize` | `T_18`, `T_19`, `T_20`, `T_21`, `T_22`, `T_23`, `T_24`, `T_25`, `T_26`, `T_35`, `T_36`, `T_37`, `T_38`, `T_39`, `T_40`, `T_41`, `T_42`, `T_35_36`, `T_37_38`, `T_39_40`, `T_41_42`, `T_43_44`, `T_45_46` |
-| `TargetGender` | `NINIAS`, `NINIOS`, `HOMBRES`, `MUJERES`, `UNISEX` |
+| `TargetGender` (Product) | `NINIAS`, `NINIOS`, `HOMBRES`, `MUJERES`, `UNISEX` |
 | `SaleStatus` | `PENDIENTE`, `PREPARACION`, `ENVIADO`, `ENTREGADO`, `CANCELADO`, `REEMBOLSADO`, `AUDITORIA`, `RECLAMO_ABIERTO`, `CERRADO_CON_DEVOLUCION` |
 | `PaymentStatus` | `PENDIENTE`, `APROBADO`, `RECHAZADO`, `REEMBOLSO_PENDIENTE`, `REEMBOLSADO` |
 | `PaymentMethod` | `MERCADO_PAGO`, `TRANSFERENCIA`, `EFECTIVO` |
@@ -235,11 +235,11 @@ No hay verificación efectiva de rol ADMIN en estos métodos; `@PreAuthorize` de
 
 | Método y ruta | Propósito | Seguridad / roles | Path y query | Request body | Éxito | Errores específicos |
 |---|---|---|---|---|---|---|
-| `POST /admin/products` | Crea producto (la categoría que asigna actualmente el servicio es `CALZADO`). | No protegido actualmente por rol. | Ninguno. | `ProductCreateRequest` (**@Valid**). | `201 ProductResponse`. | `400` validación. |
+| `POST /admin/products` | Crea producto (la categoría que asigna actualmente el servicio es `CALZADO`). | No protegido actualmente por rol. | Ninguno. | `ProductCreateRequest` (**@Valid**), incluye `targetGender`. | `201 ProductResponse`. | `400` validación; `409` nombre duplicado. |
 | `GET /admin/products` | Lista productos para administración, paginados. | Sin autorización efectiva. | Pageable; default size 20. | — | `200 Page<ProductResponse>`. | `400` parámetro inválido. |
 | `GET /admin/products/{id}` | Consulta producto por UUID. | Sin autorización efectiva. | `id`: UUID, requerido. | — | `200 ProductResponse`. | `400` UUID inválido; `404` producto inexistente. |
-| `PUT /admin/products/{id}` | Reemplaza campos editables del producto. | Sin autorización efectiva. | `id`: UUID, requerido. | `ProductUpdateRequest` (**@Valid**). | `200 ProductResponse`. | `400` validación/UUID; `404` producto inexistente. |
-| `PATCH /admin/products/{id}/status` | Cambia estado de fila; al pasar de `ACTIVE` a `INACTIVE` o `DELETED`, el servicio también inactiva o elimina lógicamente sus variantes. | Sin autorización efectiva. | `id`: UUID, requerido. | `StatusUpdateRequest` (**@Valid**). | `200 ProductResponse`. | `400` validación/UUID; `404` producto inexistente. |
+| `PUT /admin/products/{id}` | Reemplaza campos editables del producto. | Sin autorización efectiva. | `id`: UUID, requerido. | `ProductUpdateRequest` (**@Valid**), incluye `targetGender`. | `200 ProductResponse`. | `400` validación/UUID; `404` producto inexistente; `409` nombre duplicado. |
+| `PATCH /admin/products/{id}/status` | Cambia estado de fila; al pasar a `INACTIVE` inactiva las variantes; al pasar a `DELETED` elimina lógicamente las variantes y elimina las imágenes del producto y sus archivos de Storage. | Sin autorización efectiva. | `id`: UUID, requerido. | `StatusUpdateRequest` (**@Valid**). | `200 ProductResponse`. | `400` validación/UUID; `404` producto inexistente; `502` error de Storage durante la limpieza. |
 
 ### Variants
 
@@ -278,12 +278,12 @@ Flujo de alta de imagen: pedir URL firmada, cargar el binario directamente a Sup
 
 | Método y ruta | Propósito | Seguridad / roles | Path y query | Request body | Éxito | Errores específicos |
 |---|---|---|---|---|---|---|
-| `POST /variants/{variantId}/images/presigned-url` | Genera URLs de subida temporal y pública (la URL firmada tiene vigencia de 10 minutos). | Intención administrativa; actualmente sin control de rol/token. | `variantId`: Long, requerido. | `ImagePresignedUrlRequest` (**@Valid**). | `200 ImagePresignedUrlResponse`. | `400` validación/ID; `404` variante inexistente; `502` si Storage responde sin URL firmada; excepciones de transporte no mapeadas pueden producir `500`. |
-| `POST /variants/{variantId}/images` | Persiste referencia a imagen ya subida; la variante debe estar activa. | Intención administrativa; actualmente sin control efectivo. | `variantId`: Long, requerido. | `ImageCreateRequest` (**@Valid**). | `201 ImageResponse`. | `400` validación/ID; `404` variante inexistente; `410` variante no disponible. |
-| `GET /variants/{variantId}/images` | Lista galería ordenada por imagen principal y orden de display. | Sin control de rol en el controlador. | `variantId`: Long, requerido. | — | `200 List<ImageResponse>`. | `400` ID inválido; `404` variante inexistente. |
-| `PATCH /variants/{variantId}/images/{imageId}/primary` | Marca imagen principal y desmarca la anterior. | Intención administrativa; actualmente sin control efectivo. | `variantId`, `imageId`: Long, requeridos. | — | `200 ImageResponse`. | `400` ID inválido; `404` variante/imagen inexistente. |
-| `PATCH /variants/{variantId}/images/reorder` | Sincroniza el orden completo de imágenes de una variante. | Intención administrativa; actualmente sin control efectivo. | `variantId`: Long, requerido. | `ImageReorderRequest` (**@Valid**). La lista debe incluir IDs únicos que correspondan exactamente a la galería. | `200 List<ImageResponse>`. | `400` validación/ID; `404` variante/imágenes inexistentes; `422` secuencia duplicada o incompleta. |
-| `DELETE /variants/{variantId}/images/{imageId}` | Elimina el registro y solicita borrar el archivo de Storage. | Intención administrativa; actualmente sin control efectivo. | `variantId`, `imageId`: Long, requeridos. | — | `204` sin cuerpo. | `400` ID inválido; `404` imagen/variante inexistente. El servicio captura y registra los errores al borrar de Storage, por lo que la API puede responder `204` aunque el archivo no se haya eliminado. |
+| `POST /products/{productId}/colors/{colorId}/images/presigned-url` | Genera URLs de subida temporal y pública para la galería compartida (vigencia de 10 minutos). Requiere producto, color y al menos una variante activos. | Intención administrativa; actualmente sin control de rol/token. | `productId`: UUID; `colorId`: Long. | `ImagePresignedUrlRequest` (**@Valid**). | `200 ImagePresignedUrlResponse`. | `400` validación/ID; `404` producto/color inexistente; `410` combinación no disponible; `502` error de Storage. |
+| `POST /products/{productId}/colors/{colorId}/images` | Persiste referencia a una imagen ya subida; requiere producto, color y al menos una variante activos. | Intención administrativa; actualmente sin control efectivo. | `productId`: UUID; `colorId`: Long. | `ImageCreateRequest` (**@Valid**). | `201 ImageResponse`. | `400` validación/ID; `404` producto/color inexistente; `409` conflicto de imagen principal; `410` combinación no disponible. |
+| `GET /products/{productId}/colors/{colorId}/images` | Lista la galería compartida ordenada por principal y display order. | Sin control de rol en el controlador. | `productId`: UUID; `colorId`: Long. | — | `200 List<ImageResponse>`. | `400` ID inválido; `404` producto/color inexistente. |
+| `PATCH /products/{productId}/colors/{colorId}/images/{imageId}/primary` | Marca una imagen principal para el producto/color y desmarca la anterior. | Intención administrativa; actualmente sin control efectivo. | `productId`: UUID; `colorId`, `imageId`: Long. | — | `200 ImageResponse`. | `400` ID inválido; `404` producto/color/imagen inexistente; `409` conflicto de concurrencia. |
+| `PATCH /products/{productId}/colors/{colorId}/images/reorder` | Sincroniza el orden completo de la galería compartida. | Intención administrativa; actualmente sin control efectivo. | `productId`: UUID; `colorId`: Long. | `ImageReorderRequest` (**@Valid**). Debe incluir exactamente los IDs únicos de la galería. | `200 List<ImageResponse>`. | `400` validación/ID; `404` producto/color inexistente; `422` secuencia duplicada o incompleta. |
+| `DELETE /images/{imageId}` | Elimina una imagen por ID y borra su archivo de Storage; promueve otra imagen si era principal. | Intención administrativa; actualmente sin control efectivo. | `imageId`: Long. | — | `204` sin cuerpo. | `400` ID inválido; `404` imagen inexistente; `502` error de Storage. |
 
 ### Cart
 
@@ -451,12 +451,13 @@ Los dos DTOs tienen los mismos campos y restricciones.
 
 | Campo | Tipo | Requerido | Validaciones |
 |---|---|---:|---|
+| `targetGender` | `TargetGender` | Sí | `@NotNull`. |
 | `name` | string | Sí | `@NotBlank`, máximo 255. |
 | `shortDesc` | string | Sí | `@NotBlank`, máximo 255. |
 | `longDesc` | string | Sí | `@NotBlank`, máximo 5000. |
 
 ```json
-{"name":"Zapatilla Urbana","shortDesc":"Modelo liviano","longDesc":"Descripción completa del producto."}
+{"targetGender":"MUJERES","name":"Zapatilla Urbana","shortDesc":"Modelo liviano","longDesc":"Descripción completa del producto."}
 ```
 
 #### `VariantCreateRequest` y `VariantUpdateRequest`
@@ -466,7 +467,6 @@ Los dos DTOs tienen los mismos campos y restricciones.
 | `VariantCreateRequest.productId` | UUID | Sí | `@NotNull`. |
 | `colorId` | Long | Sí | `@NotNull`. |
 | `size` | `NumericSize` | Sí | `@NotNull`. |
-| `targetGender` | `TargetGender` | Sí | `@NotNull`. |
 | `desc` | string | Sí | `@NotBlank`, máximo 255. |
 | `sku` | string | Sí | `@NotBlank`, máximo 100. |
 | `price` | decimal (`BigDecimal`) | Sí | `@NotNull`, `@DecimalMin("0.0")`, inclusive. |
@@ -474,11 +474,11 @@ Los dos DTOs tienen los mismos campos y restricciones.
 | `VariantUpdateRequest` omite `productId`; los demás campos tienen las mismas reglas. | — | — | — |
 
 ```json
-{"productId":"550e8400-e29b-41d4-a716-446655440000","colorId":12,"size":"T_38","targetGender":"MUJERES","desc":"Cuero negro","sku":"URB-NEG-38","price":45999.90,"stock":20}
+{"productId":"550e8400-e29b-41d4-a716-446655440000","colorId":12,"size":"T_38","desc":"Cuero negro","sku":"URB-NEG-38","price":45999.90,"stock":20}
 ```
 
 ```json
-{"colorId":12,"size":"T_38","targetGender":"MUJERES","desc":"Cuero negro","sku":"URB-NEG-38","price":45999.90,"stock":20}
+{"colorId":12,"size":"T_38","desc":"Cuero negro","sku":"URB-NEG-38","price":45999.90,"stock":20}
 ```
 
 #### `ColorCreateRequest` y `ColorUpdateRequest`
@@ -508,7 +508,7 @@ Los dos DTOs tienen los mismos campos y restricciones.
 ```
 
 ```json
-{"imageUrl":"https://storage.example.com/products/variante/frente.webp","isPrimary":true}
+{"imageUrl":"https://storage.example.com/products/550e8400-e29b-41d4-a716-446655440000/colors/12/frente.webp","isPrimary":true}
 ```
 
 ```json
@@ -670,14 +670,15 @@ Los campos de record se serializan con los nombres indicados. Las fechas `Instan
 
 #### `ProductResponse`, `VariantResponse` y `ColorResponse`
 
-- `ProductResponse`: `id` (UUID), `category` (`Category`), `name`, `shortDesc`, `longDesc` (string), `status` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
-- `VariantResponse`: `id` (Long), `productId` (UUID), `productName` (string), `colorId` (Long), `colorName`, `colorCode` (string), `size` (`NumericSize`), `targetGender` (`TargetGender`), `desc`, `sku` (string), `price` (BigDecimal), `stock` (Integer), `rowStatus` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
+- `ProductResponse`: `id` (UUID), `category` (`Category`), `targetGender` (`TargetGender`), `name`, `shortDesc`, `longDesc` (string), `status` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
+- `VariantResponse`: `id` (Long), `productId` (UUID), `productName` (string), `colorId` (Long), `colorName`, `colorCode` (string), `size` (`NumericSize`), `desc`, `sku` (string), `price` (BigDecimal), `stock` (Integer), `rowStatus` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
 - `ColorResponse`: `id` (Long), `name`, `desc`, `code` (string), `rowStatus` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
 
 ```json
 {
   "id":"550e8400-e29b-41d4-a716-446655440000",
   "category":"CALZADO",
+  "targetGender":"MUJERES",
   "name":"Zapatilla Urbana",
   "shortDesc":"Modelo liviano",
   "longDesc":"Descripción completa del producto.",
@@ -696,7 +697,6 @@ Los campos de record se serializan con los nombres indicados. Las fechas `Instan
   "colorName":"Negro",
   "colorCode":"#000000",
   "size":"T_38",
-  "targetGender":"MUJERES",
   "desc":"Cuero negro",
   "sku":"URB-NEG-38",
   "price":45999.90,
@@ -714,14 +714,14 @@ Los campos de record se serializan con los nombres indicados. Las fechas `Instan
 #### `ImagePresignedUrlResponse` / `ImageResponse`
 
 - `ImagePresignedUrlResponse`: `uploadUrl`, `publicUrl`, `storagePath` (string).
-- `ImageResponse`: `imageId`, `variantId` (Long), `imageUrl` (string), `displayOrder` (Integer), `isPrimary` (boolean), `createdAt`, `updatedAt` (Instant).
+- `ImageResponse`: `imageId` (Long), `productId` (UUID), `colorId` (Long), `imageUrl` (string), `displayOrder` (Integer), `isPrimary` (boolean), `createdAt`, `updatedAt` (Instant).
 
 ```json
-{"uploadUrl":"https://storage.example.com/signed-upload","publicUrl":"https://storage.example.com/public/products/image.webp","storagePath":"products/12/image.webp"}
+{"uploadUrl":"https://storage.example.com/signed-upload","publicUrl":"https://storage.example.com/public/products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp","storagePath":"products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp"}
 ```
 
 ```json
-{"imageId":101,"variantId":12,"imageUrl":"https://storage.example.com/public/products/image.webp","displayOrder":0,"isPrimary":true,"createdAt":"2026-11-11T12:00:00Z","updatedAt":"2026-11-11T12:00:00Z"}
+{"imageId":101,"productId":"550e8400-e29b-41d4-a716-446655440000","colorId":12,"imageUrl":"https://storage.example.com/public/products/550e8400-e29b-41d4-a716-446655440000/colors/12/image.webp","displayOrder":0,"isPrimary":true,"createdAt":"2026-11-11T12:00:00Z","updatedAt":"2026-11-11T12:00:00Z"}
 ```
 
 #### `CartResponse` / `CartItemResponse`

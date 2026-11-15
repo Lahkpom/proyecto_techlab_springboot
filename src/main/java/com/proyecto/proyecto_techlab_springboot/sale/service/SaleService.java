@@ -9,7 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundExcep
 import com.proyecto.proyecto_techlab_springboot.sale.model.*;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.fiscal.model.FiscalReceiptType;
-import com.proyecto.proyecto_techlab_springboot.image.model.Image;
+import com.proyecto.proyecto_techlab_springboot.image.dto.ImageKey;
 import com.proyecto.proyecto_techlab_springboot.image.service.ImageService;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
@@ -89,6 +89,14 @@ public class SaleService {
         for (Variant v : lockedVariants) {
             variantMap.put(v.getVariantId(), v);
         }
+        Map<ImageKey, String> primaryImages = this.imageService.getPrimaryImageUrls(
+                lockedVariants.stream()
+                        .map(variant -> new ImageKey(
+                                variant.getProduct().getProductId(),
+                                variant.getColor().getColorId()
+                        ))
+                        .toList()
+        );
 
         // Validar stock, estado y descontar unidades
         int             totalQuantity       = 0;
@@ -121,7 +129,10 @@ public class SaleService {
             totalQuantity           += itemReq.quantity();
 
             // Buscar la imagen principal congelada
-            String mainImageUrl = resolveMainImageUrl(variant.getVariantId());
+            String mainImageUrl = primaryImages.getOrDefault(
+                    new ImageKey(variant.getProduct().getProductId(), variant.getColor().getColorId()),
+                    "https://via.placeholder.com/300x400?text=Sin+Imagen"
+            );
 
             // Construir renglón inmutable
             SaleItem saleItem = SaleItem.builder()
@@ -450,12 +461,6 @@ public class SaleService {
     private Sale internalGetSaleByTrackingTokenEntityOrThrow(UUID trackingToken) {
         return this.iSaleRepository.findByTrackingToken(trackingToken)
                 .orElseThrow(() -> new SaleNotFoundException("{ Token de seguimiento: %s }".formatted(trackingToken)));
-    }
-
-    private String resolveMainImageUrl(Long variantId) {
-        return this.imageService.getPrimaryByVariantId(variantId)
-                .map(Image::getImageUrl)
-                .orElse("https://via.placeholder.com/300x400?text=Sin+Imagen");
     }
 
     private void restoreVariantStock(List<SaleItem> items) {

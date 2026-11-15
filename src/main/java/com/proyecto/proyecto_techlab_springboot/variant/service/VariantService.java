@@ -72,7 +72,6 @@ public class VariantService {
                 .product(product)
                 .color(color)
                 .variantSize(request.size())
-                .targetGender(request.targetGender())
                 .variantDesc(request.desc().trim())
                 .variantSku(newSku)
                 .variantPrice(request.price())
@@ -120,7 +119,6 @@ public class VariantService {
         }
 
         variant.setVariantSize(request.size());
-        variant.setTargetGender(request.targetGender());
         variant.setVariantDesc(request.desc().trim());
         variant.setVariantSku(newSku);
         variant.setVariantPrice(request.price());
@@ -176,6 +174,15 @@ public class VariantService {
             throw new VariantNoLongerAvailableException("{ ID: %s }".formatted(variant.getVariantId()));
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasActiveVariant(UUID productId, Long colorId) {
+        return this.iVariantRepository.countActiveByProductIdAndColorId(
+                productId,
+                colorId,
+                RowStatus.ACTIVE
+        ) > 0;
+    }
+
     public void inactivateVariantsByProductId(UUID productId) {
         this.iVariantRepository.inactivateVariantsByProductId(productId);
     }
@@ -193,7 +200,6 @@ public class VariantService {
                 v.getColor().getColorName(),
                 v.getColor().getColorCode(),
                 v.getVariantSize(),
-                v.getTargetGender(),
                 v.getVariantDesc(),
                 v.getVariantSku(),
                 v.getVariantPrice(),

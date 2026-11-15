@@ -5,7 +5,9 @@ import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductNoLongerAvailableException;
+import com.proyecto.proyecto_techlab_springboot.product.exception.ProductAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEvent;
 import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.model.Category;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
@@ -13,6 +15,7 @@ import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepos
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,12 +31,18 @@ public class ProductService {
 
     private final IProductRepository    iProductRepository;
     private final VariantService        variantService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ProductResponse createProduct(ProductCreateRequest request) {
+        String productName = request.name().trim();
+        if (iProductRepository.existsByProductNameIgnoreCase(productName))
+            throw new ProductAlreadyExistsException("{ name: %s }".formatted(productName));
+
         Product product = Product.builder()
                 .productCategory(Category.CALZADO)
-                .productName(request.name())
+                .targetGender(request.targetGender())
+                .productName(productName)
                 .productShortDesc(request.shortDesc())
                 .productLongDesc(request.longDesc())
                 .build();
@@ -76,7 +85,12 @@ public class ProductService {
     public ProductResponse updateProduct(UUID id, ProductUpdateRequest request) {
         Product product = this.findProductByIdOrThrow(id);
 
-        product.setProductName(request.name());
+        String productName = request.name().trim();
+        if (iProductRepository.existsByProductNameIgnoreCaseAndProductIdNot(productName, id))
+            throw new ProductAlreadyExistsException("{ name: %s }".formatted(productName));
+
+        product.setProductName(productName);
+        product.setTargetGender(request.targetGender());
         product.setProductShortDesc(request.shortDesc());
         product.setProductLongDesc(request.longDesc());
 
@@ -89,15 +103,17 @@ public class ProductService {
     public ProductResponse updateProductStatus(UUID id, StatusUpdateRequest request) {
         Product product = this.findProductByIdOrThrow(id);
         RowStatus lastStatus = product.getRowStatus();
-        product.setRowStatus(request.rowStatus());
 
-        if (lastStatus == RowStatus.ACTIVE) {
-            if (request.rowStatus() == RowStatus.INACTIVE)
+        if (lastStatus != request.rowStatus()) {
+            if (request.rowStatus() == RowStatus.INACTIVE && lastStatus == RowStatus.ACTIVE)
                 this.variantService.inactivateVariantsByProductId(id);
 
-            if (request.rowStatus() == RowStatus.DELETED)
+            if (request.rowStatus() == RowStatus.DELETED) {
                 this.variantService.deleteVariantsByProductId(id);
+                this.eventPublisher.publishEvent(new ProductDeletedEvent(id));
+            }
         }
+        product.setRowStatus(request.rowStatus());
 
         log.info("Estado del Producto modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", product.getProductId(), lastStatus, product.getRowStatus());
 
@@ -108,6 +124,7 @@ public class ProductService {
         return new ProductResponse(
                 entity.getProductId(),
                 entity.getProductCategory(),
+                entity.getTargetGender(),
                 entity.getProductName(),
                 entity.getProductShortDesc(),
                 entity.getProductLongDesc(),

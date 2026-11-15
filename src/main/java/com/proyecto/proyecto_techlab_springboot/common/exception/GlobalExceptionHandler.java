@@ -12,6 +12,7 @@ import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -157,6 +158,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 "RESOURCE_ALREADY_EXISTS",
                 ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Conflicto de integridad de datos al procesar {} {}", request.getMethod(), request.getRequestURI(), ex);
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "RESOURCE_ALREADY_EXISTS",
+                "La operación entra en conflicto con un registro existente.",
                 request
         );
     }

@@ -11,6 +11,9 @@ import java.util.UUID;
 
 @Repository
 public interface IProductRepository extends JpaRepository<Product, UUID> {
+    boolean existsByProductNameIgnoreCase(String productName);
+    boolean existsByProductNameIgnoreCaseAndProductIdNot(String productName, UUID productId);
+
     // Para Administradores: Trae ACTIVE e INACTIVE
     @Query("""
         SELECT p FROM Product p

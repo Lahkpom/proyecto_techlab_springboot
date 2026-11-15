@@ -1,7 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.variant.dto;
 
 import com.proyecto.proyecto_techlab_springboot.variant.model.NumericSize;
-import com.proyecto.proyecto_techlab_springboot.variant.model.TargetGender;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -12,9 +11,6 @@ public record VariantUpdateRequest(
 
         @NotNull(message = "El talle es obligatorio")
         NumericSize size,
-
-        @NotNull(message = "El género objetivo es obligatorio")
-        TargetGender targetGender,
 
         @NotBlank(message = "La descripción es obligatoria")
         @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")

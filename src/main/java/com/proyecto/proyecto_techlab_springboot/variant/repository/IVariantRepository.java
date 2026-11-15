@@ -7,6 +7,7 @@ import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import jakarta.persistence.LockModeType;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -40,10 +41,27 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     boolean existsByVariantSkuIgnoreCaseAndVariantIdNot(String sku, Long variantId);
 
     // Buscar todas las variantes de un producto
+    @EntityGraph(attributePaths = {"product", "color"})
     List<Variant> findAllByProduct_ProductId(UUID productId);
 
     // Buscar variantes activas de un producto
+    @EntityGraph(attributePaths = {"product", "color"})
     List<Variant> findAllByProduct_ProductIdAndRowStatus(UUID productId, RowStatus rowStatus);
+
+    @Query("""
+        SELECT COUNT(v)
+        FROM Variant v
+        WHERE v.product.productId = :productId
+          AND v.product.rowStatus = :active
+          AND v.color.colorId = :colorId
+          AND v.color.rowStatus = :active
+          AND v.rowStatus = :active
+    """)
+    long countActiveByProductIdAndColorId(
+            @Param("productId") UUID productId,
+            @Param("colorId") Long colorId,
+            @Param("active") RowStatus active
+    );
 
     /**
      * Marca como INACTIVE solo las variantes ACTIVE del producto indicado
@@ -108,7 +126,9 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT  v 
-        FROM    Variant v 
+        FROM    Variant v
+        JOIN FETCH v.product
+        JOIN FETCH v.color
         WHERE   v.variantId IN :variantIds
     """)
     List<Variant> findAllByIdInWithLock(@Param("variantIds") Collection<Long> variantIds);

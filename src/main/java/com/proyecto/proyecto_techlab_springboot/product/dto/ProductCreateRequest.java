@@ -1,9 +1,14 @@
 package com.proyecto.proyecto_techlab_springboot.product.dto;
 
+import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ProductCreateRequest(
+        @NotNull(message = "El género objetivo es obligatorio.")
+        TargetGender targetGender,
+
         @NotBlank(message = "El nombre no puede estar vacío.")
         @Size(max = 255, message = "El nombre no puede exceder los 255 caracteres.")
         String name,

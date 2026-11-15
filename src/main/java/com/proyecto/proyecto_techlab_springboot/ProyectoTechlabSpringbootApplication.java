@@ -18,7 +18,7 @@ public class ProyectoTechlabSpringbootApplication {
      * TODO
      *  - Agregar en /service subcarpetas /mercadoPago /supabase
      * TODO
-     *  - Agregar en el flujo de eliminación de variantes que en cascada elimine las imagenes del bucket de supabase
+     *  - La eliminación lógica de productos debe limpiar sus imágenes en Supabase; las imágenes son compartidas por producto/color.
      * TODO
      *  - Ver en SaleAdminService, si una venta no puede ser reembolsada después de aprobado el pago, que pasa entonces cuando ya pagó y quiere hacer una devolución?
      * TODO
@@ -32,7 +32,6 @@ public class ProyectoTechlabSpringbootApplication {
      *      - Tratar de hacer que solo se cambie el estado al producto y termine la transacción, y que la cascada en las variantes se
      *          haga en segundo plano (No sé si esto tiene que ver con lo multihilo).
      *      - Podría tener un storedProcedure o un procedure común y corriente que tenga la lógica esta ?
-     *  - Hacer lo mismo con las imágenes de las variantes que también deben cambiar su estado
      * TODO
      *   - Hacer un /model para user_security_tokens cuando implemente verificación de email o reseteo de clave
      *   - Ver también la lógica para que el usuario pueda modificar su correo

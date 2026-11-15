@@ -15,6 +15,8 @@ import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.cart.model.CartItemId;
 import com.proyecto.proyecto_techlab_springboot.cart.repository.ICartItemRepository;
+import com.proyecto.proyecto_techlab_springboot.image.dto.ImageKey;
+import com.proyecto.proyecto_techlab_springboot.image.service.ImageService;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -35,6 +38,7 @@ public class CartService {
 
     private final UserService userService;
     private final VariantService variantService;
+    private final ImageService imageService;
 
     @Transactional
     public CartResponse getCartByUser(UUID userId) {
@@ -182,6 +186,15 @@ public class CartService {
         int                     totalUnits      = 0;
         BigDecimal              grandTotal      = BigDecimal.ZERO;
         List<CartItemResponse>  itemResponses   = new ArrayList<>();
+        Map<ImageKey, String> primaryImages = this.imageService.getPrimaryImageUrls(
+                items.stream()
+                        .map(CartItem::getVariant)
+                        .map(variant -> new ImageKey(
+                                variant.getProduct().getProductId(),
+                                variant.getColor().getColorId()
+                        ))
+                        .toList()
+        );
 
         for (CartItem item : items) {
             Variant     v           = item.getVariant();
@@ -197,7 +210,7 @@ public class CartService {
                             v.getProduct().getProductName(),
                             v.getVariantSku(),
                             v.getVariantDesc(),
-                            null, //v.getPrimaryImageUrl(), este valor no viene con el registro de variante, hay que buscarlo en la tabla Image
+                            primaryImages.get(new ImageKey(v.getProduct().getProductId(), v.getColor().getColorId())),
                             price,
                             item.getQuantity(),
                             subtotal,

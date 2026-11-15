@@ -2,7 +2,6 @@ package com.proyecto.proyecto_techlab_springboot.variant.dto;
 
 import com.proyecto.proyecto_techlab_springboot.variant.model.NumericSize;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
-import com.proyecto.proyecto_techlab_springboot.variant.model.TargetGender;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,7 +15,6 @@ public record VariantResponse(
         String          colorName,
         String          colorCode,
         NumericSize     size,
-        TargetGender    targetGender,
         String          desc,
         String          sku,
         BigDecimal      price,

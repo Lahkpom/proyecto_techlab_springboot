@@ -1,8 +1,10 @@
 package com.proyecto.proyecto_techlab_springboot.image.model;
 
-import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
+import com.proyecto.proyecto_techlab_springboot.color.model.Color;
+import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -26,8 +28,12 @@ public class Image {
     private Long imageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id", nullable = false)
-    private Variant variant;
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "color_id", nullable = false)
+    private Color color;
 
     @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
     private String imageUrl;
@@ -36,6 +42,7 @@ public class Image {
     private Integer displayOrder;
 
     @Column(name = "is_primary", nullable = false)
+    @Builder.Default
     private boolean isPrimary = false;
 
     @CreationTimestamp

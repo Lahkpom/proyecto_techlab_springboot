@@ -8,50 +8,65 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface IImageRepository extends JpaRepository<Image, Long> {
 
     @Query("""
         SELECT i
         FROM Image i
-        WHERE i.variant.variantId = :variantId
-        ORDER BY
-            i.isPrimary DESC,
-            i.displayOrder ASC,
-            i.createdAt ASC
+        WHERE i.product.productId = :productId
+          AND i.color.colorId = :colorId
+        ORDER BY i.isPrimary DESC, i.displayOrder ASC, i.createdAt ASC
     """)
-    List<Image> findAllByVariantIdOrdered(@Param("variantId") Long variantId);
-
-    @Query("""
-        SELECT i
-        FROM Image i
-        WHERE i.variant.variantId = :variantId
-            AND i.isPrimary = true
-    """)
-    Optional<Image> findPrimaryByVariantId(@Param("variantId") Long variantId);
+    List<Image> findAllByProductIdAndColorIdOrdered(
+            @Param("productId") UUID productId,
+            @Param("colorId") Long colorId
+    );
 
     @Query("""
         SELECT COALESCE(MAX(i.displayOrder), -1)
         FROM Image i
-        WHERE i.variant.variantId = :variantId
+        WHERE i.product.productId = :productId
+          AND i.color.colorId = :colorId
     """)
-    int findMaxDisplayOrderByVariantId(@Param("variantId") Long variantId);
+    int findMaxDisplayOrderByProductIdAndColorId(
+            @Param("productId") UUID productId,
+            @Param("colorId") Long colorId
+    );
 
-    @Query("""
-        SELECT i.imageId
-        FROM Image i
-        WHERE i.variant.variantId = :variantId
-    """)
-    List<Long> findImageIdsByVariantId(@Param("variantId") Long variantId);
+    Optional<Image> findByImageIdAndProduct_ProductIdAndColor_ColorId(
+            Long imageId,
+            UUID productId,
+            Long colorId
+    );
 
-    Optional<Image> findByImageIdAndVariant_VariantId(Long imageId, Long variantId);
+    @Query(value = "SELECT * FROM image WHERE product_id = :productId", nativeQuery = true)
+    List<Image> findAllByProductIdForDeletion(@Param("productId") UUID productId);
+
+    @Query(value = """
+        SELECT i.product_id AS "productId",
+               i.color_id AS "colorId",
+               i.image_url AS "imageUrl"
+        FROM image i
+        JOIN jsonb_to_recordset(CAST(:imageKeys AS jsonb))
+             AS requested_pair(product_id UUID, color_id BIGINT)
+          ON requested_pair.product_id = i.product_id
+         AND requested_pair.color_id = i.color_id
+        WHERE i.is_primary = TRUE
+        """, nativeQuery = true)
+    List<ImagePrimaryProjection> findPrimaryImagesByPairs(@Param("imageKeys") String imageKeys);
 
     @Modifying
     @Query("""
         UPDATE Image i
         SET i.isPrimary = false
-        WHERE i.variant.variantId = :variantId
-            AND i.isPrimary = true
+        WHERE i.product.productId = :productId
+          AND i.color.colorId = :colorId
+          AND i.isPrimary = true
     """)
-    void resetPrimaryByVariantId(@Param("variantId") Long variantId);
+    int resetPrimaryByProductIdAndColorId(
+            @Param("productId") UUID productId,
+            @Param("colorId") Long colorId
+    );
 }

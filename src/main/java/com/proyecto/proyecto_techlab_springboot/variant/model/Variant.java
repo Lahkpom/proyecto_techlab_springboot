@@ -40,11 +40,6 @@ public class Variant extends BaseEntity {
     @Column(name = "variant_size", nullable = false)
     private NumericSize variantSize;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "target_gender", nullable = false)
-    private TargetGender targetGender;
-
     @Column(name = "variant_desc", nullable = false)
     private String variantDesc;
 

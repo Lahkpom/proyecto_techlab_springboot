@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 /**
- * Qué tipo de archivo va a subir (para validar extensión/MIME antes de firmar) y para qué variante.
+ * Qué tipo de archivo va a subir (para validar extensión/MIME antes de firmar).
  *
  * @param originalFileName
  * @param contentType

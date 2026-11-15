@@ -18,6 +18,7 @@ public interface ICartItemRepository extends JpaRepository<CartItem, CartItemId>
         FROM CartItem ci
             JOIN FETCH ci.variant v
             JOIN FETCH v.product p
+            JOIN FETCH v.color c
         WHERE ci.id.userId = :userId
     """)
     List<CartItem> findAllByUserIdWithDetails(@Param("userId") UUID userId);

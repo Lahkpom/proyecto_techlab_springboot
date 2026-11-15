@@ -27,6 +27,11 @@ public class Product extends BaseEntity {
     @Column(name = "product_category", nullable = false)
     private Category productCategory;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "target_gender", nullable = false)
+    private TargetGender targetGender;
+
     @Column(name = "product_name", nullable = false)
     private String productName;
 
