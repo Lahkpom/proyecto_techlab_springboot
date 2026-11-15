@@ -8,10 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailable
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.InvalidFiscalOperationException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperationException;
-import com.proyecto.proyecto_techlab_springboot.salereturn.exception.ActiveReturnAlreadyExistsException;
-import com.proyecto.proyecto_techlab_springboot.salereturn.exception.ReturnItemQuantityExceededException;
-import com.proyecto.proyecto_techlab_springboot.salereturn.exception.ReturnWindowExpiredException;
-import com.proyecto.proyecto_techlab_springboot.salereturn.exception.SaleNotEligibleForReturnException;
+import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -291,6 +288,39 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "ARCA_BUSINESS_REJECTION",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: Subtotal inválido o no positivo en el cálculo de totales de venta
+    @ExceptionHandler(InvalidSaleAmountException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSaleAmount(InvalidSaleAmountException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_SALE_AMOUNT",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: Precondiciones de liquidación monetaria de devolución incumplidas
+    @ExceptionHandler(InvalidReturnRefundException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidReturnRefund(InvalidReturnRefundException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_RETURN_REFUND",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: Inconsistencia en los ítems informados durante el peritaje físico de devolución
+    @ExceptionHandler(InvalidReturnInspectionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidReturnInspection(InvalidReturnInspectionException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_RETURN_INSPECTION",
                 ex.getMessage(),
                 request
         );

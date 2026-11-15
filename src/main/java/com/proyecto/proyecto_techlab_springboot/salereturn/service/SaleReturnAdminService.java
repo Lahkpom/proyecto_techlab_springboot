@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.salereturn.service;
 
+import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnInspectionException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnRefundException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnStatusTransitionException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.SaleReturnNotFoundException;
@@ -163,7 +164,7 @@ public class SaleReturnAdminService {
             SaleReturnItem returnItem = returnItemMap.get(itemVerdict.returnItemId());
 
             if (returnItem == null)
-                throw new IllegalArgumentException(
+                throw new InvalidReturnInspectionException(
                         "El ítem { returnItemId: %d } no pertenece a la devolución { returnId: %s }"
                                 .formatted(itemVerdict.returnItemId(), returnId)
                 );
