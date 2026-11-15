@@ -75,6 +75,39 @@ class ProductCatalogServiceTest {
     }
 
     @Test
+    void returnsProductsWithoutImagesWithAnEmptyImageList() {
+        IProductRepository repository = mock(IProductRepository.class);
+        IProductRepository.PublicProductCatalogProjection projection =
+                mock(IProductRepository.PublicProductCatalogProjection.class);
+
+        when(projection.getProductId()).thenReturn(UUID.randomUUID());
+        when(projection.getProductCategory()).thenReturn("CALZADO");
+        when(projection.getTargetGender()).thenReturn("MUJERES");
+        when(projection.getProductName()).thenReturn("Bota");
+        when(projection.getShortDesc()).thenReturn("Cuero");
+        when(projection.getMinPrice()).thenReturn(new BigDecimal("12500.00"));
+        when(projection.getSizeCount()).thenReturn(3L);
+        when(projection.getColorCount()).thenReturn(2L);
+        when(projection.getMainImagesUrl()).thenReturn(null);
+        when(repository.findPublicCatalog(eq("MUJERES"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(projection)));
+
+        ProductService service = new ProductService(
+                repository,
+                mock(VariantService.class),
+                mock(ApplicationEventPublisher.class),
+                new ObjectMapper()
+        );
+
+        ProductCatalogResponse result = service.getAllPublicProducts(
+                TargetGender.MUJERES,
+                PageRequest.of(0, 20)
+        ).getContent().getFirst();
+
+        assertEquals(List.of(), result.mainImagesUrl());
+    }
+
+    @Test
     void rejectsUnsupportedCatalogSortFields() {
         IProductRepository repository = mock(IProductRepository.class);
         ProductService service = new ProductService(

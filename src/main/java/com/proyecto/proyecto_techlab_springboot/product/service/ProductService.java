@@ -165,7 +165,7 @@ public class ProductService {
     ) {
         String imagesJson = projection.getMainImagesUrl();
         if (imagesJson == null)
-            throw new IllegalStateException("La view del catálogo devolvió una lista de imágenes nula.");
+            return mapToCatalogResponse(projection, List.of());
 
         List<ProductCatalogImageResponse> images;
         try {
@@ -174,6 +174,13 @@ public class ProductService {
             throw new IllegalStateException("No se pudo interpretar las imágenes de la view del catálogo.", ex);
         }
 
+        return mapToCatalogResponse(projection, images);
+    }
+
+    private ProductCatalogResponse mapToCatalogResponse(
+            IProductRepository.PublicProductCatalogProjection projection,
+            List<ProductCatalogImageResponse> images
+    ) {
         return new ProductCatalogResponse(
                 projection.getProductId(),
                 Category.valueOf(projection.getProductCategory()),
