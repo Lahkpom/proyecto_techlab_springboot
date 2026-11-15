@@ -16,13 +16,14 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/products/{productId}/colors/{colorId}/images")
 @RequiredArgsConstructor
 // @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERADMIN')") // TODO: Descomentar al habilitar Spring Security
 public class ImageController {
 
     private final ImageService imageService;
 
-    @PostMapping("/products/{productId}/colors/{colorId}/images/presigned-url")
+    @PostMapping("/presigned-url")
     public ResponseEntity<ImagePresignedUrlResponse> generatePresignedUploadUrl(
             @PathVariable UUID productId,
             @PathVariable Long colorId,
@@ -31,7 +32,7 @@ public class ImageController {
         return ResponseEntity.ok(imageService.generatePresignedUrl(productId, colorId, request));
     }
 
-    @PostMapping("/products/{productId}/colors/{colorId}/images")
+    @PostMapping
     public ResponseEntity<ImageResponse> addImage(
             @PathVariable UUID productId,
             @PathVariable Long colorId,
@@ -41,7 +42,7 @@ public class ImageController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/products/{productId}/colors/{colorId}/images")
+    @GetMapping
     public ResponseEntity<List<ImageResponse>> getImages(
             @PathVariable UUID productId,
             @PathVariable Long colorId
@@ -49,7 +50,7 @@ public class ImageController {
         return ResponseEntity.ok(imageService.getImages(productId, colorId));
     }
 
-    @PatchMapping("/products/{productId}/colors/{colorId}/images/{imageId}/primary")
+    @PatchMapping("/{imageId}/primary")
     public ResponseEntity<ImageResponse> setPrimaryImage(
             @PathVariable UUID productId,
             @PathVariable Long colorId,
@@ -58,7 +59,7 @@ public class ImageController {
         return ResponseEntity.ok(imageService.setPrimaryImage(productId, colorId, imageId));
     }
 
-    @PatchMapping("/products/{productId}/colors/{colorId}/images/reorder")
+    @PatchMapping("/reorder")
     public ResponseEntity<List<ImageResponse>> reorderImages(
             @PathVariable UUID productId,
             @PathVariable Long colorId,
@@ -67,9 +68,13 @@ public class ImageController {
         return ResponseEntity.ok(imageService.reorderImages(productId, colorId, request));
     }
 
-    @DeleteMapping("/images/{imageId}")
-    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) {
-        imageService.deleteImage(imageId);
+    @DeleteMapping("/{imageId}")
+    public ResponseEntity<Void> deleteImage(
+            @PathVariable UUID productId,
+            @PathVariable Long colorId,
+            @PathVariable Long imageId
+    ) {
+        imageService.deleteImage(productId, colorId, imageId);
         return ResponseEntity.noContent().build();
     }
 }

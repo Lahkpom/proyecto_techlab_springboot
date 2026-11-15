@@ -129,11 +129,8 @@ public class ImageService {
     }
 
     @Transactional
-    public void deleteImage(Long imageId) {
-        Image image = this.imageRepository.findById(imageId)
-                .orElseThrow(() -> new ImageNotFoundException("{ imageId: %s }".formatted(imageId)));
-        UUID productId = image.getProduct().getProductId();
-        Long colorId = image.getColor().getColorId();
+    public void deleteImage(UUID productId, Long colorId, Long imageId) {
+        Image image = findByGalleryAndIdOrThrow(productId, colorId, imageId);
         String storagePath = this.storageService.extractPathFromPublicUrl(image.getImageUrl());
 
         this.storageService.deleteFiles(List.of(storagePath));
