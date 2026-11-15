@@ -1,15 +1,22 @@
 package com.proyecto.proyecto_techlab_springboot.product.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogImageResponse;
+import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.product.exception.ProductNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEvent;
 import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.model.Category;
+import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
@@ -18,10 +25,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -29,9 +40,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private static final TypeReference<List<ProductCatalogImageResponse>> CATALOG_IMAGES_TYPE = new TypeReference<>() {};
+
+    private static final Map<String, String> CATALOG_SORT_COLUMNS = Map.of(
+            "id", "product_id",
+            "category", "product_category",
+            "targetGender", "target_gender",
+            "name", "product_name",
+            "shortDesc", "short_desc",
+            "minPrice", "min_price",
+            "sizeCount", "size_count",
+            "colorCount", "color_count"
+    );
+
     private final IProductRepository    iProductRepository;
     private final VariantService        variantService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public ProductResponse createProduct(ProductCreateRequest request) {
@@ -55,9 +80,10 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductResponse> getAllPublicProducts(Pageable pageable) {
-        return this.iProductRepository.findAllPublic(pageable)
-                .map(this::mapToResponse);
+    public Page<ProductCatalogResponse> getAllPublicProducts(TargetGender targetGender, Pageable pageable) {
+        Pageable catalogPageable = toCatalogPageable(pageable);
+        return this.iProductRepository.findPublicCatalog(targetGender.name(), catalogPageable)
+                .map(this::mapToCatalogResponse);
     }
 
     @Transactional(readOnly = true)
@@ -132,6 +158,49 @@ public class ProductService {
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+    }
+
+    private ProductCatalogResponse mapToCatalogResponse(
+            IProductRepository.PublicProductCatalogProjection projection
+    ) {
+        String imagesJson = projection.getMainImagesUrl();
+        if (imagesJson == null)
+            throw new IllegalStateException("La view del catálogo devolvió una lista de imágenes nula.");
+
+        List<ProductCatalogImageResponse> images;
+        try {
+            images = objectMapper.readValue(imagesJson, CATALOG_IMAGES_TYPE);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("No se pudo interpretar las imágenes de la view del catálogo.", ex);
+        }
+
+        return new ProductCatalogResponse(
+                projection.getProductId(),
+                Category.valueOf(projection.getProductCategory()),
+                TargetGender.valueOf(projection.getTargetGender()),
+                projection.getProductName(),
+                projection.getShortDesc(),
+                projection.getMinPrice(),
+                projection.getSizeCount(),
+                projection.getColorCount(),
+                images
+        );
+    }
+
+    private Pageable toCatalogPageable(Pageable pageable) {
+        Sort sort = pageable.getSort().isUnsorted()
+                ? Sort.by("product_name").ascending().and(Sort.by("product_id").ascending())
+                : pageable.getSort().map(order -> {
+                    String column = CATALOG_SORT_COLUMNS.get(order.getProperty());
+                    if (column == null)
+                        throw new InvalidProductCatalogSortException(order.getProperty());
+                    return order.withProperty(column);
+                });
+
+        if (sort.getOrderFor("product_id") == null)
+            sort = sort.and(Sort.by("product_id").ascending());
+
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     public Product findProductByIdOrThrow(UUID id) {

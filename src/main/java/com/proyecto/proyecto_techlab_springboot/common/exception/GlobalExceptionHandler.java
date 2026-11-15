@@ -8,6 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.fiscal.exception.ArcaUnavailable
 import com.proyecto.proyecto_techlab_springboot.fiscal.exception.InvalidFiscalOperationException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.InvalidImageReorderException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperationException;
+import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -48,6 +50,32 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_PARAMETER",
                 detail,
+                request
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestParameter(
+            MissingServletRequestParameterException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_PARAMETER",
+                "El parámetro '%s' es obligatorio.".formatted(ex.getParameterName()),
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidProductCatalogSortException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidProductCatalogSort(
+            InvalidProductCatalogSortException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_PARAMETER",
+                ex.getMessage(),
                 request
         );
     }

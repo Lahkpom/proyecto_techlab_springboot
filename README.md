@@ -226,7 +226,7 @@ Rutas de usuario; aunque funcionalmente se orientan al perfil propio, los métod
 
 | Método y ruta | Propósito | Seguridad / roles | Path y query | Request body | Éxito | Errores específicos |
 |---|---|---|---|---|---|---|
-| `GET /products` | Lista productos públicos paginados. | Público; solo productos que el servicio considere públicos. | Query `page`, `size`, `sort` (Pageable; default size 20). | — | `200 Page<ProductResponse>`. | `400` parámetro inválido. |
+| `GET /products` | Lista el catálogo público paginado usando `v_public_product_catalog`. | Público; la view incluye productos con variantes y colores activos. | Query obligatorio `targetGender` (`NINIAS`, `NINIOS`, `HOMBRES`, `MUJERES`, `UNISEX`); `page`, `size` (default size 20) y `sort` opcionales. `sort` acepta `id`, `category`, `targetGender`, `name`, `shortDesc`, `minPrice`, `sizeCount` o `colorCount`. | — | `200 Page<ProductCatalogResponse>`. | `400` falta o es inválido `targetGender`, paginación inválida o campo de orden no soportado. |
 | `GET /products/{id}` | Consulta un producto público. | Público. | `id`: UUID, requerido. | — | `200 ProductResponse`. | `400` UUID inválido; `404` producto inexistente; `410` producto no disponible. |
 
 #### Administrativos (`/admin/...`)
@@ -671,6 +671,7 @@ Los campos de record se serializan con los nombres indicados. Las fechas `Instan
 #### `ProductResponse`, `VariantResponse` y `ColorResponse`
 
 - `ProductResponse`: `id` (UUID), `category` (`Category`), `targetGender` (`TargetGender`), `name`, `shortDesc`, `longDesc` (string), `status` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
+- `ProductCatalogResponse`: `id`, `category`, `targetGender`, `name`, `shortDesc`, `minPrice` (BigDecimal), `sizeCount`, `colorCount` y `mainImagesUrl` (lista de `{ colorId, colorName, colorCode, imageUrl }`); es el cuerpo de cada elemento de `GET /products`. Ejemplo: `/products?targetGender=MUJERES&page=0&size=20`.
 - `VariantResponse`: `id` (Long), `productId` (UUID), `productName` (string), `colorId` (Long), `colorName`, `colorCode` (string), `size` (`NumericSize`), `desc`, `sku` (string), `price` (BigDecimal), `stock` (Integer), `rowStatus` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
 - `ColorResponse`: `id` (Long), `name`, `desc`, `code` (string), `rowStatus` (`RowStatus`), `createdAt`, `updatedAt` (Instant).
 
