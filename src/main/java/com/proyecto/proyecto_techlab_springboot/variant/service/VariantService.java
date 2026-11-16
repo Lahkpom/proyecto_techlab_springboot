@@ -1,26 +1,32 @@
 package com.proyecto.proyecto_techlab_springboot.variant.service;
 
-import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.model.Color;
 import com.proyecto.proyecto_techlab_springboot.color.service.ColorService;
+import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEvent;
+import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivatedEvent;
+import com.proyecto.proyecto_techlab_springboot.product.model.Product;
+import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
+import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicProductVariantResponse;
+import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicVariantImageResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.variant.model.NumericSize;
 import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepository;
-import com.proyecto.proyecto_techlab_springboot.product.model.Product;
-import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
-import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEvent;
-import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.context.event.EventListener;
 
 import java.util.List;
 import java.util.Map;
@@ -31,9 +37,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VariantService {
 
+    private static final TypeReference<List<PublicVariantImageResponse>> PUBLIC_IMAGES_TYPE =
+            new TypeReference<>() {};
+
     private final IVariantRepository    iVariantRepository;
     private final ProductService productService;
     private final ColorService colorService;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public List<VariantResponse> getVariantsByProduct(UUID productId, boolean includeInactive) {
@@ -44,6 +54,14 @@ public class VariantService {
                 : iVariantRepository.findAllByProduct_ProductIdAndRowStatus(productId, RowStatus.ACTIVE);
 
         return variants.stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PublicProductVariantResponse> getPublicVariantsByProduct(UUID productId) {
+        productService.getPublicProductById(productId);
+        return iVariantRepository.findPublicVariantsByProductId(productId).stream()
+                .map(this::mapToPublicResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -213,5 +231,37 @@ public class VariantService {
                 v.getCreatedAt(),
                 v.getUpdatedAt()
         );
+    }
+
+    private PublicProductVariantResponse mapToPublicResponse(
+            IVariantRepository.PublicProductVariantProjection projection
+    ) {
+        try {
+            String imagesJson = projection.getImagesJson();
+            List<PublicVariantImageResponse> images = imagesJson == null || imagesJson.isBlank()
+                    ? List.of()
+                    : objectMapper.readValue(imagesJson, PUBLIC_IMAGES_TYPE);
+            
+            if (images == null) images = List.of();
+
+            return new PublicProductVariantResponse(
+                    projection.getProductId(),
+                    projection.getProductName(),
+                    projection.getProductLongDesc(),
+                    projection.getVariantId(),
+                    NumericSize.valueOf(projection.getVariantSize()),
+                    projection.getPrice(),
+                    projection.getStock(),
+                    projection.getColorId(),
+                    projection.getColorName(),
+                    projection.getColorCode(),
+                    images
+            );
+        } catch (JacksonException | IllegalArgumentException ex) {
+            throw new IllegalStateException(
+                    "La vista pública de variantes contiene datos inválidos.",
+                    ex
+            );
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.variant.controller;
 
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicProductVariantResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantUpdateRequest;
@@ -27,6 +28,13 @@ public class VariantController {
             @RequestParam(defaultValue = "false")   boolean includeInactive
     ) {
         return ResponseEntity.ok(variantService.getVariantsByProduct(productId, includeInactive));
+    }
+
+    @GetMapping("/public/by-product/{productId}")
+    public ResponseEntity<List<PublicProductVariantResponse>> getPublicVariantsByProduct(
+            @PathVariable UUID productId
+    ) {
+        return ResponseEntity.ok(variantService.getPublicVariantsByProduct(productId));
     }
 
     @GetMapping("/{id}")

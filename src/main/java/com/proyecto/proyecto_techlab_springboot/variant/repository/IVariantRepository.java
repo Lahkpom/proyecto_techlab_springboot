@@ -6,6 +6,7 @@ import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 
 import jakarta.persistence.LockModeType;
 
+import java.math.BigDecimal;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
@@ -47,6 +48,41 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     // Buscar variantes activas de un producto
     @EntityGraph(attributePaths = {"product", "color"})
     List<Variant> findAllByProduct_ProductIdAndRowStatus(UUID productId, RowStatus rowStatus);
+
+    @Query(value = """
+        SELECT
+            product_id AS "productId",
+            product_name AS "productName",
+            product_long_desc AS "productLongDesc",
+            variant_id AS "variantId",
+            variant_size::text AS "variantSize",
+            variant_price AS "price",
+            variant_stock AS "stock",
+            color_id AS "colorId",
+            color_name AS "colorName",
+            color_code AS "colorCode",
+            images::text AS "imagesJson"
+        FROM v_public_product_variants
+        WHERE product_id = :productId
+        ORDER BY variant_size, color_id
+        """, nativeQuery = true)
+    List<PublicProductVariantProjection> findPublicVariantsByProductId(
+            @Param("productId") UUID productId
+    );
+
+    interface PublicProductVariantProjection {
+        UUID getProductId();
+        String getProductName();
+        String getProductLongDesc();
+        Long getVariantId();
+        String getVariantSize();
+        BigDecimal getPrice();
+        Integer getStock();
+        Long getColorId();
+        String getColorName();
+        String getColorCode();
+        String getImagesJson();
+    }
 
     @Query("""
         SELECT COUNT(v)

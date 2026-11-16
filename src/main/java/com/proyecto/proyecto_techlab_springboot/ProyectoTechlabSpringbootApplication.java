@@ -12,31 +12,15 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
-     *  - Revisar la cadena de logs entre el schudler fiscal y el tryEmit de FiscalReceiptService porque se curzan entre ellas
-     * TODO
      *  - Agregar a las internal notes de las sale la hora del comentario y también quién lo hizo.
-     * TODO
-     *  - Agregar en /service subcarpetas /mercadoPago /supabase
-     * TODO
-     *  - La eliminación lógica de productos debe limpiar sus imágenes en Supabase; las imágenes son compartidas por producto/color.
-     * TODO
-     *  - Ver en SaleAdminService, si una venta no puede ser reembolsada después de aprobado el pago, que pasa entonces cuando ya pagó y quiere hacer una devolución?
      * TODO
      *  - Reveer el shippingCost del flujo de sale, se lo está recibiendo por el front pero eso debería:
      *      - Estar seteado con un costo fijo en el back
      *      - Ser dinamico dándole un flujo y una tabla en la db donde pueda modificarse
      *      - Ver si los proveedores del servicio tienen alguna api que devuelva el valor actual y calcularlo en base a eso
      * TODO
-     *  - Ver el flujo de los productos.
-     *      - Cuando un producto se inactiva o elimina hace lo mismo en cascada con sus variantes
-     *      - Tratar de hacer que solo se cambie el estado al producto y termine la transacción, y que la cascada en las variantes se
-     *          haga en segundo plano (No sé si esto tiene que ver con lo multihilo).
-     *      - Podría tener un storedProcedure o un procedure común y corriente que tenga la lógica esta ?
-     * TODO
      *   - Hacer un /model para user_security_tokens cuando implemente verificación de email o reseteo de clave
      *   - Ver también la lógica para que el usuario pueda modificar su correo
-     * TODO
-     *  - El siguiente paso en la cadena de seguridad es armar el filtro HTTP (JwtAuthenticationFilter) que intercepte cada request entrante, lea el header Authorization: Bearer <token>, extraiga el usuario con este servicio y lo cargue en el contexto de Spring Security.
      * TODO
      *  - Poner el isAnonymous en un @PreAuthorize en los endpoints de login y register para evitar que accedan usuarios con sesión activa
      */
