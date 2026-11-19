@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -29,12 +28,18 @@ public record CheckoutRequest(
         @Size(max = 50, message = "El teléfono no puede exceder los 50 caracteres")
         String customerPhone,
 
-        @NotBlank(message = "La dirección de entrega es obligatoria")
         String shippingAddress,
 
         String customerNotes,
 
-        BigDecimal shippingCost,
+        @NotNull(message = "La modalidad de entrega es obligatoria")
+        Boolean isPickup,
+
+        String shippingProvince,
+
+        String shippingLocality,
+
+        String shippingPostalCode,
 
         @NotNull(message = "El método de pago es obligatorio")
         PaymentMethod paymentMethod,

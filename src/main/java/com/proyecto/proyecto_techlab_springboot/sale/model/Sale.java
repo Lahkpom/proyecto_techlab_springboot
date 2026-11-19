@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.model;
 
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
+import com.proyecto.proyecto_techlab_springboot.shipping.model.ShippingMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -56,7 +57,21 @@ public class Sale {
     @Column(name = "customer_notes", columnDefinition = "TEXT")
     private String customerNotes;
 
-    @Column(name = "shipping_address", columnDefinition = "TEXT", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "shipping_method", nullable = false)
+    private ShippingMethod shippingMethod;
+
+    @Column(name = "shipping_province", length = 100)
+    private String shippingProvince;
+
+    @Column(name = "shipping_locality", length = 150)
+    private String shippingLocality;
+
+    @Column(name = "shipping_postal_code", length = 10)
+    private String shippingPostalCode;
+
+    @Column(name = "shipping_address", columnDefinition = "TEXT")
     private String shippingAddress;
 
     // Totales monetarios

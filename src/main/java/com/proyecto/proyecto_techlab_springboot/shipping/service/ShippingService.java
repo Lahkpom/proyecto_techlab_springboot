@@ -20,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+// TODO - En ningún momento consulta la api para ver si el CP condice con la localidad
 public class ShippingService {
 
     private static final BigDecimal PICKUP_COST = new BigDecimal("0.00");

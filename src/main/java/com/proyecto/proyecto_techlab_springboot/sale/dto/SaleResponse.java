@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.dto;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
+import com.proyecto.proyecto_techlab_springboot.shipping.model.ShippingMethod;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import lombok.Builder;
 
@@ -26,6 +27,10 @@ public record SaleResponse(
         TaxIdType               customerTaxIdType,
         String                  customerTaxIdNumber,
         String                  customerNotes,
+        ShippingMethod          shippingMethod,
+        String                  shippingProvince,
+        String                  shippingLocality,
+        String                  shippingPostalCode,
         String                  shippingAddress,
         Integer                 saleQuantity,
         BigDecimal              saleSubtotal,

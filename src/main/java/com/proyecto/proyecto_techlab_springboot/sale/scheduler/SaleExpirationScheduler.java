@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Busca órdenes con más de $X$ horas en PENDIENTE.
+ * Busca órdenes vencidas en PENDIENTE y órdenes en preparación pagadas en efectivo.
  * Invoca variantService.restoreStock(...) de forma transaccional.
  * Transiciona a CANCELADO y registra una nota en internalNotes.
  */
@@ -36,9 +36,13 @@ public class SaleExpirationScheduler {
     @Value("${sales.expiration.ttl-hours:48}")
     private long ttlHours;
 
+    @Value("${sales.expiration.cash-ttl-hours:72}")
+    private long cashTtlHours;
+
     /**
      * Tarea programada diaria: corre a las 03:00 AM hora local.
-     * Busca pedidos en PENDIENTE creados hace más de ttlHours y restituye stock.
+     * Busca pedidos PENDIENTE vencidos a las ttlHours y pedidos en preparación en efectivo
+     * vencidos a las cashTtlHours, y restituye su stock.
      */
     @Scheduled(
             cron = "${sales.expiration.cron:0 0 3 * * *}",
@@ -46,44 +50,50 @@ public class SaleExpirationScheduler {
     )
     @Transactional
     public void cancelExpiredPendingSales() {
-        List<Sale> expiredSales = this.iSaleRepository.findExpiredPendingSales(
+        List<Sale> expiredPendingSales = this.iSaleRepository.findExpiredPendingSales(
                 Instant.now().minus(Duration.ofHours(this.ttlHours))
         );
+        List<Sale> expiredCashPreparationSales = this.iSaleRepository.findExpiredCashPreparationSales(
+                Instant.now().minus(Duration.ofHours(this.cashTtlHours))
+        );
 
-        if (expiredSales.isEmpty()) {
-            log.info("Purga nocturna TTL: No se registraron órdenes pendientes vencidas.");
+        if (expiredPendingSales.isEmpty() && expiredCashPreparationSales.isEmpty()) {
+            log.info("Purga nocturna TTL: No se registraron órdenes vencidas.");
             return;
         }
 
-        log.info("Iniciando purga nocturna TTL. Cancelando {} orden(es) abandonada(s)...", expiredSales.size());
+        cancelExpiredSales(
+                expiredPendingSales,
+                "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas sin confirmación de pago."
+                        .formatted(ttlHours)
+        );
+        cancelExpiredSales(
+                expiredCashPreparationSales,
+                "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas en preparación sin coordinar/entregar el pedido en efectivo."
+                        .formatted(cashTtlHours)
+        );
+    }
 
+    private void cancelExpiredSales(List<Sale> expiredSales, String auditMessage) {
         for (Sale sale : expiredSales) {
-            try {
-                // Restituir el stock de las prendas
-                Map<Long, Integer> stockMap = sale.getItems().stream()
-                        .filter(item -> item.getVariant() != null)
-                        .collect(Collectors.toMap(
-                                item -> item.getVariant().getVariantId(),
-                                SaleItem::getQuantity,
-                                Integer::sum
-                        ));
+            Map<Long, Integer> stockMap = sale.getItems().stream()
+                    .filter(item -> item.getVariant() != null)
+                    .collect(Collectors.toMap(
+                            item -> item.getVariant().getVariantId(),
+                            SaleItem::getQuantity,
+                            Integer::sum
+                    ));
 
-                this.variantService.restoreStock(stockMap);
+            this.variantService.restoreStock(stockMap);
 
-                // Cancelar la orden
-                sale.setSaleStatus(SaleStatus.CANCELADO);
-                sale.setPaymentStatus(PaymentStatus.RECHAZADO);
-                sale.setUpdatedAt(Instant.now());
+            sale.setSaleStatus(SaleStatus.CANCELADO);
+            sale.setPaymentStatus(PaymentStatus.RECHAZADO);
+            sale.setUpdatedAt(Instant.now());
 
-                String auditMessage = "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas sin confirmación de pago."
-                                .formatted(ttlHours);
-                String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
-                sale.setInternalNotes(currentNotes + auditMessage);
+            String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
+            sale.setInternalNotes(currentNotes + auditMessage);
 
-                log.info("Orden ID: {} cancelada y stock devuelto al inventario con éxito.", sale.getSaleId());
-            } catch (Exception ex) {
-                log.error("Fallo al purgar la orden ID: {}: {}", sale.getSaleId(), ex.getMessage());
-            }
+            log.info("Orden ID: {} cancelada y stock devuelto al inventario con éxito.", sale.getSaleId());
         }
     }
 }

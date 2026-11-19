@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.service;
 import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.common.exception.InsufficientStockException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleStatusTransitionException;
+import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidShippingPaymentCombinationException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.MissingTaxIdentificationException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.EmptySaleItemsException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundException;
@@ -15,6 +16,9 @@ import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
+import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingQuoteResponse;
+import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
+import com.proyecto.proyecto_techlab_springboot.shipping.service.ShippingService;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
@@ -56,6 +60,7 @@ public class SaleService {
     private final VariantService variantService;
     private final ImageService imageService;
     private final UserService userService;
+    private final ShippingService shippingService;
 
     @Value("${arca.anonymous-invoice-limit:340000.00}")
     private BigDecimal anonymousInvoiceLimit;
@@ -69,6 +74,25 @@ public class SaleService {
     public SaleResponse createSale(CheckoutRequest request, UUID authenticatedUserId) {
         if (request.items() == null || request.items().isEmpty())
             throw new EmptySaleItemsException();
+
+        ShippingQuoteResponse shippingQuote = this.shippingService.quoteShipping(
+                request.isPickup(),
+                request.shippingProvince(),
+                request.shippingLocality(),
+                request.shippingPostalCode()
+        );
+
+        if (!request.isPickup() && (request.shippingAddress() == null || request.shippingAddress().isBlank())) {
+            throw new InvalidShippingDestinationException(
+                    "La dirección (calle y altura) es obligatoria para envíos a domicilio."
+            );
+        }
+
+        if (request.paymentMethod() == PaymentMethod.EFECTIVO && !shippingQuote.cashPaymentAllowed()) {
+            throw new InvalidShippingPaymentCombinationException(
+                    "El pago en efectivo no está habilitado para envíos por correo nacional."
+            );
+        }
 
         // Resolver usuario y rol del comprador
         Users buyer       = null;
@@ -156,7 +180,7 @@ public class SaleService {
         SaleCalculationResult calc = this.salePolicyService.calculateSaleTotals(
                 totalQuantity,
                 calculatedSubtotal,
-                request.shippingCost(),
+                shippingQuote.shippingCost(),
                 buyerRole
         );
 
@@ -184,7 +208,15 @@ public class SaleService {
                 .customerTaxIdType(taxData.type())
                 .customerTaxIdNumber(taxData.number())
                 .customerNotes(request.customerNotes())
-                .shippingAddress(request.shippingAddress().trim())
+                .shippingMethod(shippingQuote.shippingMethod())
+                .shippingProvince(trimToNull(request.shippingProvince()))
+                .shippingLocality(trimToNull(request.shippingLocality()))
+                .shippingPostalCode(trimToNull(request.shippingPostalCode()))
+                .shippingAddress(
+                        request.shippingAddress() == null || request.shippingAddress().isBlank()
+                                ? "Retiro en Estación Llavallol"
+                                : request.shippingAddress().trim()
+                )
                 .saleQuantity(calc.totalQuantity())
                 .saleSubtotal(calc.subtotal())
                 .saleDiscountAmount(calc.discountAmount())
@@ -243,6 +275,10 @@ public class SaleService {
             );
 
         return new ResolvedTaxData(resolvedType, resolvedNumber);
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     /**
@@ -508,6 +544,10 @@ public class SaleService {
                 .customerEmail(sale.getCustomerEmail())
                 .customerPhone(sale.getCustomerPhone())
                 .customerNotes(sale.getCustomerNotes())
+                .shippingMethod(sale.getShippingMethod())
+                .shippingProvince(sale.getShippingProvince())
+                .shippingLocality(sale.getShippingLocality())
+                .shippingPostalCode(sale.getShippingPostalCode())
                 .shippingAddress(sale.getShippingAddress())
                 .saleQuantity(sale.getSaleQuantity())
                 .saleSubtotal(sale.getSaleSubtotal())
@@ -535,6 +575,10 @@ public class SaleService {
                 .trackingToken(sale.getTrackingToken())
                 .customerName(sale.getCustomerName())
                 .customerEmail(sale.getCustomerEmail())
+                .shippingMethod(sale.getShippingMethod())
+                .shippingProvince(sale.getShippingProvince())
+                .shippingLocality(sale.getShippingLocality())
+                .shippingPostalCode(sale.getShippingPostalCode())
                 .saleQuantity(sale.getSaleQuantity())
                 .saleTotal(sale.getSaleTotal())
                 .saleStatus(sale.getSaleStatus())

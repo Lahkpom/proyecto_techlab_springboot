@@ -113,6 +113,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidShippingPaymentCombinationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidShippingPaymentCombination(
+            InvalidShippingPaymentCombinationException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_SHIPPING_PAYMENT_COMBINATION",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja 401 (Credenciales inválidas en login)
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {

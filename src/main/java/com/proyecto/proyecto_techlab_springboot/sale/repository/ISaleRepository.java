@@ -93,6 +93,15 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
     """)
     List<Sale> findExpiredPendingSales(@Param("threshold") Instant threshold);
 
+    @Query("""
+        SELECT s FROM Sale s
+        WHERE s.saleStatus = com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.PREPARACION
+          AND s.paymentMethod = com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod.EFECTIVO
+          AND s.paymentStatus = com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus.PENDIENTE
+          AND s.createdAt < :threshold
+    """)
+    List<Sale> findExpiredCashPreparationSales(@Param("threshold") Instant threshold);
+
     // Para simulación en perfil DEV: obtiene la última orden pendiente de Mercado Pago
     Optional<Sale> findFirstByPaymentMethodAndPaymentStatusOrderByCreatedAtDesc(
             PaymentMethod paymentMethod,
