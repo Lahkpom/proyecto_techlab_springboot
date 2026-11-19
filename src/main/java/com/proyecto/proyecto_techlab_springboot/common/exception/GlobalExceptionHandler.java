@@ -10,6 +10,7 @@ import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperation
 import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.*;
+import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -352,6 +353,20 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "INVALID_RETURN_INSPECTION",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    // Maneja 422: No coincide el cód postal con la localidad ingresada
+    @ExceptionHandler(InvalidShippingDestinationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidShippingDestination(
+            InvalidShippingDestinationException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_SHIPPING_DESTINATION",
                 ex.getMessage(),
                 request
         );

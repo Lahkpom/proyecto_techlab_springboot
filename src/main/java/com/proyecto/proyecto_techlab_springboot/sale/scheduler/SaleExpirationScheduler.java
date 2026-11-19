@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Ejecuta a intervalos regulares (por ejemplo, cada 15 o 30 minutos).
  * Busca órdenes con más de $X$ horas en PENDIENTE.
  * Invoca variantService.restoreStock(...) de forma transaccional.
  * Transiciona a CANCELADO y registra una nota en internalNotes.
