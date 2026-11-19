@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.cart.controller;
 import com.proyecto.proyecto_techlab_springboot.cart.dto.CartItemRequest;
 import com.proyecto.proyecto_techlab_springboot.cart.dto.CartItemUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.cart.dto.CartResponse;
+import com.proyecto.proyecto_techlab_springboot.cart.dto.CartSyncRequest;
 import com.proyecto.proyecto_techlab_springboot.cart.service.CartService;
 import com.proyecto.proyecto_techlab_springboot.auth.util.SecurityContextUtil;
 
@@ -37,6 +38,11 @@ public class CartController {
         UUID userId = this.securityContextUtil.resolveRequiredUserIdFromToken(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(cartService.addItemToCart(userId, itemRequest));
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<CartResponse> syncAnonymousCart(@Valid @RequestBody CartSyncRequest request) {
+        return ResponseEntity.ok(cartService.syncAnonymousCart(request.items()));
     }
 
     @PatchMapping("/item/{variantId}")

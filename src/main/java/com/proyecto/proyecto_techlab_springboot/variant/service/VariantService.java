@@ -28,6 +28,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -198,6 +199,14 @@ public class VariantService {
 
     public List<Variant> findAllByIdInWithLock(List<Long> variantIds){
         return this.iVariantRepository.findAllByIdInWithLock(variantIds);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Variant> findAllByIdInWithDetails(Collection<Long> variantIds) {
+        if (variantIds == null || variantIds.isEmpty())
+            return List.of();
+
+        return this.iVariantRepository.findAllByIdInWithDetails(variantIds);
     }
 
     public void requireAvailableVariantOrThrow(Variant variant){

@@ -25,8 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -44,6 +47,42 @@ public class CartService {
     public CartResponse getCartByUser(UUID userId) {
         this.userService.findUserByIdOrThrow(userId);
         return fetchAndSyncCartResponse(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public CartResponse syncAnonymousCart(List<CartItemRequest> requestedItems) {
+        if (requestedItems == null || requestedItems.isEmpty())
+            return new CartResponse(null, List.of(), 0, BigDecimal.ZERO, false, false);
+
+        Map<Long, Long> requestedQuantities = new LinkedHashMap<>();
+        for (CartItemRequest item : requestedItems)
+            requestedQuantities.merge(item.variantId(), item.quantity().longValue(), Long::sum);
+
+        List<Variant> variants = this.variantService.findAllByIdInWithDetails(
+                requestedQuantities.keySet()
+        );
+        Map<Long, Variant> variantsById = new HashMap<>();
+        for (Variant variant : variants)
+            variantsById.put(variant.getVariantId(), variant);
+
+        List<CartLine> itemsToKeep = new ArrayList<>();
+        boolean itemsPurged = false;
+        boolean itemsAdjusted = false;
+
+        for (Map.Entry<Long, Long> requested : requestedQuantities.entrySet()) {
+            Variant variant = variantsById.get(requested.getKey());
+            Optional<CartLine> reconciledLine = reconcileCartLine(variant, requested.getValue());
+            if (reconciledLine.isEmpty()) {
+                itemsPurged = true;
+                continue;
+            }
+
+            CartLine line = reconciledLine.get();
+            itemsToKeep.add(line);
+            itemsAdjusted |= line.wasAdjusted();
+        }
+
+        return buildCartResponse(null, itemsToKeep, itemsPurged, itemsAdjusted);
     }
 
     /**
@@ -115,7 +154,7 @@ public class CartService {
         int deleted = this.iCartItemRepository.deleteByUserIdAndVariantId(userId, variantId);
 
         if (deleted == 0)
-            throw new VariantNotFoundException(
+            throw new CartItemNotFoundException(
                     "No exite un registro para el usuario que realiza la consulta donde en su carrito contenga la variante { ID: %s }"
                             .formatted(variantId)
             );
@@ -137,30 +176,26 @@ public class CartService {
     private CartResponse fetchAndSyncCartResponse(UUID userId) {
         List<CartItem> storedItems = this.iCartItemRepository.findAllByUserIdWithDetails(userId);
 
-        List<CartItem> itemsToKeep      = new ArrayList<>();
+        List<CartLine> itemsToKeep      = new ArrayList<>();
         List<CartItem> itemsToDelete    = new ArrayList<>();
 
         boolean itemsAdjusted = false;
 
         for (CartItem item : storedItems) {
             Variant variant = item.getVariant();
-
-            int currentStock = variant.getVariantStock();
-
-            if (
-                    variant.getRowStatus() != RowStatus.ACTIVE
-                    || currentStock <= 0
-            ) {
+            Optional<CartLine> reconciledLine = reconcileCartLine(variant, item.getQuantity());
+            if (reconciledLine.isEmpty()) {
                 itemsToDelete.add(item);
                 continue;
             }
 
-            if (item.getQuantity() > currentStock) {
-                item.setQuantity(currentStock);
+            CartLine line = reconciledLine.get();
+            if (line.wasAdjusted()) {
+                item.setQuantity(line.quantity());
                 itemsAdjusted = true;
             }
 
-            itemsToKeep.add(item);
+            itemsToKeep.add(line);
         }
 
         if (!itemsToDelete.isEmpty()) {
@@ -172,6 +207,24 @@ public class CartService {
         return buildCartResponse(userId, itemsToKeep, !itemsToDelete.isEmpty(), itemsAdjusted);
     }
 
+    private Optional<CartLine> reconcileCartLine(Variant variant, long requestedQuantity) {
+        if (
+                variant == null
+                || variant.getRowStatus() != RowStatus.ACTIVE
+                || variant.getProduct().getRowStatus() != RowStatus.ACTIVE
+                || variant.getColor().getRowStatus() != RowStatus.ACTIVE
+                || variant.getVariantStock() <= 0
+        )
+            return Optional.empty();
+
+        boolean wasAdjusted = requestedQuantity > variant.getVariantStock();
+        int finalQuantity = wasAdjusted
+                ? variant.getVariantStock()
+                : (int) requestedQuantity;
+
+        return Optional.of(new CartLine(variant, finalQuantity, wasAdjusted));
+    }
+
     private void validateQuantity(int required, int stock) {
         if (required > stock)
             throw new InsufficientStockException("{ Disponible: %d, Solicitado: %d }".formatted(stock, required));
@@ -179,7 +232,7 @@ public class CartService {
 
     private CartResponse buildCartResponse(
             UUID            userId,
-            List<CartItem>  items,
+            List<CartLine>  items,
             boolean         itemsPurged,
             boolean         itemsAdjusted
     ) {
@@ -188,7 +241,7 @@ public class CartService {
         List<CartItemResponse>  itemResponses   = new ArrayList<>();
         Map<ImageKey, String> primaryImages = this.imageService.getPrimaryImageUrls(
                 items.stream()
-                        .map(CartItem::getVariant)
+                        .map(CartLine::variant)
                         .map(variant -> new ImageKey(
                                 variant.getProduct().getProductId(),
                                 variant.getColor().getColorId()
@@ -196,12 +249,13 @@ public class CartService {
                         .toList()
         );
 
-        for (CartItem item : items) {
-            Variant     v           = item.getVariant();
+        for (CartLine item : items) {
+            Variant     v           = item.variant();
+            int         quantity    = item.quantity();
             BigDecimal  price       = v.getVariantPrice();
-            BigDecimal  subtotal    = price.multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal  subtotal    = price.multiply(BigDecimal.valueOf(quantity));
 
-            totalUnits += item.getQuantity();
+            totalUnits += quantity;
             grandTotal = grandTotal.add(subtotal);
 
             itemResponses.add(
@@ -212,10 +266,10 @@ public class CartService {
                             v.getVariantDesc(),
                             primaryImages.get(new ImageKey(v.getProduct().getProductId(), v.getColor().getColorId())),
                             price,
-                            item.getQuantity(),
+                            quantity,
                             subtotal,
                             v.getVariantStock(),
-                            item.getQuantity() > v.getVariantStock()
+                            item.wasAdjusted()
                     )
             );
         }
@@ -229,4 +283,6 @@ public class CartService {
                 itemsAdjusted
         );
     }
+
+    private record CartLine(Variant variant, int quantity, boolean wasAdjusted) {}
 }

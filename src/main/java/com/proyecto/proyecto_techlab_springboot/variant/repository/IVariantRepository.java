@@ -49,6 +49,15 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     @EntityGraph(attributePaths = {"product", "color"})
     List<Variant> findAllByProduct_ProductIdAndRowStatus(UUID productId, RowStatus rowStatus);
 
+    @Query("""
+        SELECT v
+        FROM Variant v
+        JOIN FETCH v.product
+        JOIN FETCH v.color
+        WHERE v.variantId IN :variantIds
+    """)
+    List<Variant> findAllByIdInWithDetails(@Param("variantIds") Collection<Long> variantIds);
+
     @Query(value = """
         SELECT
             product_id AS "productId",
