@@ -342,9 +342,10 @@ public class SaleService {
      * Historial paginado de órdenes del usuario registrado.
      */
     @Transactional(readOnly = true)
-    public Page<SaleSummaryResponse> getMyOrders(UUID userId, Pageable pageable) {
+    public Page<SaleSummaryResponse> getMyOrders(UUID userId, List<SaleStatus> statuses, Pageable pageable) {
+        List<SaleStatus> effectiveStatuses = (statuses == null || statuses.isEmpty()) ? null : statuses;
         return this.iSaleRepository
-                .findAllByUser_UserIdOrderByCreatedAtDesc(userId, pageable)
+                .findMyOrdersByStatuses(userId, effectiveStatuses, pageable)
                 .map(this::mapToSaleSummaryResponse);
     }
 
@@ -584,6 +585,7 @@ public class SaleService {
                 .saleStatus(sale.getSaleStatus())
                 .paymentMethod(sale.getPaymentMethod())
                 .paymentStatus(sale.getPaymentStatus())
+                .saleDeliveredAt(sale.getSaleDeliveredAt())
                 .createdAt(sale.getCreatedAt())
                 .build();
     }

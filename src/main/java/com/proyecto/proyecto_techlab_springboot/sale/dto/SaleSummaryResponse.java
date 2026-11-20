@@ -32,5 +32,6 @@ public record SaleSummaryResponse(
         SaleStatus saleStatus,
         PaymentMethod paymentMethod,
         PaymentStatus paymentStatus,
+        Instant         saleDeliveredAt,
         Instant         createdAt
 ) {}

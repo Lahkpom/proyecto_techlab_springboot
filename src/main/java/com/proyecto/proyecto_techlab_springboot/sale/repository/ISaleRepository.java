@@ -32,6 +32,19 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
     // Historial de compras de un usuario registrado (Paginado)
     Page<Sale> findAllByUser_UserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
+    @Query("""
+        SELECT s
+        FROM Sale s
+        WHERE s.user.userId = :userId
+          AND (:statuses IS NULL OR s.saleStatus IN :statuses)
+        ORDER BY s.createdAt DESC
+    """)
+    Page<Sale> findMyOrdersByStatuses(
+            @Param("userId") UUID userId,
+            @Param("statuses") List<SaleStatus> statuses,
+            Pageable pageable
+    );
+
     // Trae por estado de pago, se crea para ser usado por el scheduler de reintento de facturación (Paginado)
     Page<Sale> findAllByPaymentStatusOrderByCreatedAtAsc(PaymentStatus paymentStatus, Pageable pageable);
 
