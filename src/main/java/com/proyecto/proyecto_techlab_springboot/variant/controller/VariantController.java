@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,13 +44,13 @@ public class VariantController {
     }
 
     @PostMapping
-    //    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     public ResponseEntity<VariantResponse> createVariant(@Valid @RequestBody VariantCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(variantService.createVariant(request));
     }
 
     @PutMapping("/{id}")
-    //    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     public ResponseEntity<VariantResponse> updateVariant(
             @PathVariable       Long                    id,
             @Valid @RequestBody VariantUpdateRequest    request
@@ -58,7 +59,7 @@ public class VariantController {
     }
 
     @PatchMapping("/{id}/status")
-    //    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     public ResponseEntity<VariantResponse> updateVariantStatus(
             @PathVariable       Long                id,
             @Valid @RequestBody StatusUpdateRequest request

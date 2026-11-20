@@ -4,8 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.salereturn.dto.SaleReturnCreateR
 import com.proyecto.proyecto_techlab_springboot.salereturn.dto.SaleReturnResponse;
 import com.proyecto.proyecto_techlab_springboot.salereturn.dto.SaleReturnSummaryResponse;
 import com.proyecto.proyecto_techlab_springboot.salereturn.service.SaleReturnService;
-import com.proyecto.proyecto_techlab_springboot.auth.util.SecurityContextUtil;
-import jakarta.servlet.http.HttpServletRequest;
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -28,21 +29,21 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SaleReturnController {
 
-    private final SaleReturnService  saleReturnService;
-    private final SecurityContextUtil securityContextUtil;
+    private final SaleReturnService saleReturnService;
 
     /**
      * Inicia una solicitud de devolución para un usuario registrado sobre una orden propia.
      */
-    // @PreAuthorize("isAuthenticated()") // TODO: Descomentar al habilitar Spring Security
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/orders/{saleId}")
     public ResponseEntity<SaleReturnResponse> createReturnForCustomer(
             @PathVariable UUID saleId,
             @Valid @RequestBody SaleReturnCreateRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID authenticatedUserId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.saleReturnService.createReturnForUser(saleId, request, authenticatedUserId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                this.saleReturnService.createReturnForUser(saleId, request, principal.userId())
+        );
     }
 
     /**
@@ -67,13 +68,12 @@ public class SaleReturnController {
     /**
      * Historial paginado de devoluciones del cliente autenticado.
      */
-    // @PreAuthorize("isAuthenticated()") // TODO: Descomentar al habilitar Spring Security
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public ResponseEntity<Page<SaleReturnSummaryResponse>> getMyReturns(
             @PageableDefault(size = 10) Pageable pageable,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID authenticatedUserId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(this.saleReturnService.getMyReturns(authenticatedUserId, pageable));
+        return ResponseEntity.ok(this.saleReturnService.getMyReturns(principal.userId(), pageable));
     }
 }

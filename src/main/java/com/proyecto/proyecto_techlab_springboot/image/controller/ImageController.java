@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/products/{productId}/colors/{colorId}/images")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
+@PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
 public class ImageController {
 
     private final ImageService imageService;

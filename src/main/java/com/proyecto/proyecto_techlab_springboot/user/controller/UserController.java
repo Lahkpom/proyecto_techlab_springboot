@@ -8,6 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.user.dto.UserUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,12 +20,13 @@ public class UserController {
 
     private final UserService userService;
 
+    @PreAuthorize("#id == authentication.principal.userId() or hasAnyAuthority('OPERATOR', 'ADMIN')")
     @GetMapping("/{id}")
-    // Algún tipo de autorización para que los usuarios solo puedan pedir su propia información y no la de otros
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(this.userService.getUserById(id));
     }
 
+    @PreAuthorize("#id == authentication.principal.userId() or hasAnyAuthority('OPERATOR', 'ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable       UUID                id,
@@ -33,6 +35,7 @@ public class UserController {
         return ResponseEntity.ok(this.userService.updateUser(id, request));
     }
 
+    @PreAuthorize("#id == authentication.principal.userId() or hasAnyAuthority('OPERATOR', 'ADMIN')")
     @PatchMapping("/{id}/password")
     public ResponseEntity<UserResponse> updateUserPassword(
             @PathVariable       UUID                    id,
@@ -41,6 +44,7 @@ public class UserController {
         return ResponseEntity.ok(this.userService.updateUserPassword(id, request));
     }
 
+    @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     @PatchMapping("/{id}/status")
     public ResponseEntity<UserResponse> updateUserStatus(
             @PathVariable       UUID                id,

@@ -8,6 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.shipping.service.ShippingService
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/shipping")
 @RequiredArgsConstructor
-// TODO - Falta limitar por el rol
+@PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
 public class ShippingAdminController {
 
     private final ShippingService shippingService;

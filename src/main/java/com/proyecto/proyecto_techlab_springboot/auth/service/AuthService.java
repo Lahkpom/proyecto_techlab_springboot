@@ -14,6 +14,7 @@ import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;
 import com.proyecto.proyecto_techlab_springboot.auth.repository.IUserSessionRepository;
 import com.proyecto.proyecto_techlab_springboot.auth.util.TokenHashUtil;
+import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ import java.util.UUID;
 public class AuthService {
     private final IUserRepository           iUserRepository;
     private final IUserSessionRepository    iUserSessionRepository;
+    private final UserService               userService;
     private final PasswordEncoder           passwordEncoder;
 
     private final JwtService jwtService;
@@ -39,6 +41,11 @@ public class AuthService {
 
     private static final int MAX_FAILED_ATTEMPTS    = 5;
     private static final int REFRESH_TOKEN_DAYS     = 7;
+
+    @Transactional(readOnly = true)
+    public UserResponse getAuthenticatedUserProfile(UUID userId) {
+        return userService.getUserById(userId);
+    }
 
     @Transactional
     public UserResponse createUser(UserCreateRequest req) {
@@ -97,6 +104,7 @@ public class AuthService {
                 .companyName(company)
                 .taxIdType(taxIdType)
                 .taxIdNumber(taxIdNumber)
+                .isEmailVerified(true)
                 .build();
 
         Users saved = this.iUserRepository.save(user);
@@ -224,7 +232,7 @@ public class AuthService {
         }
 
         // Crear sesión y tokens antes de registrar el login como exitoso.
-        AuthResponse authResponse = createSessionAndTokens(user, ip, userAgent);
+        AuthResponse authResponse = createSessionAndTokens(user, ip, userAgent).authResponse();
 
         auditService.recordAttempt(
             user.getUserId(),
@@ -240,12 +248,21 @@ public class AuthService {
         return authResponse;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public AuthResponse refreshToken(RefreshTokenRequest req, HttpServletRequest httpRequest) {
         String tokenHash = TokenHashUtil.hash(req.refreshToken());
 
-        UserSession session = this.iUserSessionRepository.findByRefreshTokenHashAndIsRevokedFalse(tokenHash)
+        UserSession session = this.iUserSessionRepository.findByRefreshTokenHash(tokenHash)
                 .orElseThrow(() -> new InvalidCredentialsException("Sesión inválida o revocada."));
+
+        if (session.isRevoked()) {
+            UUID userId = session.getUser().getUserId();
+            log.warn("Posible robo o reutilización de Refresh Token revocado para el usuario {}", userId);
+            this.iUserSessionRepository.revokeAllActiveSessionsByUserId(userId);
+            throw new InvalidCredentialsException(
+                    "Se detectó reutilización de sesión revocada. Todas las sesiones han sido cerradas por seguridad."
+            );
+        }
 
         // Comprobar expiración del refresh token
         if (session.getExpiresAt().isBefore(Instant.now())) {
@@ -254,20 +271,18 @@ public class AuthService {
             throw new InvalidCredentialsException("El refresh token ha expirado. Inicie sesión nuevamente.");
         }
 
-        // ROTACIÓN DE REFRESH TOKEN (Se revoca el anterior)
-        session.setRevoked(true);
-
         // Emitir nuevo par de tokens
         Users user          = session.getUser();
         String ip           = extractClientIp(httpRequest);
         String userAgent    = httpRequest.getHeader("User-Agent");
 
-        AuthResponse newAuth = createSessionAndTokens(user, ip, userAgent);
+        SessionTokens newSession = createSessionAndTokens(user, ip, userAgent);
 
-        // Enlazar sesión vieja con la nueva para trazabilidad
+        session.setReplacedBySessionId(newSession.session().getSessionId());
+        session.setRevoked(true);
         this.iUserSessionRepository.saveAndFlush(session);
 
-        return newAuth;
+        return newSession.authResponse();
     }
 
     @Transactional
@@ -290,7 +305,7 @@ public class AuthService {
         return xfHeader.split(",")[0].trim();
     }
 
-    private AuthResponse createSessionAndTokens(Users user, String ip, String userAgent) {
+    private SessionTokens createSessionAndTokens(Users user, String ip, String userAgent) {
         String  accessToken     = jwtService.generateAccessToken(user);
         String  rawRefreshToken = UUID.randomUUID().toString() + UUID.randomUUID().toString();
         Instant expiresAt       = Instant.now().plus(REFRESH_TOKEN_DAYS, ChronoUnit.DAYS);
@@ -306,10 +321,13 @@ public class AuthService {
                 .expiresAt(expiresAt)
                 .build();
 
-        this.iUserSessionRepository.save(session);
+        UserSession savedSession = this.iUserSessionRepository.save(session);
 
-        return AuthResponse.of(accessToken, rawRefreshToken, expiresAt, mapToResponse(user));
+        AuthResponse authResponse = AuthResponse.of(accessToken, rawRefreshToken, expiresAt, mapToResponse(user));
+        return new SessionTokens(savedSession, authResponse);
     }
+
+    private record SessionTokens(UserSession session, AuthResponse authResponse) {}
 
     private UserResponse mapToResponse(Users entity) {
         return new UserResponse(

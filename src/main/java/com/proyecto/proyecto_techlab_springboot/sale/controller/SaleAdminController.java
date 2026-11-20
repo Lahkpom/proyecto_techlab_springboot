@@ -8,9 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleSummaryResponse;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleAdminService;
-import com.proyecto.proyecto_techlab_springboot.auth.util.SecurityContextUtil;
-
-import jakarta.servlet.http.HttpServletRequest;
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -30,11 +30,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/sales")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
+@PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
 public class SaleAdminController {
 
-    private final SaleAdminService      saleAdminService;
-    private final SecurityContextUtil   securityContextUtil;    
+    private final SaleAdminService saleAdminService;
 
     /**
      * Búsqueda paginada multicriterio de órdenes de compra.
@@ -74,10 +73,9 @@ public class SaleAdminController {
     public ResponseEntity<SaleResponse> updateSaleStatus(
             @PathVariable UUID saleId,
             @Valid @RequestBody SaleStatusUpdateRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(saleAdminService.updateSaleStatus(saleId, request, operatorId));
+        return ResponseEntity.ok(saleAdminService.updateSaleStatus(saleId, request, principal.userId()));
     }
 
     /**
@@ -87,10 +85,9 @@ public class SaleAdminController {
     public ResponseEntity<SaleResponse> updatePaymentStatus(
             @PathVariable UUID saleId,
             @Valid @RequestBody PaymentStatusUpdateRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID operatorId = securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(saleAdminService.updatePaymentStatus(saleId, request, operatorId));
+        return ResponseEntity.ok(saleAdminService.updatePaymentStatus(saleId, request, principal.userId()));
     }
 
     /**
@@ -100,9 +97,8 @@ public class SaleAdminController {
     public ResponseEntity<SaleResponse> updateInternalNotes(
             @PathVariable UUID saleId,
             @Valid @RequestBody SaleInternalNoteRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(saleAdminService.updateInternalNotes(saleId, request, operatorId));
+        return ResponseEntity.ok(saleAdminService.updateInternalNotes(saleId, request, principal.userId()));
     }
 }

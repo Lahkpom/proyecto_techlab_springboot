@@ -4,8 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.salereturn.dto.*;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnReason;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnStatus;
 import com.proyecto.proyecto_techlab_springboot.salereturn.service.SaleReturnAdminService;
-import com.proyecto.proyecto_techlab_springboot.auth.util.SecurityContextUtil;
-import jakarta.servlet.http.HttpServletRequest;
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -28,11 +29,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/admin/returns")
 @RequiredArgsConstructor
-// @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')") // TODO: Descomentar al habilitar Spring Security
+@PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
 public class SaleReturnAdminController {
 
-    private final SaleReturnAdminService    saleReturnAdminService;
-    private final SecurityContextUtil       securityContextUtil;
+    private final SaleReturnAdminService saleReturnAdminService;
 
     /**
      * Búsqueda paginada multicriterio de devoluciones para el panel administrativo.
@@ -66,10 +66,11 @@ public class SaleReturnAdminController {
     public ResponseEntity<SaleReturnResponse> updateReturnStatus(
             @PathVariable UUID returnId,
             @Valid @RequestBody SaleReturnStatusUpdateRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(this.saleReturnAdminService.updateReturnStatus(returnId, request, operatorId));
+        return ResponseEntity.ok(
+                this.saleReturnAdminService.updateReturnStatus(returnId, request, principal.userId())
+        );
     }
 
     /**
@@ -79,10 +80,11 @@ public class SaleReturnAdminController {
     public ResponseEntity<SaleReturnResponse> inspectReturn(
             @PathVariable UUID returnId,
             @Valid @RequestBody SaleReturnInspectionRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(this.saleReturnAdminService.inspectReturn(returnId, request, operatorId));
+        return ResponseEntity.ok(
+                this.saleReturnAdminService.inspectReturn(returnId, request, principal.userId())
+        );
     }
 
     /**
@@ -92,9 +94,10 @@ public class SaleReturnAdminController {
     public ResponseEntity<SaleReturnResponse> processRefund(
             @PathVariable UUID returnId,
             @Valid @RequestBody(required = false) SaleReturnRefundRequest request,
-            HttpServletRequest httpRequest
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        UUID operatorId = this.securityContextUtil.resolveRequiredUserIdFromToken(httpRequest);
-        return ResponseEntity.ok(this.saleReturnAdminService.processRefund(returnId, request, operatorId));
+        return ResponseEntity.ok(
+                this.saleReturnAdminService.processRefund(returnId, request, principal.userId())
+        );
     }
 }
