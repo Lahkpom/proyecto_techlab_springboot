@@ -1,7 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.user.dto;
 
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
-import com.proyecto.proyecto_techlab_springboot.common.util.ValidationUtil;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -12,7 +11,7 @@ public record UserUpdateRequest(
         String name,
 
         @Pattern(
-                regexp = ValidationUtil.PHONE_REGEX,
+                regexp = "^(?:\\d{10}|\\s*)$",
                 message = "El teléfono debe contener exactamente 10 dígitos numéricos."
         )
         String phone,
