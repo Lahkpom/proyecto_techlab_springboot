@@ -16,7 +16,6 @@ public record WholesalerCreateRequest(
         @Size(max = 255, message = "El email no puede exceder los 255 caracteres.")
         String email,
 
-        @NotBlank(message = "La contraseña es obligatoria.")
         @Size(max = 255, message = "La contraseña no puede exceder los 255 caracteres.")
         String password,
 

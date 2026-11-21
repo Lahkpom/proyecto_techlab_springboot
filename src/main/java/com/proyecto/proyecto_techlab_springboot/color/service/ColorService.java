@@ -1,14 +1,17 @@
 package com.proyecto.proyecto_techlab_springboot.color.service;
 
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.color.dto.ColorCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.color.dto.ColorResponse;
 import com.proyecto.proyecto_techlab_springboot.color.dto.ColorUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.exception.ColorAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.color.exception.ColorNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.color.model.Color;
-import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.repository.IColorRepository;
+import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -92,7 +95,15 @@ public class ColorService {
     }
 
     @Transactional
-    public ColorResponse updateColorStatus(Long id, StatusUpdateRequest request) {
+    public ColorResponse updateColorStatus(
+            Long id,
+            StatusUpdateRequest request,
+            AuthenticatedUserPrincipal actor
+    ) {
+        if (request.rowStatus() == RowStatus.DELETED && actor.role() != UserRole.ADMIN) {
+            throw new AccessDeniedException("Solo un administrador puede eliminar registros de forma lógica.");
+        }
+
         Color color = findColorByIdOrThrow(id);
 
         color.setRowStatus(request.rowStatus());

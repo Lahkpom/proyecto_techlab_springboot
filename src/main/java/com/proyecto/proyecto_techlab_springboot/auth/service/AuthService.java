@@ -1,43 +1,45 @@
 package com.proyecto.proyecto_techlab_springboot.auth.service;
 
 import com.proyecto.proyecto_techlab_springboot.auth.dto.*;
-import com.proyecto.proyecto_techlab_springboot.user.dto.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.auth.exception.AccountLockedException;
 import com.proyecto.proyecto_techlab_springboot.auth.exception.EmailNotVerifiedException;
 import com.proyecto.proyecto_techlab_springboot.auth.exception.ExpiredPasswordException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCredentialsException;
-import com.proyecto.proyecto_techlab_springboot.user.exception.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.auth.model.UserSession;
-import com.proyecto.proyecto_techlab_springboot.user.model.Users;
-import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
-import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
-import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;
 import com.proyecto.proyecto_techlab_springboot.auth.repository.IUserSessionRepository;
 import com.proyecto.proyecto_techlab_springboot.auth.util.TokenHashUtil;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCredentialsException;
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
+import com.proyecto.proyecto_techlab_springboot.user.dto.UserResponse;
+import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
+import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
+import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
+import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    private final IUserRepository           iUserRepository;
     private final IUserSessionRepository    iUserSessionRepository;
     private final UserService               userService;
     private final PasswordEncoder           passwordEncoder;
 
     private final JwtService jwtService;
     private final LoginAuditService auditService;
+
+    @Value("${application.security.initial-password}")
+    private String initialPassword;
 
     private static final int MAX_FAILED_ATTEMPTS    = 5;
     private static final int REFRESH_TOKEN_DAYS     = 7;
@@ -57,21 +59,39 @@ public class AuthService {
                 req.phone(),
                 req.taxIdType(),
                 req.taxIdNumber(),
-                null
+                null,
+                false
         );
     }
 
     @Transactional
     public UserResponse createWholesaler(WholesalerCreateRequest req) {
+        boolean mustChangePassword = req.password() == null || req.password().isBlank();
         return registerUser(
                 UserRole.WHOLESALER,
                 req.name(),
                 req.email(),
-                req.password(),
+                mustChangePassword ? initialPassword : req.password(),
                 req.phone(),
                 req.taxIdType(),
                 req.taxIdNumber(),
-                req.companyName()
+                req.companyName(),
+                mustChangePassword
+        );
+    }
+
+    @Transactional
+    public UserResponse createOperator(OperatorCreateRequest req) {
+        return registerUser(
+                UserRole.OPERATOR,
+                req.name(),
+                req.email(),
+                initialPassword,
+                req.phone(),
+                null,
+                null,
+                null,
+                true
         );
     }
 
@@ -84,7 +104,8 @@ public class AuthService {
             String      rawPhone,
             TaxIdType   taxIdType,
             String      rawTaxIdNumber,
-            String      rawCompanyName
+            String      rawCompanyName,
+            boolean     mustChangePassword
     ) {
         String name        = rawName != null ? rawName.trim() : null;
         String email       = rawEmail.trim().toLowerCase();
@@ -92,8 +113,6 @@ public class AuthService {
         String phone       = rawPhone != null ? rawPhone.trim() : null;
         String taxIdNumber = rawTaxIdNumber != null ? rawTaxIdNumber.trim() : null;
         String company     = rawCompanyName != null ? rawCompanyName.trim() : null;
-
-        validateUserEmailOrThrow(email);
 
         Users user = Users.builder()
                 .userRole(role)
@@ -105,9 +124,13 @@ public class AuthService {
                 .taxIdType(taxIdType)
                 .taxIdNumber(taxIdNumber)
                 .isEmailVerified(true)
+                .mustChangePassword(mustChangePassword)
+                .passwordExpiresAt(mustChangePassword
+                        ? Instant.now()
+                        : Instant.now().plus(180, ChronoUnit.DAYS))
                 .build();
 
-        Users saved = this.iUserRepository.save(user);
+        Users saved = this.userService.createAccount(user);
 
         log.info("Usuario {} creado exitosamente { ID: {}, email: {}, compañía: {} }", 
                     role, saved.getUserId(), saved.getUserEmail(), saved.getCompanyName());
@@ -126,7 +149,7 @@ public class AuthService {
         String  ip          = extractClientIp(httpRequest);
         String  userAgent   = httpRequest.getHeader("User-Agent");
         String  email       = req.email().trim().toLowerCase();
-        Users   user        = this.getUserByEmail(email).orElse(null);
+        Users   user        = this.userService.findUserByEmail(email).orElse(null);
 
         // Usuario inexistente
         if (user == null) {
@@ -218,7 +241,7 @@ public class AuthService {
             throw new InvalidCredentialsException("Contraseña Incorrecta.");
         }
 
-        if (user.getPasswordExpiresAt().isBefore(Instant.now())) {
+        if (user.isMustChangePassword() || user.getPasswordExpiresAt().isBefore(Instant.now())) {
             auditService.recordAttempt(
                     user.getUserId(),
                     req.email(),
@@ -245,6 +268,42 @@ public class AuthService {
 
         // El trigger Postgres actualiza last_login_at y limpia failed_login_attempts.
         log.info("Usuario inició sesión exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
+        return authResponse;
+    }
+
+    @Transactional
+    public AuthResponse changeExpiredPassword(
+            ExpiredPasswordResetRequest req,
+            HttpServletRequest httpRequest
+    ) {
+        String email = req.email().trim().toLowerCase();
+        Users user = userService.findUserByEmail(email)
+                .filter(candidate -> candidate.getRowStatus() != RowStatus.INACTIVE)
+                .orElseThrow(() -> new InvalidCredentialsException("{ email: %s }".formatted(email)));
+
+        if (!user.isMustChangePassword() && !user.getPasswordExpiresAt().isBefore(Instant.now())) {
+            throw new InvalidUserDataException("La contraseña actual no requiere renovación forzada.");
+        }
+
+        if (!passwordEncoder.matches(req.currentPassword(), user.getUserPassword())) {
+            throw new InvalidCredentialsException("La contraseña actual ingresada es incorrecta.");
+        }
+
+        if (passwordEncoder.matches(req.newPassword(), user.getUserPassword())) {
+            throw new InvalidUserDataException("La nueva contraseña no puede ser igual a la contraseña actual.");
+        }
+
+        user.setUserPassword(passwordEncoder.encode(req.newPassword()));
+        user.setMustChangePassword(false);
+        user.setPasswordExpiresAt(Instant.now().plus(180, ChronoUnit.DAYS));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+
+        String ip = extractClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+        AuthResponse authResponse = createSessionAndTokens(user, ip, userAgent).authResponse();
+
+        auditService.recordAttempt(user.getUserId(), email, true, null, ip, userAgent);
         return authResponse;
     }
 
@@ -340,16 +399,9 @@ public class AuthService {
                 entity.getTaxIdType(),
                 entity.getTaxIdNumber(),
                 entity.getLastLoginAt(),
-                entity.getPasswordExpiresAt()
+                entity.getPasswordExpiresAt(),
+                entity.getRowStatus()
         );
     }
 
-    private void validateUserEmailOrThrow(String email) {
-        if (this.getUserByEmail(email).isPresent())
-            throw new UserAlreadyExistsException("{ email: %s }".formatted(email));
-    }
-
-    private Optional<Users> getUserByEmail(String email) {
-        return this.iUserRepository.findByUserEmailIgnoreCase(email);
-    }
 }

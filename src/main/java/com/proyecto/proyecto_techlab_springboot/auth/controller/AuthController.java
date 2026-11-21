@@ -29,6 +29,15 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request, httpRequest));
     }
 
+    @PreAuthorize("isAnonymous()")
+    @PostMapping("/change-expired-password")
+    public ResponseEntity<AuthResponse> changeExpiredPassword(
+            @Valid @RequestBody ExpiredPasswordResetRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        return ResponseEntity.ok(authService.changeExpiredPassword(request, httpRequest));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request,
@@ -47,6 +56,12 @@ public class AuthController {
     @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     public ResponseEntity<UserResponse> createWholesaler(@Valid @RequestBody WholesalerCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.createWholesaler(request));
+    }
+
+    @PostMapping("/register/operators")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<UserResponse> createOperator(@Valid @RequestBody OperatorCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.createOperator(request));
     }
 
     @PreAuthorize("isAuthenticated()")

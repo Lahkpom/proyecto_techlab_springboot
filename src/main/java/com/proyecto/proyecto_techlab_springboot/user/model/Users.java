@@ -36,6 +36,10 @@ public class Users extends BaseEntity {
     @Column(name = "user_password", nullable = false)
     private String userPassword;
 
+    @Column(name = "must_change_password", nullable = false)
+    @Builder.Default
+    private boolean mustChangePassword = false;
+
     @Column(name = "user_name", nullable = false)
     private String userName;
 

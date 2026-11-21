@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.variant.controller;
 
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicProductVariantResponse;
@@ -16,6 +17,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -87,8 +89,9 @@ public class VariantController {
     @PreAuthorize("hasAnyAuthority('OPERATOR', 'ADMIN')")
     public ResponseEntity<VariantResponse> updateVariantStatus(
             @PathVariable       Long                id,
-            @Valid @RequestBody StatusUpdateRequest request
+            @Valid @RequestBody StatusUpdateRequest request,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal actor
     ) {
-        return ResponseEntity.ok(variantService.updateVariantStatus(id, request));
+        return ResponseEntity.ok(variantService.updateVariantStatus(id, request, actor));
     }
 }

@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.user.controller;
 
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import com.proyecto.proyecto_techlab_springboot.user.dto.PasswordUpdateRequest;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -48,8 +50,9 @@ public class UserController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<UserResponse> updateUserStatus(
             @PathVariable       UUID                id,
-            @Valid @RequestBody StatusUpdateRequest request
+            @Valid @RequestBody StatusUpdateRequest request,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal actor
     ) {
-        return ResponseEntity.ok(this.userService.updateUserStatus(id, request));
+        return ResponseEntity.ok(this.userService.updateUserStatus(id, request, actor));
     }
 }

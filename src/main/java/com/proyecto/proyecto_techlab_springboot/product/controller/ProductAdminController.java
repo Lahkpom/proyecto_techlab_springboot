@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.product.controller;
 
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductOptionResponse;
@@ -15,6 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -65,9 +67,10 @@ public class ProductAdminController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<ProductResponse> updateProductStatus(
             @PathVariable       UUID                id,
-            @Valid @RequestBody StatusUpdateRequest request
+            @Valid @RequestBody StatusUpdateRequest request,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal actor
     ) {
-        ProductResponse response = this.productService.updateProductStatus(id, request);
+        ProductResponse response = this.productService.updateProductStatus(id, request, actor);
         return ResponseEntity.ok(response);
     }
 }

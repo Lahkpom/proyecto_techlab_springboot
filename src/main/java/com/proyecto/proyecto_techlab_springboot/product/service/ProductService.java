@@ -3,6 +3,8 @@ package com.proyecto.proyecto_techlab_springboot.product.service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
+import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogImageResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
@@ -21,6 +23,7 @@ import com.proyecto.proyecto_techlab_springboot.product.model.Category;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
+import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -137,7 +140,16 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateProductStatus(UUID id, StatusUpdateRequest request) {
+    public ProductResponse updateProductStatus(
+            UUID id,
+            StatusUpdateRequest request,
+            AuthenticatedUserPrincipal actor
+    ) {
+        if (request.rowStatus() == RowStatus.DELETED
+                && actor.role() != UserRole.ADMIN) {
+            throw new AccessDeniedException("Solo un administrador puede eliminar registros de forma lógica.");
+        }
+
         Product product = this.findProductByIdOrThrow(id);
         RowStatus lastStatus = product.getRowStatus();
 

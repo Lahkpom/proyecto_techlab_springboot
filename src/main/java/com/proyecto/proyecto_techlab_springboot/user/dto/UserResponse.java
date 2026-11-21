@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.user.dto;
 
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 
@@ -16,5 +17,6 @@ public record UserResponse(
         TaxIdType   taxIdType,
         String      taxIdNumber,
         Instant     lastLoginAt,
-        Instant     passwordExpiresAt
+        Instant     passwordExpiresAt,
+        RowStatus   rowStatus
 ) {}

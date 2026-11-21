@@ -3,7 +3,9 @@ package com.proyecto.proyecto_techlab_springboot.variant.service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
+import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.model.Color;
 import com.proyecto.proyecto_techlab_springboot.color.service.ColorService;
@@ -22,6 +24,7 @@ import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoun
 import com.proyecto.proyecto_techlab_springboot.variant.model.NumericSize;
 import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
 import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepository;
+import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -174,7 +177,16 @@ public class VariantService {
     }
 
     @Transactional
-    public VariantResponse updateVariantStatus(Long id, StatusUpdateRequest request) {
+    public VariantResponse updateVariantStatus(
+            Long id,
+            StatusUpdateRequest request,
+            AuthenticatedUserPrincipal actor
+    ) {
+        if (request.rowStatus() == RowStatus.DELETED
+                && actor.role() != UserRole.ADMIN) {
+            throw new AccessDeniedException("Solo un administrador puede eliminar registros de forma lógica.");
+        }
+
         Variant     variant     = findVariantByIdOrThrow(id);
         RowStatus   lastStatus  = variant.getRowStatus();
 
