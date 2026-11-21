@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.controller;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.CheckoutRequest;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleResponse;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleSummaryResponse;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.service.SaleService;
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -71,10 +73,11 @@ public class SaleController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public ResponseEntity<Page<SaleSummaryResponse>> getMyOrders(
-            @PageableDefault(size = 10) Pageable pageable,
+            @RequestParam(required = false) List<SaleStatus> statuses,
+            @PageableDefault(size = 15) Pageable pageable,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        return ResponseEntity.ok(saleService.getMyOrders(principal.userId(), pageable));
+        return ResponseEntity.ok(saleService.getMyOrders(principal.userId(), statuses, pageable));
     }
 
     /**

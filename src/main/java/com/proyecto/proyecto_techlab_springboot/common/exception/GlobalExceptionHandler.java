@@ -11,6 +11,7 @@ import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProduct
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.*;
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
+import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -322,6 +323,16 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.UNPROCESSABLE_CONTENT,
                 "INVALID_FISCAL_OPERATION",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidUserDataException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidUserData(InvalidUserDataException ex, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_USER_DATA",
                 ex.getMessage(),
                 request
         );

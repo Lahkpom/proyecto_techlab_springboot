@@ -1,7 +1,10 @@
 package com.proyecto.proyecto_techlab_springboot.user.service;
 
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCredentialsException;
+import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
 import com.proyecto.proyecto_techlab_springboot.user.exception.UserNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;
@@ -14,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,15 +34,29 @@ public class UserService {
         return mapToResponse(this.findUserByIdOrThrow(id));
     }
 
-    // TODO - Hacer las validaciones correspondientes en estos campos de update
     @Transactional
     public UserResponse updateUser(UUID id, UserUpdateRequest request) {
         Users user = this.findUserByIdOrThrow(id);
 
-        user.setUserName(request.name());
-        user.setUserPhone(request.phone());
+        String normalizedName = request.name().trim();
+        String normalizedPhone = normalizeOptionalValue(request.phone());
+        String normalizedTaxIdNumber = normalizeOptionalValue(request.taxIdNumber());
+
+        if ((request.taxIdType() != null && normalizedTaxIdNumber == null)
+                || (request.taxIdType() == null && normalizedTaxIdNumber != null)) {
+            throw new InvalidUserDataException("Debe completar tanto el tipo como el número de documento.");
+        }
+
+        if (request.taxIdType() != null && !isValidTaxIdNumber(request.taxIdType(), normalizedTaxIdNumber)) {
+            throw new InvalidUserDataException(
+                    "El número de documento no tiene un formato válido para " + request.taxIdType() + "."
+            );
+        }
+
+        user.setUserName(normalizedName);
+        user.setUserPhone(normalizedPhone);
         user.setTaxIdType(request.taxIdType());
-        user.setTaxIdNumber(request.taxIdNumber());
+        user.setTaxIdNumber(normalizedTaxIdNumber);
 
         log.info("Usuario modificado exitosamente { ID: {}, email: {}, name: {}, phone: {} }", user.getUserId(), user.getUserEmail(), user.getUserName(), user.getUserPhone());
 
@@ -48,11 +67,35 @@ public class UserService {
     public UserResponse updateUserPassword(UUID id, PasswordUpdateRequest request) {
         Users user = this.findUserByIdOrThrow(id);
 
-        user.setUserPassword(passwordEncoder.encode(request.password()));
+        if (!passwordEncoder.matches(request.currentPassword(), user.getUserPassword())) {
+            throw new InvalidCredentialsException("La contraseña actual ingresada es incorrecta.");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getUserPassword())) {
+            throw new InvalidUserDataException("La nueva contraseña no puede ser igual a la contraseña actual.");
+        }
+
+        user.setUserPassword(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordExpiresAt(Instant.now().plus(180, ChronoUnit.DAYS));
 
         log.info("La contraseña fue actualizada correctamente { ID: {} }",  user.getUserId());
 
         return mapToResponse(user);
+    }
+
+    private String normalizeOptionalValue(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private boolean isValidTaxIdNumber(TaxIdType taxIdType, String taxIdNumber) {
+        String regex = switch (taxIdType) {
+            case DNI -> "^\\d{7,8}$";
+            case CUIL, CUIT -> "^\\d{11}$";
+            case PASAPORTE -> "^[A-Za-z0-9]{6,15}$";
+        };
+        return taxIdNumber.matches(regex);
     }
 
     @Transactional
@@ -97,4 +140,3 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("{ ID: %s }".formatted(id)));
     }
 }
-
