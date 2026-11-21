@@ -64,6 +64,13 @@ public class UserService {
     }
 
     @Transactional
+    public void updateUserTaxData(UUID userId, TaxIdType taxIdType, String taxIdNumber) {
+        Users user = this.findUserByIdOrThrow(userId);
+        user.setTaxIdType(taxIdType);
+        user.setTaxIdNumber(taxIdNumber);
+    }
+
+    @Transactional
     public UserResponse updateUserPassword(UUID id, PasswordUpdateRequest request) {
         Users user = this.findUserByIdOrThrow(id);
 

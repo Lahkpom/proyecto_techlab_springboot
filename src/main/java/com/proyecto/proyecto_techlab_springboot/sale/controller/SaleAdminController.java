@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.controller;
 
 import com.proyecto.proyecto_techlab_springboot.sale.dto.PaymentStatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleInternalNoteRequest;
+import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleFiscalDataUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleResponse;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleStatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleSummaryResponse;
@@ -21,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -40,16 +42,22 @@ public class SaleAdminController {
      */
     @GetMapping
     public ResponseEntity<Page<SaleSummaryResponse>> searchSales(
+            @RequestParam(defaultValue = "false") boolean auditOnly,
+            @RequestParam(required = false) List<SaleStatus> statuses,
             @RequestParam(required = false) SaleStatus      saleStatus,
             @RequestParam(required = false) PaymentStatus   paymentStatus,
+            @RequestParam(required = false) Boolean         fiscalRejection,
             @RequestParam(required = false) String          customerEmail,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
             @PageableDefault(size = 20)     Pageable pageable
     ) {
         Page<SaleSummaryResponse> sales = saleAdminService.searchSales(
+                auditOnly,
+                statuses,
                 saleStatus,
                 paymentStatus,
+                fiscalRejection,
                 customerEmail,
                 startDate,
                 endDate,
@@ -100,5 +108,14 @@ public class SaleAdminController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         return ResponseEntity.ok(saleAdminService.updateInternalNotes(saleId, request, principal.userId()));
+    }
+
+    @PatchMapping("/{saleId}/fiscal-data")
+    public ResponseEntity<SaleResponse> updateSaleFiscalData(
+            @PathVariable UUID saleId,
+            @Valid @RequestBody SaleFiscalDataUpdateRequest request,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
+    ) {
+        return ResponseEntity.ok(saleAdminService.updateSaleFiscalData(saleId, request, principal.userId()));
     }
 }

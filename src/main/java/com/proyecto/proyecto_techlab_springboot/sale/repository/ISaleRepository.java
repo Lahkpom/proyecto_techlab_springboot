@@ -75,20 +75,32 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
 
     // Para Panel Administrativo: Búsqueda dinámica multicriterio
     @Query("""
-        SELECT  s 
-        FROM    Sale s
-        WHERE 
-            (:saleStatus        IS NULL OR s.saleStatus = :saleStatus)
-            AND (:paymentStatus IS NULL OR s.paymentStatus = :paymentStatus)
-            AND (:customerEmail IS NULL OR LOWER(s.customerEmail) LIKE LOWER(CONCAT('%', :customerEmail, '%')))
-            AND (:startDate     IS NULL OR s.createdAt >= :startDate)
-            AND (:endDate       IS NULL OR s.createdAt <= :endDate)
-        ORDER BY 
-            s.createdAt DESC
+        SELECT s
+        FROM Sale s
+        WHERE (:auditOnly = false OR (
+                s.saleStatus = com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.AUDITORIA
+                OR (s.fiscalRejection = true AND s.saleStatus NOT IN (
+                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.ENTREGADO,
+                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.CANCELADO,
+                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.REEMBOLSADO,
+                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.CERRADO_CON_DEVOLUCION
+                ))
+              ))
+          AND (:statuses IS NULL OR s.saleStatus IN :statuses)
+          AND (:saleStatus IS NULL OR s.saleStatus = :saleStatus)
+          AND (:paymentStatus IS NULL OR s.paymentStatus = :paymentStatus)
+          AND (:fiscalRejection IS NULL OR s.fiscalRejection = :fiscalRejection)
+          AND (:customerEmail IS NULL OR LOWER(s.customerEmail) LIKE LOWER(CONCAT('%', :customerEmail, '%')))
+          AND (:startDate IS NULL OR s.createdAt >= :startDate)
+          AND (:endDate IS NULL OR s.createdAt <= :endDate)
+        ORDER BY s.createdAt DESC
     """)
     Page<Sale> searchSalesAdmin(
+            @Param("auditOnly") boolean auditOnly,
+            @Param("statuses") List<SaleStatus> statuses,
             @Param("saleStatus")    SaleStatus      saleStatus,
             @Param("paymentStatus") PaymentStatus   paymentStatus,
+            @Param("fiscalRejection") Boolean fiscalRejection,
             @Param("customerEmail") String          customerEmail,
             @Param("startDate")     Instant         startDate,
             @Param("endDate")       Instant         endDate,

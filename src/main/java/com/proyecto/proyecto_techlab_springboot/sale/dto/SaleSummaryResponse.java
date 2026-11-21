@@ -32,6 +32,7 @@ public record SaleSummaryResponse(
         SaleStatus saleStatus,
         PaymentMethod paymentMethod,
         PaymentStatus paymentStatus,
+        boolean         fiscalRejection,
         Instant         saleDeliveredAt,
         Instant         createdAt
 ) {}

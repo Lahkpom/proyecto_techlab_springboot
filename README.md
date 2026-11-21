@@ -315,11 +315,12 @@ Las búsquedas/detalles no exigen JWT en sus métodos; las tres mutaciones sí r
 
 | Método y ruta | Propósito | Seguridad / roles | Path y query | Request body | Éxito | Errores específicos |
 |---|---|---|---|---|---|---|
-| `GET /admin/sales` | Búsqueda paginada por estado de venta/pago, email y rango temporal. | Sin autorización efectiva. | Opcionales: `saleStatus` (`SaleStatus`), `paymentStatus` (`PaymentStatus`), `customerEmail` (String), `startDate`/`endDate` (`Instant`, ISO date-time), Pageable (default size 20). | — | `200 Page<SaleSummaryResponse>`. | `400` enum/fecha/page inválidos. |
-| `GET /admin/sales/{saleId}` | Detalle de venta. | Sin autorización efectiva. | `saleId`: UUID, requerido. | — | `200 SaleResponse`. | `400` UUID inválido; `404` venta inexistente. |
-| `PATCH /admin/sales/{saleId}/status` | Cambia estado logístico según máquina de estados. | Requiere JWT manual; sin autorización por rol. | `saleId`: UUID, requerido. | `SaleStatusUpdateRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`; `422` transición de venta no permitida. |
-| `PATCH /admin/sales/{saleId}/payment-status` | Conciliación manual del estado de pago. | Requiere JWT manual; sin autorización por rol. | `saleId`: UUID, requerido. | `PaymentStatusUpdateRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`; `422` transición de pago no permitida. |
-| `PATCH /admin/sales/{saleId}/internal-notes` | Crea/edita notas operativas internas. | Requiere JWT manual; sin autorización por rol. | `saleId`: UUID, requerido. | `SaleInternalNoteRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`. |
+| `GET /admin/sales` | Búsqueda paginada por auditoría, lista/estado de venta, estado de pago, rechazo fiscal, email y rango temporal. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | Opcionales: `auditOnly` (boolean, default `false`), `statuses` (lista de `SaleStatus`), `saleStatus` (`SaleStatus`), `paymentStatus` (`PaymentStatus`), `fiscalRejection` (boolean), `customerEmail` (String), `startDate`/`endDate` (`Instant`, ISO date-time), Pageable (default size 20). | — | `200 Page<SaleSummaryResponse>`. | `400` enum/fecha/page inválidos. |
+| `GET /admin/sales/{saleId}` | Detalle de venta. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | — | `200 SaleResponse`. | `400` UUID inválido; `404` venta inexistente. |
+| `PATCH /admin/sales/{saleId}/status` | Cambia estado logístico según máquina de estados. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | `SaleStatusUpdateRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`; `422` transición de venta no permitida. |
+| `PATCH /admin/sales/{saleId}/payment-status` | Conciliación manual del estado de pago. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | `PaymentStatusUpdateRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`; `422` transición de pago no permitida. |
+| `PATCH /admin/sales/{saleId}/internal-notes` | Crea/edita notas operativas internas. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | `SaleInternalNoteRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`. |
+| `PATCH /admin/sales/{saleId}/fiscal-data` | Corrige datos fiscales del receptor cuando ARCA rechazó la factura; sincroniza tipo y número con el perfil registrado si cambiaron. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | `SaleFiscalDataUpdateRequest` (**@Valid**). | `200 SaleResponse`. | `400` validación; `401`; `404`; `422` la venta no tiene rechazo fiscal. |
 
 #### Webhooks externos
 
@@ -356,12 +357,11 @@ El controlador solo expone consultas. La emisión fiscal se integra en servicios
 
 #### Administrativos (`/admin/...`)
 
-`@PreAuthorize` está comentado; actualmente no hay protección de rol efectiva.
-
 | Método y ruta | Propósito | Seguridad / roles | Path y query | Request body | Éxito | Errores específicos |
 |---|---|---|---|---|---|---|
-| `GET /admin/fiscal/sales/{saleId}` | Lista comprobantes fiscales asociados a una venta. | Sin autorización efectiva. | `saleId`: UUID, requerido. | — | `200 List<FiscalReceiptResponse>`; si no hay comprobantes, la lista es vacía. | `400` UUID inválido; `404` venta inexistente. |
-| `GET /admin/fiscal/{fiscalReceiptId}` | Consulta comprobante por UUID. | Sin autorización efectiva. | `fiscalReceiptId`: UUID, requerido. | — | `200 FiscalReceiptResponse`. | `400` UUID inválido; `404` comprobante inexistente. |
+| `GET /admin/fiscal/sales/{saleId}` | Lista comprobantes fiscales asociados a una venta. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | — | `200 List<FiscalReceiptResponse>`; si no hay comprobantes, la lista es vacía. | `400` UUID inválido; `404` venta inexistente. |
+| `GET /admin/fiscal/{fiscalReceiptId}` | Consulta comprobante por UUID. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `fiscalReceiptId`: UUID, requerido. | — | `200 FiscalReceiptResponse`. | `400` UUID inválido; `404` comprobante inexistente. |
+| `POST /admin/fiscal/sales/{saleId}/retry-invoice` | Reintenta manualmente la emisión de Factura C únicamente si ARCA rechazó la factura por datos inválidos; las indisponibilidades siguen a cargo del scheduler. | Requiere `OPERATOR` o `ADMIN` (`@PreAuthorize`). | `saleId`: UUID, requerido. | — | `200 FiscalReceiptResponse`. | `400` UUID inválido; `404` venta inexistente; `422` sin rechazo fiscal o factura no elegible. |
 
 ## 5. Contratos de DTO y ejemplos
 
@@ -566,9 +566,18 @@ Los dos DTOs tienen los mismos campos y restricciones.
 | `PaymentStatusUpdateRequest.newPaymentStatus` | `PaymentStatus` | Sí | `@NotNull`. |
 | `PaymentStatusUpdateRequest.paymentNotes` | string | No | Máximo 500. |
 | `SaleInternalNoteRequest.internalNotes` | string | Sí | `@NotBlank`, máximo 2000. |
+| `SaleFiscalDataUpdateRequest.customerName` | string | Sí | `@NotBlank`, máximo 255. |
+| `SaleFiscalDataUpdateRequest.customerTaxIdType` | `TaxIdType` | No | Debe informarse junto con `customerTaxIdNumber`. |
+| `SaleFiscalDataUpdateRequest.customerTaxIdNumber` | string | No | Máximo 20; se normalizan separadores y debe informarse junto con `customerTaxIdType`. |
 
 ```json
 {"newStatus":"PREPARACION","changeReason":"Pago confirmado"}
+```
+
+Ejemplo de corrección de datos fiscales:
+
+```json
+{"customerName":"Nombre o razón social","customerTaxIdType":"CUIT","customerTaxIdNumber":"30-12345678-9"}
 ```
 
 ```json
@@ -737,8 +746,8 @@ Los campos de record se serializan con los nombres indicados. Las fechas `Instan
 
 #### `SaleResponse`, `SaleSummaryResponse` y `SaleItemResponse`
 
-- `SaleResponse`: `saleId`, `userId`, `trackingToken` (UUID); `customerName`, `customerEmail`, `customerPhone` (string); `customerTaxIdType` (`TaxIdType`), `customerTaxIdNumber`, `customerNotes`, `shippingAddress` (string); `saleQuantity` (Integer); `saleSubtotal`, `saleDiscountAmount`, `shippingCost`, `saleTotal` (BigDecimal); `saleShippedAt`, `saleDeliveredAt` (Instant); `saleStatus` (`SaleStatus`); `paymentMethod` (`PaymentMethod`); `paymentStatus` (`PaymentStatus`); `internalNotes`, `mpPreferenceId`, `mpInitPoint` (string); `createdAt`, `updatedAt` (Instant); `items` (array de `SaleItemResponse`).
-- `SaleSummaryResponse`: `saleId`, `userId`, `trackingToken` (UUID); `customerName`, `customerEmail` (string); `customerTaxIdType` (`TaxIdType`), `customerTaxIdNumber` (string); `saleQuantity` (Integer), `saleTotal` (BigDecimal); `saleStatus` (`SaleStatus`), `paymentMethod` (`PaymentMethod`), `paymentStatus` (`PaymentStatus`), `createdAt` (Instant).
+- `SaleResponse`: `saleId`, `userId`, `trackingToken` (UUID); `customerName`, `customerEmail`, `customerPhone` (string); `customerTaxIdType` (`TaxIdType`), `customerTaxIdNumber`, `customerNotes`, `shippingAddress` (string); `saleQuantity` (Integer); `saleSubtotal`, `saleDiscountAmount`, `shippingCost`, `saleTotal` (BigDecimal); `saleShippedAt`, `saleDeliveredAt` (Instant); `saleStatus` (`SaleStatus`); `paymentMethod` (`PaymentMethod`); `paymentStatus` (`PaymentStatus`); `fiscalRejection` (boolean); `internalNotes`, `mpPreferenceId`, `mpInitPoint` (string); `createdAt`, `updatedAt` (Instant); `items` (array de `SaleItemResponse`).
+- `SaleSummaryResponse`: `saleId`, `userId`, `trackingToken` (UUID); `customerName`, `customerEmail` (string); `customerTaxIdType` (`TaxIdType`), `customerTaxIdNumber` (string); `saleQuantity` (Integer), `saleTotal` (BigDecimal); `saleStatus` (`SaleStatus`), `paymentMethod` (`PaymentMethod`), `paymentStatus` (`PaymentStatus`), `fiscalRejection` (boolean), `createdAt` (Instant).
 - `SaleItemResponse`: `saleItemId`, `variantId` (Long); `productName`, `productDesc`, `variantDesc`, `variantSku` (string); `variantSize` (`NumericSize`); `colorName`, `imageUrl` (string); `unitPrice`, `subtotal` (BigDecimal); `quantity` (Integer); `createdAt` (Instant).
 
 ```json

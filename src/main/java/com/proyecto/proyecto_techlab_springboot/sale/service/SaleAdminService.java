@@ -10,6 +10,9 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.fiscal.service.FiscalReceiptService;
+import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
+import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
+import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -39,6 +43,7 @@ public class SaleAdminService {
     private final ISaleRepository       iSaleRepository;
     private final VariantService variantService;
     private final FiscalReceiptService  fiscalReceiptService;
+    private final UserService userService;
 
     // Matriz de transiciones de ciclo de vida legales
     private static final Map<SaleStatus, Set<SaleStatus>> ALLOWED_TRANSITIONS = Map.of(
@@ -56,16 +61,23 @@ public class SaleAdminService {
      */
     @Transactional(readOnly = true)
     public Page<SaleSummaryResponse> searchSales(
+            boolean         auditOnly,
+            List<SaleStatus> statuses,
             SaleStatus      saleStatus,
             PaymentStatus   paymentStatus,
+            Boolean         fiscalRejection,
             String          customerEmail,
             Instant         startDate,
             Instant         endDate,
             Pageable        pageable
     ) {
+        List<SaleStatus> effectiveStatuses = (statuses == null || statuses.isEmpty()) ? null : statuses;
         return this.iSaleRepository.searchSalesAdmin(
+                auditOnly,
+                effectiveStatuses,
                 saleStatus,
                 paymentStatus,
+                fiscalRejection,
                 customerEmail,
                 startDate,
                 endDate,
@@ -190,6 +202,55 @@ public class SaleAdminService {
         return mapToSaleResponse(sale);
     }
 
+    @Transactional
+    public SaleResponse updateSaleFiscalData(UUID saleId, SaleFiscalDataUpdateRequest request, UUID operatorId) {
+        Sale sale = this.findSaleByIdOrThrow(saleId);
+        if (!sale.isFiscalRejection()) {
+            throw new InvalidSaleStatusTransitionException(
+                    "Solo se pueden corregir datos fiscales de ventas con rechazo en ARCA."
+            );
+        }
+
+        TaxIdType normalizedType = request.customerTaxIdType();
+        String normalizedNumber = normalizeTaxIdNumber(normalizedType, request.customerTaxIdNumber());
+        if ((normalizedType != null && normalizedNumber == null)
+                || (normalizedType == null && normalizedNumber != null)) {
+            throw new InvalidUserDataException(
+                    "Debe completar tanto el tipo como el número de documento fiscal."
+            );
+        }
+
+        boolean taxDataChanged = !Objects.equals(sale.getCustomerTaxIdType(), normalizedType)
+                || !Objects.equals(sale.getCustomerTaxIdNumber(), normalizedNumber);
+
+        sale.setCustomerName(request.customerName().trim());
+        sale.setCustomerTaxIdType(normalizedType);
+        sale.setCustomerTaxIdNumber(normalizedNumber);
+
+        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
+        sale.setInternalNotes(currentNotes + (currentNotes.isEmpty() ? "" : "\n")
+                + "[ACTUALIZACIÓN DE DATOS FISCALES]: Operador " + operatorId
+                + " actualizó los datos fiscales del receptor.");
+        sale.setUpdatedBy(operatorId);
+        sale.setUpdatedAt(Instant.now());
+
+        if (sale.getUser() != null && taxDataChanged) {
+            this.userService.updateUserTaxData(sale.getUser().getUserId(), normalizedType, normalizedNumber);
+        }
+
+        return mapToSaleResponse(sale);
+    }
+
+    private String normalizeTaxIdNumber(TaxIdType taxIdType, String taxIdNumber) {
+        if (taxIdNumber == null || taxIdNumber.isBlank()) {
+            return null;
+        }
+        String normalized = taxIdType == TaxIdType.PASAPORTE
+                ? taxIdNumber.replaceAll("[^A-Za-z0-9]", "")
+                : taxIdNumber.replaceAll("\\D", "");
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     // =========================================================================
     // Lógica Privada de Soporte
     // =========================================================================
@@ -290,6 +351,8 @@ public class SaleAdminService {
                 .trackingToken(sale.getTrackingToken())
                 .customerName(sale.getCustomerName())
                 .customerEmail(sale.getCustomerEmail())
+                .customerTaxIdType(sale.getCustomerTaxIdType())
+                .customerTaxIdNumber(sale.getCustomerTaxIdNumber())
                 .shippingMethod(sale.getShippingMethod())
                 .shippingProvince(sale.getShippingProvince())
                 .shippingLocality(sale.getShippingLocality())
@@ -299,6 +362,7 @@ public class SaleAdminService {
                 .saleStatus(sale.getSaleStatus())
                 .paymentMethod(sale.getPaymentMethod())
                 .paymentStatus(sale.getPaymentStatus())
+                .fiscalRejection(sale.isFiscalRejection())
                 .createdAt(sale.getCreatedAt())
                 .build();
     }
@@ -329,6 +393,8 @@ public class SaleAdminService {
                 .customerName(sale.getCustomerName())
                 .customerEmail(sale.getCustomerEmail())
                 .customerPhone(sale.getCustomerPhone())
+                .customerTaxIdType(sale.getCustomerTaxIdType())
+                .customerTaxIdNumber(sale.getCustomerTaxIdNumber())
                 .customerNotes(sale.getCustomerNotes())
                 .shippingMethod(sale.getShippingMethod())
                 .shippingProvince(sale.getShippingProvince())
@@ -345,6 +411,7 @@ public class SaleAdminService {
                 .saleStatus(sale.getSaleStatus())
                 .paymentMethod(sale.getPaymentMethod())
                 .paymentStatus(sale.getPaymentStatus())
+                .fiscalRejection(sale.isFiscalRejection())
                 .internalNotes(sale.getInternalNotes())
                 .mpPreferenceId(sale.getMpPreferenceId())
                 .createdAt(sale.getCreatedAt())

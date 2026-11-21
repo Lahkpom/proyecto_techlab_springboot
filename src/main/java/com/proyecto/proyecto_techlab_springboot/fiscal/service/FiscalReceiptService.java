@@ -84,6 +84,18 @@ public class FiscalReceiptService {
         // sube directamente al catch(ArcaUnavailableException) del Scheduler para ejecutar el break.
     }
 
+    @Transactional
+    public FiscalReceipt retryRejectedInvoiceForSale(UUID saleId, UUID operatorId) {
+        Sale sale = this.saleService.getSaleByIdOrElseThrow(saleId);
+        if (!sale.isFiscalRejection()) {
+            throw new InvalidFiscalOperationException(
+                    "Solo se puede reintentar manualmente una factura rechazada por ARCA por datos inválidos; las pendientes por indisponibilidad del servicio son procesadas automáticamente por el scheduler."
+            );
+        }
+        sale.setFiscalRejection(false);
+        return this.emitInvoiceForSale(saleId, operatorId);
+    }
+
     /**
      * Emite la Factura C correspondiente a una venta cobrada.
      */

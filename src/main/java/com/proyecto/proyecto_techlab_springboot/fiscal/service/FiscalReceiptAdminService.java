@@ -18,6 +18,7 @@ public class FiscalReceiptAdminService {
 
     private final IFiscalReceiptRepository fiscalReceiptRepository;
     private final SaleService              saleService;
+    private final FiscalReceiptService      fiscalReceiptService;
 
     @Transactional(readOnly = true)
     public List<FiscalReceiptResponse> getReceiptsBySale(UUID saleId) {
@@ -34,6 +35,11 @@ public class FiscalReceiptAdminService {
                 .orElseThrow(() -> new FiscalReceiptNotFoundException("{ ID: %s }".formatted(fiscalReceiptId)));
 
         return mapToResponse(receipt);
+    }
+
+    @Transactional
+    public FiscalReceiptResponse retryRejectedInvoiceForSale(UUID saleId, UUID operatorId) {
+        return mapToResponse(this.fiscalReceiptService.retryRejectedInvoiceForSale(saleId, operatorId));
     }
 
     private FiscalReceiptResponse mapToResponse(FiscalReceipt r) {

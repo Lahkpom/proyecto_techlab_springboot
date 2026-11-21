@@ -42,6 +42,7 @@ public record SaleResponse(
         SaleStatus saleStatus,
         PaymentMethod paymentMethod,
         PaymentStatus paymentStatus,
+        boolean                 fiscalRejection,
         String                  internalNotes,
         String                  mpPreferenceId,
         String                  mpInitPoint, // URL provista por MP para redirección al Checkout Pro
