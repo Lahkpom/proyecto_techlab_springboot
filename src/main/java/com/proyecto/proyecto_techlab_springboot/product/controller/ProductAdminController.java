@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.product.controller;
 
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.product.dto.ProductOptionResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -38,6 +40,11 @@ public class ProductAdminController {
     ) {
         Page<ProductResponse> res = this.productService.getAllAdminProducts(pageable);
         return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/options")
+    public ResponseEntity<List<ProductOptionResponse>> getActiveProductOptions() {
+        return ResponseEntity.ok(this.productService.getActiveProductOptions());
     }
 
     @GetMapping("/{id}")

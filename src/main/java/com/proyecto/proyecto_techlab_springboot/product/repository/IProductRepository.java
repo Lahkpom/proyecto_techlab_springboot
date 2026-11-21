@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.product.repository;
 
 import com.proyecto.proyecto_techlab_springboot.product.model.Product;
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -22,6 +24,9 @@ public interface IProductRepository extends JpaRepository<Product, UUID> {
         ORDER BY p.createdAt DESC
     """)
     Page<Product> findAllForAdmin(Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.rowStatus = com.proyecto.proyecto_techlab_springboot.common.model.RowStatus.ACTIVE ORDER BY p.productName ASC")
+    List<Product> findAllActiveForSelect();
 
     @Query(
         value = """

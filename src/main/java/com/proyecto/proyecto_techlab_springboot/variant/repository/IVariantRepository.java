@@ -7,6 +7,8 @@ import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
@@ -48,6 +50,44 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     // Buscar variantes activas de un producto
     @EntityGraph(attributePaths = {"product", "color"})
     List<Variant> findAllByProduct_ProductIdAndRowStatus(UUID productId, RowStatus rowStatus);
+
+    @Query(
+        value = """
+            SELECT v
+            FROM Variant v
+            JOIN FETCH v.product p
+            JOIN FETCH v.color c
+            WHERE (:productId IS NULL OR p.productId = :productId)
+              AND (:colorId IS NULL OR c.colorId = :colorId)
+              AND (:size IS NULL OR v.variantSize = :size)
+              AND (:rowStatus IS NULL OR v.rowStatus = :rowStatus)
+              AND (:search IS NULL OR LOWER(v.variantSku) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(v.variantDesc) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')))
+            ORDER BY p.productName ASC, c.colorName ASC, v.variantSize ASC
+        """,
+        countQuery = """
+            SELECT COUNT(v)
+            FROM Variant v
+            JOIN v.product p
+            JOIN v.color c
+            WHERE (:productId IS NULL OR p.productId = :productId)
+              AND (:colorId IS NULL OR c.colorId = :colorId)
+              AND (:size IS NULL OR v.variantSize = :size)
+              AND (:rowStatus IS NULL OR v.rowStatus = :rowStatus)
+              AND (:search IS NULL OR LOWER(v.variantSku) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(v.variantDesc) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')))
+        """
+    )
+    Page<Variant> searchVariantsAdmin(
+            @Param("productId") UUID productId,
+            @Param("colorId") Long colorId,
+            @Param("size") NumericSize size,
+            @Param("rowStatus") RowStatus rowStatus,
+            @Param("search") String search,
+            Pageable pageable
+    );
 
     @Query("""
         SELECT v

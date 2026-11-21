@@ -25,6 +25,8 @@ import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepos
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +57,26 @@ public class VariantService {
                 : iVariantRepository.findAllByProduct_ProductIdAndRowStatus(productId, RowStatus.ACTIVE);
 
         return variants.stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<VariantResponse> searchVariantsAdmin(
+            UUID productId,
+            Long colorId,
+            NumericSize size,
+            RowStatus rowStatus,
+            String search,
+            Pageable pageable
+    ) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+        return iVariantRepository.searchVariantsAdmin(
+                productId,
+                colorId,
+                size,
+                rowStatus,
+                normalizedSearch,
+                pageable
+        ).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)

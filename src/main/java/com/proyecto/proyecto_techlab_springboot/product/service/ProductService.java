@@ -7,6 +7,7 @@ import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogImageResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
+import com.proyecto.proyecto_techlab_springboot.product.dto.ProductOptionResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivatedEvent;
@@ -89,6 +90,17 @@ public class ProductService {
     public Page<ProductResponse> getAllAdminProducts(Pageable pageable) {
         return this.iProductRepository.findAllForAdmin(pageable)
                 .map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductOptionResponse> getActiveProductOptions() {
+        return this.iProductRepository.findAllActiveForSelect().stream()
+                .map(product -> new ProductOptionResponse(
+                        product.getProductId(),
+                        product.getProductName(),
+                        product.getTargetGender()
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)
