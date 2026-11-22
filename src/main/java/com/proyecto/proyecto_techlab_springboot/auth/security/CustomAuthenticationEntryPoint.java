@@ -1,6 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.auth.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.common.exception.ErrorResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
