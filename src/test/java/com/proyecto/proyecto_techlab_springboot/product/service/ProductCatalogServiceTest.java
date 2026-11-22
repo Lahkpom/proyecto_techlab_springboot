@@ -5,7 +5,6 @@ import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogRespon
 import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
-import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
@@ -52,7 +51,6 @@ class ProductCatalogServiceTest {
 
         ProductService service = new ProductService(
                 repository,
-                mock(VariantService.class),
                 mock(ApplicationEventPublisher.class),
                 new ObjectMapper()
         );
@@ -94,7 +92,6 @@ class ProductCatalogServiceTest {
 
         ProductService service = new ProductService(
                 repository,
-                mock(VariantService.class),
                 mock(ApplicationEventPublisher.class),
                 new ObjectMapper()
         );
@@ -112,7 +109,6 @@ class ProductCatalogServiceTest {
         IProductRepository repository = mock(IProductRepository.class);
         ProductService service = new ProductService(
                 repository,
-                mock(VariantService.class),
                 mock(ApplicationEventPublisher.class),
                 new ObjectMapper()
         );

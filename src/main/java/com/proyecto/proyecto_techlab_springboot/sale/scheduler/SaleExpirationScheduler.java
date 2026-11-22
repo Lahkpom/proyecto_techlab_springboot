@@ -2,6 +2,7 @@ package com.proyecto.proyecto_techlab_springboot.sale.scheduler;
 
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
+import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
@@ -51,9 +52,13 @@ public class SaleExpirationScheduler {
     @Transactional
     public void cancelExpiredPendingSales() {
         List<Sale> expiredPendingSales = this.iSaleRepository.findExpiredPendingSales(
+                SaleStatus.PENDIENTE,
                 Instant.now().minus(Duration.ofHours(this.ttlHours))
         );
         List<Sale> expiredCashPreparationSales = this.iSaleRepository.findExpiredCashPreparationSales(
+                SaleStatus.PREPARACION,
+                PaymentMethod.EFECTIVO,
+                PaymentStatus.PENDIENTE,
                 Instant.now().minus(Duration.ofHours(this.cashTtlHours))
         );
 

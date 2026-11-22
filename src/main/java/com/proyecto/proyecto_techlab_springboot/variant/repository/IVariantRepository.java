@@ -57,35 +57,42 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
             FROM Variant v
             JOIN FETCH v.product p
             JOIN FETCH v.color c
-            WHERE (:productId IS NULL OR p.productId = :productId)
-              AND (:colorId IS NULL OR c.colorId = :colorId)
-              AND (:size IS NULL OR v.variantSize = :size)
-              AND (:rowStatus IS NULL OR v.rowStatus = :rowStatus)
-              AND (:search IS NULL OR LOWER(v.variantSku) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(v.variantDesc) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')))
-            ORDER BY p.productName ASC, c.colorName ASC, v.variantSize ASC
+            WHERE (:filterProductId = false OR p.productId = :productId)
+              AND (:filterColorId = false OR c.colorId = :colorId)
+              AND (:filterSize = false OR v.variantSize = :size)
+              AND (:filterRowStatus = false OR v.rowStatus = :rowStatus)
+              AND (LOWER(v.variantSku) LIKE LOWER(:searchPattern)
+                   OR LOWER(v.variantDesc) LIKE LOWER(:searchPattern)
+                   OR LOWER(p.productName) LIKE LOWER(:searchPattern))
+            ORDER BY CASE WHEN v.rowStatus = :activeStatus THEN 0 ELSE 1 END ASC,
+                     p.productName ASC,
+                     v.variantSize ASC
         """,
         countQuery = """
             SELECT COUNT(v)
             FROM Variant v
             JOIN v.product p
             JOIN v.color c
-            WHERE (:productId IS NULL OR p.productId = :productId)
-              AND (:colorId IS NULL OR c.colorId = :colorId)
-              AND (:size IS NULL OR v.variantSize = :size)
-              AND (:rowStatus IS NULL OR v.rowStatus = :rowStatus)
-              AND (:search IS NULL OR LOWER(v.variantSku) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(v.variantDesc) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')))
+            WHERE (:filterProductId = false OR p.productId = :productId)
+              AND (:filterColorId = false OR c.colorId = :colorId)
+              AND (:filterSize = false OR v.variantSize = :size)
+              AND (:filterRowStatus = false OR v.rowStatus = :rowStatus)
+              AND (LOWER(v.variantSku) LIKE LOWER(:searchPattern)
+                   OR LOWER(v.variantDesc) LIKE LOWER(:searchPattern)
+                   OR LOWER(p.productName) LIKE LOWER(:searchPattern))
         """
     )
     Page<Variant> searchVariantsAdmin(
+            @Param("filterProductId") boolean filterProductId,
             @Param("productId") UUID productId,
+            @Param("filterColorId") boolean filterColorId,
             @Param("colorId") Long colorId,
+            @Param("filterSize") boolean filterSize,
             @Param("size") NumericSize size,
+            @Param("filterRowStatus") boolean filterRowStatus,
             @Param("rowStatus") RowStatus rowStatus,
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
+            @Param("activeStatus") RowStatus activeStatus,
             Pageable pageable
     );
 
@@ -155,7 +162,7 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     default void inactivateVariantsByProductId(@Param("productId") UUID productId) {
         inactivateVariantsByProductId(productId, RowStatus.ACTIVE, RowStatus.INACTIVE);
     }
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
         UPDATE
             Variant v
@@ -178,7 +185,7 @@ public interface IVariantRepository extends JpaRepository<Variant, Long> {
     default void deleteVariantsByProductId(@Param("productId") UUID productId) {
         deleteVariantsByProductId(productId, RowStatus.DELETED);
     }    
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
         UPDATE  Variant v
         SET     v.rowStatus         = :deleted

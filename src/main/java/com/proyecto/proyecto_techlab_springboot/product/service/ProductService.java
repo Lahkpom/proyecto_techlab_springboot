@@ -90,18 +90,37 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductResponse> getAllAdminProducts(Pageable pageable) {
-        return this.iProductRepository.findAllForAdmin(pageable)
+    public Page<ProductResponse> getAllAdminProducts(
+            TargetGender targetGender,
+            RowStatus rowStatus,
+            String search,
+            Pageable pageable
+    ) {
+        String normalizedSearch = search == null || search.isBlank()
+                ? "%%"
+                : "%" + search.trim() + "%";
+        Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+        return this.iProductRepository.searchAdminProducts(
+                targetGender != null,
+                targetGender,
+                rowStatus != null,
+                rowStatus,
+                normalizedSearch,
+                RowStatus.ACTIVE,
+                unsortedPageable
+        )
                 .map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductOptionResponse> getActiveProductOptions() {
-        return this.iProductRepository.findAllActiveForSelect().stream()
+    public List<ProductOptionResponse> getProductOptions() {
+        return this.iProductRepository.findAllOptionsForSelect(RowStatus.ACTIVE).stream()
                 .map(product -> new ProductOptionResponse(
                         product.getProductId(),
                         product.getProductName(),
-                        product.getTargetGender()
+                        product.getTargetGender(),
+                        product.getRowStatus()
                 ))
                 .toList();
     }
@@ -152,6 +171,9 @@ public class ProductService {
 
         Product product = this.findProductByIdOrThrow(id);
         RowStatus lastStatus = product.getRowStatus();
+        product.setRowStatus(request.rowStatus());
+        // Guardamos el cambio de estado antes de publicar los eventos
+        product = this.iProductRepository.saveAndFlush(product); 
 
         if (lastStatus != request.rowStatus()) {
             if (request.rowStatus() == RowStatus.INACTIVE && lastStatus == RowStatus.ACTIVE)
@@ -160,7 +182,6 @@ public class ProductService {
             if (request.rowStatus() == RowStatus.DELETED)
                 this.eventPublisher.publishEvent(new ProductDeletedEvent(id));
         }
-        product.setRowStatus(request.rowStatus());
 
         log.info("Estado del Producto modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", product.getProductId(), lastStatus, product.getRowStatus());
 

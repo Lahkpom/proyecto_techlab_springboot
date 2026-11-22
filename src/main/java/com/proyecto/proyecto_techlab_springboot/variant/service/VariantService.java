@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,14 +72,22 @@ public class VariantService {
             String search,
             Pageable pageable
     ) {
-        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+        String normalizedSearch = search == null || search.isBlank()
+                ? "%%"
+                : "%" + search.trim() + "%";
+        Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         return iVariantRepository.searchVariantsAdmin(
+                productId != null,
                 productId,
+                colorId != null,
                 colorId,
+                size != null,
                 size,
+                rowStatus != null,
                 rowStatus,
                 normalizedSearch,
-                pageable
+                RowStatus.ACTIVE,
+                unsortedPageable
         ).map(this::mapToResponse);
     }
 
@@ -217,11 +226,13 @@ public class VariantService {
     }
 
     @EventListener
+    @Transactional
     public void onProductInactivated(ProductInactivatedEvent event) {
         this.iVariantRepository.inactivateVariantsByProductId(event.productId());
     }
 
     @EventListener
+    @Transactional
     public void onProductDeleted(ProductDeletedEvent event) {
         this.iVariantRepository.deleteVariantsByProductId(event.productId());
     }

@@ -78,12 +78,9 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
         SELECT s
         FROM Sale s
         WHERE (:auditOnly = false OR (
-                s.saleStatus = com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.AUDITORIA
+                s.saleStatus = :auditStatus
                 OR (s.fiscalRejection = true AND s.saleStatus NOT IN (
-                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.ENTREGADO,
-                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.CANCELADO,
-                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.REEMBOLSADO,
-                    com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.CERRADO_CON_DEVOLUCION
+                    :terminalStatuses
                 ))
               ))
           AND (:statuses IS NULL OR s.saleStatus IN :statuses)
@@ -97,6 +94,8 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
     """)
     Page<Sale> searchSalesAdmin(
             @Param("auditOnly") boolean auditOnly,
+            @Param("auditStatus") SaleStatus auditStatus,
+            @Param("terminalStatuses") List<SaleStatus> terminalStatuses,
             @Param("statuses") List<SaleStatus> statuses,
             @Param("saleStatus")    SaleStatus      saleStatus,
             @Param("paymentStatus") PaymentStatus   paymentStatus,
@@ -113,19 +112,27 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
      */
     @Query("""
         SELECT s FROM Sale s
-        WHERE s.saleStatus = com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.PENDIENTE
+        WHERE s.saleStatus = :saleStatus
           AND s.createdAt < :threshold
     """)
-    List<Sale> findExpiredPendingSales(@Param("threshold") Instant threshold);
+    List<Sale> findExpiredPendingSales(
+            @Param("saleStatus") SaleStatus saleStatus,
+            @Param("threshold") Instant threshold
+    );
 
     @Query("""
         SELECT s FROM Sale s
-        WHERE s.saleStatus = com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus.PREPARACION
-          AND s.paymentMethod = com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod.EFECTIVO
-          AND s.paymentStatus = com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus.PENDIENTE
+        WHERE s.saleStatus = :saleStatus
+          AND s.paymentMethod = :paymentMethod
+          AND s.paymentStatus = :paymentStatus
           AND s.createdAt < :threshold
     """)
-    List<Sale> findExpiredCashPreparationSales(@Param("threshold") Instant threshold);
+    List<Sale> findExpiredCashPreparationSales(
+            @Param("saleStatus") SaleStatus saleStatus,
+            @Param("paymentMethod") PaymentMethod paymentMethod,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("threshold") Instant threshold
+    );
 
     // Para simulación en perfil DEV: obtiene la última orden pendiente de Mercado Pago
     Optional<Sale> findFirstByPaymentMethodAndPaymentStatusOrderByCreatedAtDesc(

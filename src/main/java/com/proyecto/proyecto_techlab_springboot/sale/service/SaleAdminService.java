@@ -74,6 +74,13 @@ public class SaleAdminService {
         List<SaleStatus> effectiveStatuses = (statuses == null || statuses.isEmpty()) ? null : statuses;
         return this.iSaleRepository.searchSalesAdmin(
                 auditOnly,
+                SaleStatus.AUDITORIA,
+                List.of(
+                        SaleStatus.ENTREGADO,
+                        SaleStatus.CANCELADO,
+                        SaleStatus.REEMBOLSADO,
+                        SaleStatus.CERRADO_CON_DEVOLUCION
+                ),
                 effectiveStatuses,
                 saleStatus,
                 paymentStatus,

@@ -2,10 +2,12 @@ package com.proyecto.proyecto_techlab_springboot.product.controller;
 
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductOptionResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductUpdateRequest;
+import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,15 +40,23 @@ public class ProductAdminController {
 
     @GetMapping
     public ResponseEntity<Page<ProductResponse>> getProducts(
+            @RequestParam(required = false) TargetGender targetGender,
+            @RequestParam(required = false) RowStatus rowStatus,
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<ProductResponse> res = this.productService.getAllAdminProducts(pageable);
+        Page<ProductResponse> res = this.productService.getAllAdminProducts(
+                targetGender,
+                rowStatus,
+                search,
+                pageable
+        );
         return ResponseEntity.ok(res);
     }
 
     @GetMapping("/options")
-    public ResponseEntity<List<ProductOptionResponse>> getActiveProductOptions() {
-        return ResponseEntity.ok(this.productService.getActiveProductOptions());
+    public ResponseEntity<List<ProductOptionResponse>> getProductOptions() {
+        return ResponseEntity.ok(this.productService.getProductOptions());
     }
 
     @GetMapping("/{id}")
