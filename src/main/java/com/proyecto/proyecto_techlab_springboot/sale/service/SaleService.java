@@ -343,9 +343,10 @@ public class SaleService {
      */
     @Transactional(readOnly = true)
     public Page<SaleSummaryResponse> getMyOrders(UUID userId, List<SaleStatus> statuses, Pageable pageable) {
-        List<SaleStatus> effectiveStatuses = (statuses == null || statuses.isEmpty()) ? null : statuses;
+        boolean filterStatuses = statuses != null && !statuses.isEmpty();
+        List<SaleStatus> effectiveStatuses = filterStatuses ? statuses : List.of(SaleStatus.values());
         return this.iSaleRepository
-                .findMyOrdersByStatuses(userId, effectiveStatuses, pageable)
+                .findMyOrdersByStatuses(userId, filterStatuses, effectiveStatuses, pageable)
                 .map(this::mapToSaleSummaryResponse);
     }
 

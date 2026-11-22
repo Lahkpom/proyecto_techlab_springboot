@@ -36,11 +36,12 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
         SELECT s
         FROM Sale s
         WHERE s.user.userId = :userId
-          AND (:statuses IS NULL OR s.saleStatus IN :statuses)
+          AND (:filterStatuses = false OR s.saleStatus IN :statuses)
         ORDER BY s.createdAt DESC
     """)
     Page<Sale> findMyOrdersByStatuses(
             @Param("userId") UUID userId,
+            @Param("filterStatuses") boolean filterStatuses,
             @Param("statuses") List<SaleStatus> statuses,
             Pageable pageable
     );
@@ -83,25 +84,31 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
                     :terminalStatuses
                 ))
               ))
-          AND (:statuses IS NULL OR s.saleStatus IN :statuses)
-          AND (:saleStatus IS NULL OR s.saleStatus = :saleStatus)
-          AND (:paymentStatus IS NULL OR s.paymentStatus = :paymentStatus)
-          AND (:fiscalRejection IS NULL OR s.fiscalRejection = :fiscalRejection)
-          AND (:customerEmail IS NULL OR LOWER(s.customerEmail) LIKE LOWER(CONCAT('%', :customerEmail, '%')))
-          AND (:startDate IS NULL OR s.createdAt >= :startDate)
-          AND (:endDate IS NULL OR s.createdAt <= :endDate)
+          AND (:filterStatuses = false OR s.saleStatus IN :statuses)
+          AND (:filterSaleStatus = false OR s.saleStatus = :saleStatus)
+          AND (:filterPaymentStatus = false OR s.paymentStatus = :paymentStatus)
+          AND (:filterFiscalRejection = false OR s.fiscalRejection = :fiscalRejection)
+          AND LOWER(s.customerEmail) LIKE LOWER(:customerEmailPattern)
+          AND (:filterStartDate = false OR s.createdAt >= :startDate)
+          AND (:filterEndDate = false OR s.createdAt <= :endDate)
         ORDER BY s.createdAt DESC
     """)
     Page<Sale> searchSalesAdmin(
             @Param("auditOnly") boolean auditOnly,
             @Param("auditStatus") SaleStatus auditStatus,
             @Param("terminalStatuses") List<SaleStatus> terminalStatuses,
+            @Param("filterStatuses") boolean filterStatuses,
             @Param("statuses") List<SaleStatus> statuses,
+            @Param("filterSaleStatus") boolean filterSaleStatus,
             @Param("saleStatus")    SaleStatus      saleStatus,
+            @Param("filterPaymentStatus") boolean filterPaymentStatus,
             @Param("paymentStatus") PaymentStatus   paymentStatus,
+            @Param("filterFiscalRejection") boolean filterFiscalRejection,
             @Param("fiscalRejection") Boolean fiscalRejection,
-            @Param("customerEmail") String          customerEmail,
+            @Param("customerEmailPattern") String   customerEmailPattern,
+            @Param("filterStartDate") boolean filterStartDate,
             @Param("startDate")     Instant         startDate,
+            @Param("filterEndDate") boolean filterEndDate,
             @Param("endDate")       Instant         endDate,
             Pageable pageable
     );

@@ -57,18 +57,22 @@ public interface ISaleReturnRepository extends JpaRepository<SaleReturn, UUID> {
     @Query("""
         SELECT sr FROM SaleReturn sr
         JOIN sr.sale s
-        WHERE (:returnStatus IS NULL OR sr.returnStatus = :returnStatus)
-          AND (:returnReason IS NULL OR sr.returnReason = :returnReason)
-          AND (:customerEmail IS NULL OR LOWER(s.customerEmail) LIKE LOWER(CONCAT('%', :customerEmail, '%')))
-          AND (:startDate IS NULL OR sr.createdAt >= :startDate)
-          AND (:endDate IS NULL OR sr.createdAt <= :endDate)
+        WHERE (:filterReturnStatus = false OR sr.returnStatus = :returnStatus)
+          AND (:filterReturnReason = false OR sr.returnReason = :returnReason)
+          AND LOWER(s.customerEmail) LIKE LOWER(:customerEmailPattern)
+          AND (:filterStartDate = false OR sr.createdAt >= :startDate)
+          AND (:filterEndDate = false OR sr.createdAt <= :endDate)
         ORDER BY sr.createdAt DESC
     """)
     Page<SaleReturn> searchReturnsAdmin(
+            @Param("filterReturnStatus") boolean filterReturnStatus,
             @Param("returnStatus")  ReturnStatus    returnStatus,
+            @Param("filterReturnReason") boolean filterReturnReason,
             @Param("returnReason")  ReturnReason    returnReason,
-            @Param("customerEmail") String          customerEmail,
+            @Param("customerEmailPattern") String   customerEmailPattern,
+            @Param("filterStartDate") boolean filterStartDate,
             @Param("startDate")     Instant         startDate,
+            @Param("filterEndDate") boolean filterEndDate,
             @Param("endDate")       Instant         endDate,
             Pageable pageable
     );

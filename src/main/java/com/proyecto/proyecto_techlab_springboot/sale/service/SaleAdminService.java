@@ -71,7 +71,11 @@ public class SaleAdminService {
             Instant         endDate,
             Pageable        pageable
     ) {
-        List<SaleStatus> effectiveStatuses = (statuses == null || statuses.isEmpty()) ? null : statuses;
+        boolean filterStatuses = statuses != null && !statuses.isEmpty();
+        List<SaleStatus> effectiveStatuses = filterStatuses ? statuses : List.of(SaleStatus.values());
+        String customerEmailPattern = (customerEmail == null || customerEmail.isBlank())
+                ? "%%"
+                : "%" + customerEmail.trim() + "%";
         return this.iSaleRepository.searchSalesAdmin(
                 auditOnly,
                 SaleStatus.AUDITORIA,
@@ -81,12 +85,18 @@ public class SaleAdminService {
                         SaleStatus.REEMBOLSADO,
                         SaleStatus.CERRADO_CON_DEVOLUCION
                 ),
+                filterStatuses,
                 effectiveStatuses,
+                saleStatus != null,
                 saleStatus,
+                paymentStatus != null,
                 paymentStatus,
+                fiscalRejection != null,
                 fiscalRejection,
-                customerEmail,
+                customerEmailPattern,
+                startDate != null,
                 startDate,
+                endDate != null,
                 endDate,
                 pageable
         ).map(this::mapToSaleSummaryResponse);

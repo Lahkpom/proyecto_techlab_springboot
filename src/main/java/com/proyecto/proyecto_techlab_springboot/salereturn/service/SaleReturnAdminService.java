@@ -74,11 +74,18 @@ public class SaleReturnAdminService {
             Instant         endDate,
             Pageable        pageable
     ) {
+        String customerEmailPattern = (customerEmail == null || customerEmail.isBlank())
+                ? "%%"
+                : "%" + customerEmail.trim() + "%";
         return this.iSaleReturnRepository.searchReturnsAdmin(
+                returnStatus != null,
                 returnStatus,
+                returnReason != null,
                 returnReason,
-                customerEmail,
+                customerEmailPattern,
+                startDate != null,
                 startDate,
+                endDate != null,
                 endDate,
                 pageable
         ).map(this::mapToSummaryResponse);

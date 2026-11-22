@@ -190,12 +190,16 @@ public class UserService {
             );
         }
 
-        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+        String searchPattern = search == null || search.isBlank()
+                ? "%%"
+                : "%" + search.trim() + "%";
         return iUserRepository.searchUsersAdmin(
                         allowedRoles,
+                        roleFilter != null,
                         roleFilter,
+                        rowStatus != null,
                         rowStatus,
-                        normalizedSearch,
+                        searchPattern,
                         pageable
                 )
                 .map(this::mapToResponse);

@@ -39,9 +39,11 @@ class UserAdminServiceTest {
         Pageable pageable = Pageable.unpaged();
         when(repository.searchUsersAdmin(
                 List.of(UserRole.CUSTOMER, UserRole.WHOLESALER),
+                false,
                 null,
+                false,
                 null,
-                null,
+                "%%",
                 pageable
         )).thenReturn(Page.empty(pageable));
 
@@ -57,9 +59,11 @@ class UserAdminServiceTest {
         assertEquals(0, result.getTotalElements());
         verify(repository).searchUsersAdmin(
                 List.of(UserRole.CUSTOMER, UserRole.WHOLESALER),
+                false,
                 null,
+                false,
                 null,
-                null,
+                "%%",
                 pageable
         );
     }

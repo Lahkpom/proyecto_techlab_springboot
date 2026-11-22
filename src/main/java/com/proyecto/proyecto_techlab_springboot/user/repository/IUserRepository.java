@@ -22,19 +22,21 @@ public interface IUserRepository extends JpaRepository<Users, UUID> {
             SELECT u
             FROM Users u
             WHERE u.userRole IN :allowedRoles
-              AND (:roleFilter IS NULL OR u.userRole = :roleFilter)
-              AND (:rowStatus IS NULL OR u.rowStatus = :rowStatus)
-              AND (:search IS NULL OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(u.userEmail) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(COALESCE(u.companyName, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(COALESCE(u.taxIdNumber, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:filterRole = false OR u.userRole = :roleFilter)
+              AND (:filterRowStatus = false OR u.rowStatus = :rowStatus)
+              AND (LOWER(u.userName) LIKE LOWER(:searchPattern)
+                   OR LOWER(u.userEmail) LIKE LOWER(:searchPattern)
+                   OR LOWER(COALESCE(u.companyName, '')) LIKE LOWER(:searchPattern)
+                   OR LOWER(COALESCE(u.taxIdNumber, '')) LIKE LOWER(:searchPattern))
             ORDER BY u.userName ASC
             """)
     Page<Users> searchUsersAdmin(
             @Param("allowedRoles") List<UserRole> allowedRoles,
+            @Param("filterRole") boolean filterRole,
             @Param("roleFilter") UserRole roleFilter,
+            @Param("filterRowStatus") boolean filterRowStatus,
             @Param("rowStatus") RowStatus rowStatus,
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 }
