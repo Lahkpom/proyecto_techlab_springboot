@@ -15,23 +15,28 @@ import org.springframework.context.annotation.Profile;
 @Getter
 public class MercadoPagoConfiguration {
 
-    @Value("${mercadopago.access-token}")
-    private String accessToken;
+    private final String accessToken;
+    private final String webhookSecret;
+    private final String notificationUrl;
+    private final String backUrlSuccess;
+    private final String backUrlFailure;
+    private final String backUrlPending;
 
-    @Value("${mercadopago.webhook-secret}")
-    private String webhookSecret;
-
-    @Value("${mercadopago.notification-url}")
-    private String notificationUrl;
-
-    @Value("${mercadopago.back-urls.success}")
-    private String backUrlSuccess;
-
-    @Value("${mercadopago.back-urls.failure}")
-    private String backUrlFailure;
-
-    @Value("${mercadopago.back-urls.pending}")
-    private String backUrlPending;
+    public MercadoPagoConfiguration(
+            @Value("${mercadopago.access-token}") String accessToken,
+            @Value("${mercadopago.webhook-secret}") String webhookSecret,
+            @Value("${mercadopago.notification-url}") String notificationUrl,
+            @Value("${mercadopago.back-urls.success}") String backUrlSuccess,
+            @Value("${mercadopago.back-urls.failure}") String backUrlFailure,
+            @Value("${mercadopago.back-urls.pending}") String backUrlPending
+    ) {
+        this.accessToken = accessToken;
+        this.webhookSecret = webhookSecret;
+        this.notificationUrl = notificationUrl;
+        this.backUrlSuccess = backUrlSuccess;
+        this.backUrlFailure = backUrlFailure;
+        this.backUrlPending = backUrlPending;
+    }
 
     @PostConstruct
     public void init() {

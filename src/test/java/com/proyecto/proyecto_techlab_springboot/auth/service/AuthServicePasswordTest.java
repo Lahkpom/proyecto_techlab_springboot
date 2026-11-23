@@ -15,7 +15,6 @@ import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -42,7 +41,6 @@ class AuthServicePasswordTest {
         UserService userService = mock(UserService.class);
         PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
         AuthService service = service(userService, passwordEncoder, mock(IUserSessionRepository.class));
-        ReflectionTestUtils.setField(service, "initialPassword", "configured-initial-password");
         when(passwordEncoder.encode("configured-initial-password")).thenReturn("encoded-initial-password");
         when(userService.createAccount(any(Users.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -65,7 +63,6 @@ class AuthServicePasswordTest {
         UserService userService = mock(UserService.class);
         PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
         AuthService service = service(userService, passwordEncoder, mock(IUserSessionRepository.class));
-        ReflectionTestUtils.setField(service, "initialPassword", "configured-initial-password");
         when(passwordEncoder.encode("configured-initial-password")).thenReturn("encoded-initial-password");
         when(userService.createAccount(any(Users.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -195,7 +192,14 @@ class AuthServicePasswordTest {
             JwtService jwtService,
             LoginAuditService auditService
     ) {
-        return new AuthService(sessionRepository, userService, passwordEncoder, jwtService, auditService);
+        return new AuthService(
+                sessionRepository,
+                userService,
+                passwordEncoder,
+                jwtService,
+                auditService,
+                "configured-initial-password"
+        );
     }
 
     private Users user(UUID userId, String email, UserRole role, boolean mustChangePassword) {

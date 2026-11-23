@@ -16,6 +16,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
+import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingQuoteResponse;
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
 import com.proyecto.proyecto_techlab_springboot.shipping.service.ShippingService;
@@ -28,7 +29,6 @@ import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -61,9 +61,7 @@ public class SaleService {
     private final ImageService imageService;
     private final UserService userService;
     private final ShippingService shippingService;
-
-    @Value("${arca.anonymous-invoice-limit:340000.00}")
-    private BigDecimal anonymousInvoiceLimit;
+    private final ArcaProperties arcaProperties;
 
     private record ResolvedTaxData(TaxIdType type, String number) {}
 
@@ -268,10 +266,10 @@ public class SaleService {
             );
 
         // Compras que superan el límite de facturación anónima de ARCA
-        if (saleTotal.compareTo(this.anonymousInvoiceLimit) >= 0 && (resolvedType == null || resolvedNumber == null || resolvedNumber.isBlank()))
+        if (saleTotal.compareTo(this.arcaProperties.anonymousInvoiceLimit()) >= 0 && (resolvedType == null || resolvedNumber == null || resolvedNumber.isBlank()))
             throw new MissingTaxIdentificationException(
                     "Por regulaciones fiscales de ARCA, las operaciones que superan los $%s requieren identificación obligatoria (DNI o CUIT)."
-                            .formatted(this.anonymousInvoiceLimit)
+                            .formatted(this.arcaProperties.anonymousInvoiceLimit())
             );
 
         return new ResolvedTaxData(resolvedType, resolvedNumber);

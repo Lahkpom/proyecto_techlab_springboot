@@ -16,7 +16,6 @@ import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,7 +28,6 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuthService {
     private final IUserSessionRepository    iUserSessionRepository;
     private final UserService               userService;
@@ -38,8 +36,23 @@ public class AuthService {
     private final JwtService jwtService;
     private final LoginAuditService auditService;
 
-    @Value("${application.security.initial-password}")
-    private String initialPassword;
+    private final String initialPassword;
+
+    public AuthService(
+            IUserSessionRepository iUserSessionRepository,
+            UserService userService,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            LoginAuditService auditService,
+            @Value("${application.security.initial-password}") String initialPassword
+    ) {
+        this.iUserSessionRepository = iUserSessionRepository;
+        this.userService = userService;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.auditService = auditService;
+        this.initialPassword = initialPassword;
+    }
 
     private static final int MAX_FAILED_ATTEMPTS    = 5;
     private static final int REFRESH_TOKEN_DAYS     = 7;

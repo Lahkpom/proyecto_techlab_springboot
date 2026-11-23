@@ -7,7 +7,6 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,18 +26,25 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class SaleExpirationScheduler {
 
     private final ISaleRepository   iSaleRepository;
     private final VariantService    variantService;
+    private final long ttlHours;
+    private final long cashTtlHours;
 
     // Horas de tolerancia antes de cancelar por abandono (48hs)
-    @Value("${sales.expiration.ttl-hours:48}")
-    private long ttlHours;
-
-    @Value("${sales.expiration.cash-ttl-hours:72}")
-    private long cashTtlHours;
+    public SaleExpirationScheduler(
+            ISaleRepository iSaleRepository,
+            VariantService variantService,
+            @Value("${sales.expiration.ttl-hours:48}") long ttlHours,
+            @Value("${sales.expiration.cash-ttl-hours:72}") long cashTtlHours
+    ) {
+        this.iSaleRepository = iSaleRepository;
+        this.variantService = variantService;
+        this.ttlHours = ttlHours;
+        this.cashTtlHours = cashTtlHours;
+    }
 
     /**
      * Tarea programada diaria: corre a las 03:00 AM hora local.
