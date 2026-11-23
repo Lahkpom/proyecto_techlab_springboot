@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Async;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -67,6 +68,12 @@ public class FiscalReceiptService {
         } catch (Exception ex) {
             log.warn("[ALERTA FISCAL]: Error inesperado al emitir Factura C para Venta ID {}: {}", saleId, ex.getMessage());
         }
+    }
+
+    @Async
+    @Transactional
+    public void tryEmitInvoiceSafelyAsync(UUID saleId, UUID operatorId) {
+        this.tryEmitInvoiceSafely(saleId, operatorId);
     }
 
     /**

@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -102,8 +104,12 @@ public class MercadoPagoWebhookService {
         // Transición cruzada a nivel logístico
         if (targetPaymentStatus == PaymentStatus.APROBADO && sale.getSaleStatus() == SaleStatus.PENDIENTE) {
             sale.setSaleStatus(SaleStatus.PREPARACION);
-            // DISPARO FISCAL: Emisión de Factura C ante pago aprobado en Mercado Pago
-            this.fiscalReceiptService.tryEmitInvoiceSafely(saleId, null);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    fiscalReceiptService.tryEmitInvoiceSafelyAsync(saleId, null);
+                }
+            });
         } else if (targetPaymentStatus == PaymentStatus.REEMBOLSADO) {
             sale.setSaleStatus(SaleStatus.REEMBOLSADO);
         }

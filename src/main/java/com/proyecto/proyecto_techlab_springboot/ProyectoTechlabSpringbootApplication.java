@@ -19,6 +19,7 @@ public class ProyectoTechlabSpringbootApplication {
      *      - nota es la nota escrita por el usuario para guardar
      *  - Las notas deben guardarse de modo que las nuevas notas vayan quedando arriba de las viejas notas
      *  - Después ver en el front que cuando se habre una sale, en la parte de las internalNotes, que abajo del campo para agregar nuevas notas se imprima el estado actual (Donde estará ordenado cronológicamente)
+     *  - También en todo el flujo del sistema en donde el sistema ingresa notas internas, debe quedar claro, con el mismo formato, que fue el sistéma y que sector del sistema ingresó esa nota
      * TODO
      *   - Hacer un /model para user_security_tokens cuando implemente verificación de email o reseteo de clave
      *   - Ver también la lógica para que el usuario pueda modificar su correo

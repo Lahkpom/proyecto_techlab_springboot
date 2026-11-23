@@ -48,7 +48,8 @@ public class SecurityConfig {
                                 "/api/auth/change-expired-password"
                         ).anonymous()
                         .requestMatchers("/api/auth/refresh", "/api/auth/logout").permitAll()
-                        .requestMatchers(HttpMethod.GET,
+                                .requestMatchers("/api/dev/**").permitAll()
+                                .requestMatchers(HttpMethod.GET,
                                 "/api/products/**",
                                 "/api/variants/**",
                                 "/api/colors/**",
