@@ -9,6 +9,9 @@ public final class AuxiliarFunction {
         if (isBlank(str)) return str;
 
         String trimmed = str.trim();
-        return trimmed.substring(0, 1).toUpperCase() + trimmed.substring(1).toLowerCase();
+        return "%s%s".formatted(
+                trimmed.substring(0, 1).toUpperCase(),
+                trimmed.substring(1).toLowerCase()
+        );
     }
 }

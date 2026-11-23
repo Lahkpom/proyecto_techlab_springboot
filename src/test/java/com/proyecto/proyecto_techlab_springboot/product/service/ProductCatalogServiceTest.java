@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.product.service;
 import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
 import com.proyecto.proyecto_techlab_springboot.product.exception.InvalidProductCatalogSortException;
+import com.proyecto.proyecto_techlab_springboot.product.mapper.ProductMapper;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class ProductCatalogServiceTest {
         ProductService service = new ProductService(
                 repository,
                 mock(ApplicationEventPublisher.class),
-                new ObjectMapper()
+                new ProductMapper(new ObjectMapper())
         );
 
         ProductCatalogResponse result = service.getAllPublicProducts(
@@ -93,7 +94,7 @@ class ProductCatalogServiceTest {
         ProductService service = new ProductService(
                 repository,
                 mock(ApplicationEventPublisher.class),
-                new ObjectMapper()
+                new ProductMapper(new ObjectMapper())
         );
 
         ProductCatalogResponse result = service.getAllPublicProducts(
@@ -110,7 +111,7 @@ class ProductCatalogServiceTest {
         ProductService service = new ProductService(
                 repository,
                 mock(ApplicationEventPublisher.class),
-                new ObjectMapper()
+                new ProductMapper(new ObjectMapper())
         );
 
         assertThrows(InvalidProductCatalogSortException.class, () ->

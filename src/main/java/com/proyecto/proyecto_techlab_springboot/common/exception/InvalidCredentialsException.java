@@ -4,6 +4,6 @@ package com.proyecto.proyecto_techlab_springboot.common.exception;
 
 public class InvalidCredentialsException extends /*BadCredentialsException*/ RuntimeException {
     public InvalidCredentialsException(String param) {
-        super("Credenciales inválidas: " + param);
+        super("Credenciales inválidas: %s".formatted(param));
     }
 }

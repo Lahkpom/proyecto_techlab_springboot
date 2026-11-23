@@ -4,6 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.cart.dto.CartItemRequest;
 import com.proyecto.proyecto_techlab_springboot.cart.dto.CartItemResponse;
 import com.proyecto.proyecto_techlab_springboot.cart.dto.CartItemUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.cart.dto.CartResponse;
+import com.proyecto.proyecto_techlab_springboot.cart.mapper.CartMapper;
 import com.proyecto.proyecto_techlab_springboot.cart.exception.CartItemNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNoLongerAvailableException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
@@ -38,6 +39,7 @@ import java.util.UUID;
 public class CartService {
 
     private final ICartItemRepository iCartItemRepository;
+    private final CartMapper cartMapper;
 
     private final UserService userService;
     private final VariantService variantService;
@@ -52,7 +54,7 @@ public class CartService {
     @Transactional(readOnly = true)
     public CartResponse syncAnonymousCart(List<CartItemRequest> requestedItems) {
         if (requestedItems == null || requestedItems.isEmpty())
-            return new CartResponse(null, List.of(), 0, BigDecimal.ZERO, false, false);
+            return this.cartMapper.toResponse(null, List.of(), 0, BigDecimal.ZERO, false, false);
 
         Map<Long, Long> requestedQuantities = new LinkedHashMap<>();
         for (CartItemRequest item : requestedItems)
@@ -258,23 +260,17 @@ public class CartService {
             totalUnits += quantity;
             grandTotal = grandTotal.add(subtotal);
 
-            itemResponses.add(
-                    new CartItemResponse(
-                            v.getVariantId(),
-                            v.getProduct().getProductName(),
-                            v.getVariantSku(),
-                            v.getVariantDesc(),
-                            primaryImages.get(new ImageKey(v.getProduct().getProductId(), v.getColor().getColorId())),
-                            price,
-                            quantity,
-                            subtotal,
-                            v.getVariantStock(),
-                            item.wasAdjusted()
-                    )
-            );
+            itemResponses.add(this.cartMapper.toItemResponse(
+                    v,
+                    primaryImages.get(new ImageKey(v.getProduct().getProductId(), v.getColor().getColorId())),
+                    price,
+                    quantity,
+                    subtotal,
+                    item.wasAdjusted()
+            ));
         }
 
-        return new CartResponse(
+        return this.cartMapper.toResponse(
                 userId,
                 itemResponses,
                 totalUnits,

@@ -81,7 +81,9 @@ public class WsaaTokenService implements IWsaaTokenClient {
 
         } catch (Exception ex) {
             log.error("Fallo crítico al autenticar con ARCA WSAA: {}", ex.getMessage(), ex);
-            throw new ArcaUnavailableException("Error de autenticación con el servicio fiscal ARCA WSAA: " + ex.getMessage(), ex);
+            throw new ArcaUnavailableException(
+                    "Error de autenticación con el servicio fiscal ARCA WSAA: %s".formatted(ex.getMessage()), ex
+            );
         }
     }
 
@@ -90,15 +92,15 @@ public class WsaaTokenService implements IWsaaTokenClient {
         Instant genTime = now.minus(10, ChronoUnit.MINUTES);
         Instant expTime = now.plus(12, ChronoUnit.HOURS);
 
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<loginTicketRequest version=\"1.0\">"
                     + "<header>"
-                        + "<uniqueId>" + now.getEpochSecond() + "</uniqueId>"
-                        + "<generationTime>" + genTime + "</generationTime>"
-                        + "<expirationTime>" + expTime + "</expirationTime>"
+                        + "<uniqueId>%s</uniqueId>"
+                        + "<generationTime>%s</generationTime>"
+                        + "<expirationTime>%s</expirationTime>"
                     + "</header>"
                     + "<service>wsfe</service>"
-                + "</loginTicketRequest>";
+                + "</loginTicketRequest>").formatted(now.getEpochSecond(), genTime, expTime);
     }
 
     private byte[] signCms(byte[] contentToSign)

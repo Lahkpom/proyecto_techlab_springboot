@@ -17,6 +17,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
 import com.proyecto.proyecto_techlab_springboot.sale.mapper.SaleMapper;
+import com.proyecto.proyecto_techlab_springboot.sale.util.SaleInternalNoteFormatter;
 import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingQuoteResponse;
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
@@ -294,20 +295,23 @@ public class SaleService {
         // Validar método de pago original
         if (sale.getPaymentMethod() != PaymentMethod.MERCADO_PAGO)
             throw new InvalidSaleStatusTransitionException(
-                    "Solo se puede generar un link de Mercado Pago para órdenes configuradas con dicho método de pago. Método actual: " + sale.getPaymentMethod()
+                    "Solo se puede generar un link de Mercado Pago para órdenes configuradas con dicho método de pago. Método actual: %s"
+                            .formatted(sale.getPaymentMethod())
             );
         
         // Validar estado comercial de la venta
         if (sale.getSaleStatus() != SaleStatus.PENDIENTE)
             throw new InvalidSaleStatusTransitionException(
-                    "No es posible reintentar el pago. La orden se encuentra en estado logístico: " + sale.getSaleStatus()
+                    "No es posible reintentar el pago. La orden se encuentra en estado logístico: %s"
+                            .formatted(sale.getSaleStatus())
             );
 
         // Validar estado financiero actual
         PaymentStatus currentPaymentStatus = sale.getPaymentStatus();
         if (currentPaymentStatus != PaymentStatus.PENDIENTE && currentPaymentStatus != PaymentStatus.RECHAZADO)
             throw new InvalidSaleStatusTransitionException(
-                    "No es posible reintentar el cobro. El estado del pago actual es: " + currentPaymentStatus
+                    "No es posible reintentar el cobro. El estado del pago actual es: %s"
+                            .formatted(currentPaymentStatus)
             );
 
         // Crear nueva preferencia en MP y actualizar entidad administrada
@@ -439,7 +443,7 @@ public class SaleService {
         sale.setSaleStatus(SaleStatus.ENTREGADO);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote = "Orden reincorporada a ENTREGADO. Motivo: " + reason;
+        String auditNote = "Orden reincorporada a ENTREGADO. Motivo: %s".formatted(reason);
         sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
                 sale.getInternalNotes(),
                 "SISTEMA - Posventa",
@@ -457,7 +461,8 @@ public class SaleService {
         sale.setPaymentStatus(PaymentStatus.REEMBOLSO_PENDIENTE);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote = "Inspección aprobada. Pago en REEMBOLSO_PENDIENTE por un monto de $" + amountToRefund;
+        String auditNote = "Inspección aprobada. Pago en REEMBOLSO_PENDIENTE por un monto de $%s"
+                .formatted(amountToRefund);
         sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
                 sale.getInternalNotes(),
                 "SISTEMA - Posventa",
@@ -496,7 +501,7 @@ public class SaleService {
         sale.setFiscalRejection(true);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote = "El comprobante fue rechazado formalmente: " + rejectionReason;
+        String auditNote = "El comprobante fue rechazado formalmente: %s".formatted(rejectionReason);
         sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
                 sale.getInternalNotes(),
                 "SISTEMA - Facturación ARCA",

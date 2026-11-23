@@ -1,6 +1,7 @@
 package com.proyecto.proyecto_techlab_springboot.sale.service;
 
 import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
+import com.proyecto.proyecto_techlab_springboot.sale.util.SaleInternalNoteFormatter;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;

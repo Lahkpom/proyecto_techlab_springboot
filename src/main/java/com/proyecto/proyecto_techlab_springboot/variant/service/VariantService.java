@@ -1,12 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.variant.service;
 
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCatalogDataException;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.model.Color;
 import com.proyecto.proyecto_techlab_springboot.color.service.ColorService;
@@ -16,7 +12,6 @@ import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicProductVariantResponse;
-import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicVariantImageResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantUpdateRequest;
@@ -25,6 +20,7 @@ import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNoLonge
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.variant.model.NumericSize;
 import com.proyecto.proyecto_techlab_springboot.variant.model.Variant;
+import com.proyecto.proyecto_techlab_springboot.variant.mapper.VariantMapper;
 import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepository;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -47,13 +43,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VariantService {
 
-    private static final TypeReference<List<PublicVariantImageResponse>> PUBLIC_IMAGES_TYPE =
-            new TypeReference<>() {};
-
     private final IVariantRepository    iVariantRepository;
     private final ProductService productService;
     private final ColorService colorService;
-    private final ObjectMapper objectMapper;
+    private final VariantMapper variantMapper;
 
     @Transactional(readOnly = true)
     public List<VariantResponse> getVariantsByProduct(UUID productId, boolean includeInactive) {
@@ -63,7 +56,7 @@ public class VariantService {
                 ? iVariantRepository.findAllByProduct_ProductId(productId)
                 : iVariantRepository.findAllByProduct_ProductIdAndRowStatus(productId, RowStatus.ACTIVE);
 
-        return variants.stream().map(this::mapToResponse).toList();
+        return variants.stream().map(this.variantMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +70,7 @@ public class VariantService {
     ) {
         String normalizedSearch = search == null || search.isBlank()
                 ? "%%"
-                : "%" + search.trim() + "%";
+                : "%%%s%%".formatted(search.trim());
         Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         return iVariantRepository.searchVariantsAdmin(
                 productId != null,
@@ -91,20 +84,20 @@ public class VariantService {
                 normalizedSearch,
                 RowStatus.ACTIVE,
                 unsortedPageable
-        ).map(this::mapToResponse);
+        ).map(this.variantMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
     public List<PublicProductVariantResponse> getPublicVariantsByProduct(UUID productId) {
         productService.getPublicProductById(productId);
         return iVariantRepository.findPublicVariantsByProductId(productId).stream()
-                .map(this::mapToPublicResponse)
+                .map(this.variantMapper::toPublicResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public VariantResponse getVariantById(Long id) {
-        return mapToResponse(findVariantByIdOrThrow(id));
+        return this.variantMapper.toResponse(findVariantByIdOrThrow(id));
     }
 
     @Transactional
@@ -142,7 +135,7 @@ public class VariantService {
 
         log.info("Variante creada exitosamente { variantId: {}, productId: {}, SKU: {} }", saved.getVariantId(), saved.getProduct().getProductId(), saved.getVariantSku());
 
-        return mapToResponse(saved);
+        return this.variantMapper.toResponse(saved);
     }
 
     @Transactional
@@ -185,7 +178,7 @@ public class VariantService {
 
         log.info("Variante modificada exitosamente { variantId: {}, productId: {}, SKU: {} }", variant.getVariantId(), variant.getProduct().getProductId(), variant.getVariantSku());
 
-        return mapToResponse(variant);
+        return this.variantMapper.toResponse(variant);
     }
 
     @Transactional
@@ -206,7 +199,7 @@ public class VariantService {
 
         log.info("Estado de la variante modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", variant.getVariantId(), lastStatus, variant.getRowStatus());
 
-        return mapToResponse(variant);
+        return this.variantMapper.toResponse(variant);
     }
 
     /**
@@ -283,54 +276,4 @@ public class VariantService {
         ) > 0;
     }
 
-    private VariantResponse mapToResponse(Variant v) {
-        return new VariantResponse(
-                v.getVariantId(),
-                v.getProduct().getProductId(),
-                v.getProduct().getProductName(),
-                v.getColor().getColorId(),
-                v.getColor().getColorName(),
-                v.getColor().getColorCode(),
-                v.getVariantSize(),
-                v.getVariantDesc(),
-                v.getVariantSku(),
-                v.getVariantPrice(),
-                v.getVariantStock(),
-                v.getRowStatus(),
-                v.getCreatedAt(),
-                v.getUpdatedAt()
-        );
-    }
-
-    private PublicProductVariantResponse mapToPublicResponse(
-            IVariantRepository.PublicProductVariantProjection projection
-    ) {
-        try {
-            String imagesJson = projection.getImagesJson();
-            List<PublicVariantImageResponse> images = imagesJson == null || imagesJson.isBlank()
-                    ? List.of()
-                    : objectMapper.readValue(imagesJson, PUBLIC_IMAGES_TYPE);
-            
-            if (images == null) images = List.of();
-
-            return new PublicProductVariantResponse(
-                    projection.getProductId(),
-                    projection.getProductName(),
-                    projection.getProductLongDesc(),
-                    projection.getVariantId(),
-                    NumericSize.valueOf(projection.getVariantSize()),
-                    projection.getPrice(),
-                    projection.getStock(),
-                    projection.getColorId(),
-                    projection.getColorName(),
-                    projection.getColorCode(),
-                    images
-            );
-        } catch (JacksonException | IllegalArgumentException ex) {
-            throw new InvalidCatalogDataException(
-                    "La vista pública de variantes contiene datos inválidos.",
-                    ex
-            );
-        }
-    }
 }

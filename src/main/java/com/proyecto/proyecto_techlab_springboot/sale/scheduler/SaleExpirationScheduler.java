@@ -5,7 +5,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
-import com.proyecto.proyecto_techlab_springboot.sale.service.SaleInternalNoteFormatter;
+import com.proyecto.proyecto_techlab_springboot.sale.util.SaleInternalNoteFormatter;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

@@ -110,7 +110,10 @@ public class FiscalReceiptService {
         Sale sale = this.saleService.getSaleByIdOrElseThrow(saleId);
 
         if (sale.getPaymentStatus() != PaymentStatus.APROBADO)
-            throw new InvalidFiscalOperationException("Solo se pueden facturar ventas con pago APROBADO. Estado actual: " + sale.getPaymentStatus());
+            throw new InvalidFiscalOperationException(
+                    "Solo se pueden facturar ventas con pago APROBADO. Estado actual: %s"
+                            .formatted(sale.getPaymentStatus())
+            );
 
         if (this.existsBySaleIdAndReceiptType(saleId, FiscalReceiptType.FACTURA_C))
             throw new FiscalReceiptAlreadyExistsException("{ Venta ID: %s, Tipo: %s }".formatted(saleId, FiscalReceiptType.FACTURA_C));
@@ -194,10 +197,16 @@ public class FiscalReceiptService {
         SaleReturn saleReturn = this.saleReturnService.getSaleReturnByIdOrThrow(returnId);
 
         if (saleReturn.getReturnStatus() != ReturnStatus.APROBADA)
-            throw new InvalidFiscalOperationException("Solo se pueden emitir notas de crédito para devoluciones APROBADAS. Estado actual: " + saleReturn.getReturnStatus());
+            throw new InvalidFiscalOperationException(
+                    "Solo se pueden emitir notas de crédito para devoluciones APROBADAS. Estado actual: %s"
+                            .formatted(saleReturn.getReturnStatus())
+            );
 
         if (saleReturn.getReturnResolution() != ReturnResolution.REEMBOLSO_DINERO)
-            throw new InvalidFiscalOperationException("La devolución no tiene resolución monetaria (REEMBOLSO_DINERO). Resolución actual: " + saleReturn.getReturnResolution());
+            throw new InvalidFiscalOperationException(
+                    "La devolución no tiene resolución monetaria (REEMBOLSO_DINERO). Resolución actual: %s"
+                            .formatted(saleReturn.getReturnResolution())
+            );
 
         if (this.iFiscalReceiptRepository.findFirstBySaleReturn_ReturnId(returnId).isPresent())
             throw new FiscalReceiptAlreadyExistsException("{ Devolución ID: %s, Tipo: %s }".formatted(returnId, FiscalReceiptType.NOTA_CREDITO_C));
@@ -325,7 +334,7 @@ public class FiscalReceiptService {
 
             String json    = objectMapper.writeValueAsString(qrData);
             String encoded = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-            return "https://www.afip.gob.ar/fe/qr/?p=" + encoded;
+            return "https://www.afip.gob.ar/fe/qr/?p=%s".formatted(encoded);
         } catch (Exception ex) {
             log.warn("No se pudo armar el payload QR para comprobante #{}: {}", nro, ex.getMessage());
             return "";

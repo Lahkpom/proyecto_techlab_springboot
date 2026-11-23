@@ -11,6 +11,7 @@ import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCredenti
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.user.dto.UserResponse;
 import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
+import com.proyecto.proyecto_techlab_springboot.user.mapper.UserMapper;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
@@ -35,6 +36,7 @@ public class AuthService {
 
     private final JwtService jwtService;
     private final LoginAuditService auditService;
+    private final UserMapper userMapper;
 
     private final String initialPassword;
 
@@ -44,6 +46,7 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             LoginAuditService auditService,
+            UserMapper userMapper,
             @Value("${application.security.initial-password}") String initialPassword
     ) {
         this.iUserSessionRepository = iUserSessionRepository;
@@ -51,6 +54,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.auditService = auditService;
+        this.userMapper = userMapper;
         this.initialPassword = initialPassword;
     }
 
@@ -146,7 +150,7 @@ public class AuthService {
 
         log.info("Usuario {} creado exitosamente: userId={}", role, saved.getUserId());
 
-        return mapToResponse(saved);
+        return this.userMapper.toResponse(saved);
     }
 
     // Evitar el rollback cuando salten estas exception para que borre los insert en la tabla
@@ -376,7 +380,7 @@ public class AuthService {
 
     private SessionTokens createSessionAndTokens(Users user, String ip, String userAgent) {
         String  accessToken     = jwtService.generateAccessToken(user);
-        String  rawRefreshToken = UUID.randomUUID().toString() + UUID.randomUUID().toString();
+        String  rawRefreshToken = "%s%s".formatted(UUID.randomUUID(), UUID.randomUUID());
         Instant expiresAt       = Instant.now().plus(REFRESH_TOKEN_DAYS, ChronoUnit.DAYS);
 
         UserSession session = UserSession.builder()
@@ -392,26 +396,10 @@ public class AuthService {
 
         UserSession savedSession = this.iUserSessionRepository.save(session);
 
-        AuthResponse authResponse = AuthResponse.of(accessToken, rawRefreshToken, expiresAt, mapToResponse(user));
+        AuthResponse authResponse = AuthResponse.of(accessToken, rawRefreshToken, expiresAt, this.userMapper.toResponse(user));
         return new SessionTokens(savedSession, authResponse);
     }
 
     private record SessionTokens(UserSession session, AuthResponse authResponse) {}
-
-    private UserResponse mapToResponse(Users entity) {
-        return new UserResponse(
-                entity.getUserId(),
-                entity.getUserRole(),
-                entity.getUserName(),
-                entity.getUserEmail(),
-                entity.getUserPhone(),
-                entity.getCompanyName(),
-                entity.getTaxIdType(),
-                entity.getTaxIdNumber(),
-                entity.getLastLoginAt(),
-                entity.getPasswordExpiresAt(),
-                entity.getRowStatus()
-        );
-    }
 
 }

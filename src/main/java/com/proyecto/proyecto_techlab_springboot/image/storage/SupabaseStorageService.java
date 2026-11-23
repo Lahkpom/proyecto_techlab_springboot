@@ -1,4 +1,4 @@
-package com.proyecto.proyecto_techlab_springboot.image.service;
+package com.proyecto.proyecto_techlab_springboot.image.storage;
 
 import com.proyecto.proyecto_techlab_springboot.image.exception.StorageOperationException;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +7,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Service
+@Component
 public class SupabaseStorageService {
 
     private final RestClient    restClient;
@@ -30,8 +30,8 @@ public class SupabaseStorageService {
         this.supabaseUrl    = supabaseUrl;
         this.bucketName     = bucketName;
         this.restClient     = RestClient.builder()
-                .baseUrl(this.supabaseUrl + "/storage/v1")
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + serviceRoleKey)
+                .baseUrl("%s/storage/v1".formatted(this.supabaseUrl))
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(serviceRoleKey))
                 .defaultHeader("apikey", serviceRoleKey)
                 .build();
     }
@@ -60,7 +60,7 @@ public class SupabaseStorageService {
             throw new StorageOperationException("No se pudo obtener la presigned URL de Supabase Storage.");
 
         // Supabase devuelve una ruta relativa /object/upload/sign/...
-        return this.supabaseUrl + "/storage/v1" + url;
+        return "%s/storage/v1%s".formatted(this.supabaseUrl, url);
     }
 
     /**

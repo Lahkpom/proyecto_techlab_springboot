@@ -6,9 +6,11 @@ import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.image.dto.*;
 import com.proyecto.proyecto_techlab_springboot.image.exception.ImageCollectionNotAvailableException;
 import com.proyecto.proyecto_techlab_springboot.image.exception.ImageNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.image.mapper.ImageMapper;
 import com.proyecto.proyecto_techlab_springboot.image.model.Image;
 import com.proyecto.proyecto_techlab_springboot.image.repository.IImageRepository;
 import com.proyecto.proyecto_techlab_springboot.image.repository.ImagePrimaryProjection;
+import com.proyecto.proyecto_techlab_springboot.image.storage.SupabaseStorageService;
 import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEvent;
 import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 public class ImageService {
 
     private final IImageRepository imageRepository;
+    private final ImageMapper imageMapper;
     private final ProductService productService;
     private final ColorService colorService;
     private final VariantService variantService;
@@ -70,7 +73,7 @@ public class ImageService {
                 .isPrimary(shouldBePrimary)
                 .build();
 
-        return mapToResponse(this.imageRepository.saveAndFlush(image));
+        return this.imageMapper.toResponse(this.imageRepository.saveAndFlush(image));
     }
 
     @Transactional(readOnly = true)
@@ -78,7 +81,7 @@ public class ImageService {
         requireKnownGallery(productId, colorId);
         return this.imageRepository.findGalleryImagesByProductIdAndColorId(productId, colorId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(this.imageMapper::toResponse)
                 .toList();
     }
 
@@ -93,7 +96,7 @@ public class ImageService {
             this.imageRepository.flush();
         }
 
-        return mapToResponse(image);
+        return this.imageMapper.toResponse(image);
     }
 
     @Transactional
@@ -183,18 +186,6 @@ public class ImageService {
             case "image/webp" -> "webp";
             default -> "jpg";
         };
-    }
-
-    private ImageResponse mapToResponse(Image image) {
-        return new ImageResponse(
-                image.getImageId(),
-                image.getProduct().getProductId(),
-                image.getColor().getColorId(),
-                image.getImageUrl(),
-                image.isPrimary(),
-                image.getCreatedAt(),
-                image.getUpdatedAt()
-        );
     }
 
     private record Gallery(Product product, Color color) {}

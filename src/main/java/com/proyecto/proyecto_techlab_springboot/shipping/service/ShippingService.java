@@ -8,6 +8,7 @@ import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingZoneRespons
 import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingZoneUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.ShippingZoneNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.shipping.mapper.ShippingMapper;
 import com.proyecto.proyecto_techlab_springboot.shipping.model.ShippingMethod;
 import com.proyecto.proyecto_techlab_springboot.shipping.model.ShippingZone;
 import com.proyecto.proyecto_techlab_springboot.shipping.repository.IShippingZoneRepository;
@@ -25,18 +26,19 @@ public class ShippingService {
     private static final BigDecimal PICKUP_COST = new BigDecimal("0.00");
 
     private final IShippingZoneRepository shippingZoneRepository;
+    private final ShippingMapper shippingMapper;
 
     @Transactional(readOnly = true)
     public List<ShippingZoneResponse> getShippingZones() {
         return shippingZoneRepository.findAllByRowStatusNotOrderByBaseCostAsc(RowStatus.DELETED)
                 .stream()
-                .map(this::mapToZoneResponse)
+                .map(this.shippingMapper::toZoneResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public ShippingZoneResponse getShippingZone(Long shippingZoneId) {
-        return mapToZoneResponse(findShippingZoneByIdOrThrow(shippingZoneId));
+        return this.shippingMapper.toZoneResponse(findShippingZoneByIdOrThrow(shippingZoneId));
     }
 
     @Transactional
@@ -53,14 +55,14 @@ public class ShippingService {
             zone.setRowStatus(request.rowStatus());
         }
 
-        return mapToZoneResponse(zone);
+        return this.shippingMapper.toZoneResponse(zone);
     }
 
     @Transactional
     public ShippingZoneResponse updateShippingZoneStatus(Long shippingZoneId, StatusUpdateRequest request) {
         ShippingZone zone = findShippingZoneByIdOrThrow(shippingZoneId);
         zone.setRowStatus(request.rowStatus());
-        return mapToZoneResponse(zone);
+        return this.shippingMapper.toZoneResponse(zone);
     }
 
     private ShippingZone findShippingZoneByIdOrThrow(Long shippingZoneId) {
@@ -72,7 +74,7 @@ public class ShippingService {
     public List<ShippingZoneResponse> getActiveShippingOptions() {
         return shippingZoneRepository.findAllByRowStatusOrderByBaseCostAsc(RowStatus.ACTIVE)
                 .stream()
-                .map(this::mapToZoneResponse)
+                .map(this.shippingMapper::toZoneResponse)
                 .toList();
     }
 
@@ -85,16 +87,16 @@ public class ShippingService {
     ) {
         if (isPickup) {
             ShippingZone pickupZone = findActiveZoneByMethod(ShippingMethod.RETIRO_LLAVALLOL);
-            return mapToQuoteResponse(pickupZone, PICKUP_COST, true);
+            return this.shippingMapper.toQuoteResponse(pickupZone, PICKUP_COST, true);
         }
 
         String normalizedCp = normalizeDestination(province, locality, postalCode);
         ShippingZone zone = shippingZoneRepository
-                .findActiveZoneByPostalCode("[\"" + normalizedCp + "\"]")
+                .findActiveZoneByPostalCode("[\"%s\"]".formatted(normalizedCp))
                 .filter(this::isGbaZone)
                 .orElseGet(() -> findActiveZoneByMethod(ShippingMethod.ENVIO_CORREO_NACIONAL));
 
-        return mapToQuoteResponse(
+        return this.shippingMapper.toQuoteResponse(
                 zone,
                 zone.getBaseCost(),
                 isGbaZone(zone)
@@ -135,31 +137,4 @@ public class ShippingService {
                 || zone.getShippingMethod() == ShippingMethod.ENVIO_GBA_GENERAL;
     }
 
-    private ShippingQuoteResponse mapToQuoteResponse(
-            ShippingZone zone,
-            BigDecimal shippingCost,
-            boolean cashPaymentAllowed
-    ) {
-        return new ShippingQuoteResponse(
-                zone.getShippingMethod(),
-                zone.getZoneName(),
-                zone.getDescription(),
-                shippingCost,
-                zone.getEstimatedDays(),
-                cashPaymentAllowed
-        );
-    }
-
-    private ShippingZoneResponse mapToZoneResponse(ShippingZone zone) {
-        return new ShippingZoneResponse(
-                zone.getShippingZoneId(),
-                zone.getShippingMethod(),
-                zone.getZoneName(),
-                zone.getDescription(),
-                zone.getPostalCodes(),
-                zone.getBaseCost(),
-                zone.getEstimatedDays(),
-                zone.getRowStatus()
-        );
-    }
 }

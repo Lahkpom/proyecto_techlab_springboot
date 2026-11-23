@@ -13,6 +13,7 @@ import com.proyecto.proyecto_techlab_springboot.user.dto.UserUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
 import com.proyecto.proyecto_techlab_springboot.user.exception.UserAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.user.exception.UserNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.user.mapper.UserMapper;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
@@ -37,6 +38,7 @@ import java.util.UUID;
 public class UserService {
     private final IUserRepository iUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     @Transactional
     public Users createAccount(Users user) {
@@ -48,7 +50,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserResponse getUserById(UUID id) {
-        return mapToResponse(this.findUserByIdOrThrow(id));
+        return this.userMapper.toResponse(this.findUserByIdOrThrow(id));
     }
 
     @Transactional
@@ -70,7 +72,7 @@ public class UserService {
 
         log.info("Usuario modificado exitosamente: userId={}", user.getUserId());
 
-        return mapToResponse(user);
+        return this.userMapper.toResponse(user);
     }
 
     @Transactional
@@ -97,7 +99,7 @@ public class UserService {
 
         log.info("La contraseña fue actualizada correctamente { ID: {} }",  user.getUserId());
 
-        return mapToResponse(user);
+        return this.userMapper.toResponse(user);
     }
 
     public String validateTaxIdentificationForRole(UserRole role, TaxIdType taxIdType, String rawTaxIdNumber) {
@@ -118,7 +120,7 @@ public class UserService {
 
         if (taxIdType != null && !isValidTaxIdNumber(taxIdType, taxIdNumber)) {
             throw new InvalidUserDataException(
-                    "El número de documento no tiene un formato válido para " + taxIdType + "."
+                    "El número de documento no tiene un formato válido para %s.".formatted(taxIdType)
             );
         }
         return taxIdNumber;
@@ -169,7 +171,7 @@ public class UserService {
         user.setRowStatus(request.rowStatus());
 
         if (request.rowStatus() == RowStatus.DELETED) {
-            user.setUserEmail("deleted_" + user.getUserId() + "@anonymized.local");
+            user.setUserEmail("deleted_%s@anonymized.local".formatted(user.getUserId()));
             user.setUserName("Usuario Eliminado");
             user.setUserPhone(null);
             user.setUserPassword("ANONYMIZED");
@@ -177,7 +179,7 @@ public class UserService {
 
         log.info("Estado del Usuario modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", user.getUserId(), lastStatus, user.getRowStatus());
 
-        return mapToResponse(user);
+        return this.userMapper.toResponse(user);
     }
 
     @Transactional(readOnly = true)
@@ -209,7 +211,7 @@ public class UserService {
 
         String searchPattern = search == null || search.isBlank()
                 ? "%%"
-                : "%" + search.trim() + "%";
+                : "%%%s%%".formatted(search.trim());
         return iUserRepository.searchUsersAdmin(
                         allowedRoles,
                         roleFilter != null,
@@ -219,7 +221,7 @@ public class UserService {
                         searchPattern,
                         pageable
                 )
-                .map(this::mapToResponse);
+                .map(this.userMapper::toResponse);
     }
 
     @Transactional
@@ -266,7 +268,7 @@ public class UserService {
         user.setTaxIdType(request.taxIdType());
         user.setTaxIdNumber(taxIdNumber);
 
-        return mapToResponse(user);
+        return this.userMapper.toResponse(user);
     }
 
     @Transactional
@@ -280,22 +282,6 @@ public class UserService {
 
     private boolean isCustomerOrWholesaler(UserRole role) {
         return role == UserRole.CUSTOMER || role == UserRole.WHOLESALER;
-    }
-
-    private UserResponse mapToResponse(Users entity) {
-        return new UserResponse(
-                entity.getUserId(),
-                entity.getUserRole(),
-                entity.getUserName(),
-                entity.getUserEmail(),
-                entity.getUserPhone(),
-                entity.getCompanyName(),
-                entity.getTaxIdType(),
-                entity.getTaxIdNumber(),
-                entity.getLastLoginAt(),
-                entity.getPasswordExpiresAt(),
-                entity.getRowStatus()
-        );
     }
 
     public Optional<Users> findUserById(UUID id) {

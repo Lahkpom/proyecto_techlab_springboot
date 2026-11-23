@@ -10,6 +10,7 @@ import com.proyecto.proyecto_techlab_springboot.auth.repository.IUserSessionRepo
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
+import com.proyecto.proyecto_techlab_springboot.user.mapper.UserMapper;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
 import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -198,6 +199,7 @@ class AuthServicePasswordTest {
                 passwordEncoder,
                 jwtService,
                 auditService,
+                new UserMapper(),
                 "configured-initial-password"
         );
     }

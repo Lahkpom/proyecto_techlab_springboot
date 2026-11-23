@@ -10,6 +10,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.sale.mapper.SaleMapper;
+import com.proyecto.proyecto_techlab_springboot.sale.util.SaleInternalNoteFormatter;
 import com.proyecto.proyecto_techlab_springboot.fiscal.service.FiscalReceiptService;
 import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
@@ -207,7 +208,7 @@ public class SaleAdminService {
             String operatorName = this.userService.getUserById(operatorId).userName();
             sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
                     sale.getInternalNotes(),
-                    operatorName + " - Pago " + targetPaymentStatus,
+                    "%s - Pago %s".formatted(operatorName, targetPaymentStatus),
                     request.paymentNotes().trim()
             ));
         }
@@ -266,7 +267,7 @@ public class SaleAdminService {
         String operatorName = this.userService.getUserById(operatorId).userName();
         sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
                 sale.getInternalNotes(),
-                operatorName + " - Datos Fiscales",
+                "%s - Datos Fiscales".formatted(operatorName),
                 "Actualizó los datos fiscales del receptor."
         ));
         sale.setUpdatedBy(operatorId);

@@ -3,6 +3,7 @@ package com.proyecto.proyecto_techlab_springboot.user.service;
 import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
+import com.proyecto.proyecto_techlab_springboot.user.mapper.UserMapper;
 import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,7 +16,7 @@ import static org.mockito.Mockito.mock;
 class UserServiceTaxIdentificationTest {
 
     private final UserService userService =
-            new UserService(mock(IUserRepository.class), mock(PasswordEncoder.class));
+            new UserService(mock(IUserRepository.class), mock(PasswordEncoder.class), new UserMapper());
 
     @Test
     void normalizesValidCustomerTaxIdentification() {

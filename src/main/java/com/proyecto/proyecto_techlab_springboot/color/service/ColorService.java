@@ -9,6 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedExc
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.exception.ColorAlreadyExistsException;
 import com.proyecto.proyecto_techlab_springboot.color.exception.ColorNotFoundException;
+import com.proyecto.proyecto_techlab_springboot.color.mapper.ColorMapper;
 import com.proyecto.proyecto_techlab_springboot.color.model.Color;
 import com.proyecto.proyecto_techlab_springboot.color.repository.IColorRepository;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
@@ -25,6 +26,7 @@ import java.util.List;
 public class ColorService {
 
     private final IColorRepository iColorRepository;
+    private final ColorMapper colorMapper;
 
     /**
      * GET /colores                     : Por defecto devuelve solo los activos (vista pública / cliente).
@@ -38,12 +40,12 @@ public class ColorService {
                 ? iColorRepository.findAll()
                 : iColorRepository.findAllByRowStatus(RowStatus.ACTIVE);
 
-        return colors.stream().map(this::mapToResponse).toList();
+        return colors.stream().map(this.colorMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public ColorResponse getColorById(Long id) {
-        return mapToResponse(findColorByIdOrThrow(id));
+        return this.colorMapper.toResponse(findColorByIdOrThrow(id));
     }
 
     @Transactional
@@ -68,7 +70,7 @@ public class ColorService {
 
         log.info("Color creado exitosamente { ID: {}, nombre: {}, código: {} }", savedColor.getColorId(), savedColor.getColorName(), savedColor.getColorCode());
 
-        return mapToResponse(savedColor);
+        return this.colorMapper.toResponse(savedColor);
     }
 
     @Transactional
@@ -91,7 +93,7 @@ public class ColorService {
 
         log.info("Color modificado exitosamente { ID: {}, nombre: {}, código: {} }", color.getColorId(), color.getColorName(), color.getColorCode());
 
-        return mapToResponse(color);
+        return this.colorMapper.toResponse(color);
     }
 
     @Transactional
@@ -110,7 +112,7 @@ public class ColorService {
 
         log.info("Estado de Color modificado exitosamente { ID: {}, estado: {} }", color.getColorId(), color.getRowStatus());
 
-        return mapToResponse(color);
+        return this.colorMapper.toResponse(color);
     }
 
     public Color findColorByIdOrThrow(Long id) {
@@ -118,15 +120,4 @@ public class ColorService {
                 .orElseThrow(() -> new ColorNotFoundException("{ ID: %s }".formatted(id)));
     }
 
-    private ColorResponse mapToResponse(Color color) {
-        return new ColorResponse(
-                color.getColorId(),
-                color.getColorName(),
-                color.getColorDesc(),
-                color.getColorCode(),
-                color.getRowStatus(),
-                color.getCreatedAt(),
-                color.getUpdatedAt()
-        );
-    }
 }

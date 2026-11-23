@@ -10,6 +10,7 @@ import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataEx
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.user.model.Users;
+import com.proyecto.proyecto_techlab_springboot.user.mapper.UserMapper;
 import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -33,7 +34,7 @@ class UserAdminServiceTest {
     @Test
     void operatorSearchIsConstrainedToCustomersAndWholesalers() {
         IUserRepository repository = mock(IUserRepository.class);
-        UserService service = new UserService(repository, mock(PasswordEncoder.class));
+        UserService service = new UserService(repository, mock(PasswordEncoder.class), new UserMapper());
         AuthenticatedUserPrincipal operator =
                 new AuthenticatedUserPrincipal(UUID.randomUUID(), "operator@example.com", UserRole.OPERATOR);
         Pageable pageable = Pageable.unpaged();
@@ -71,7 +72,7 @@ class UserAdminServiceTest {
     @Test
     void operatorCannotSearchTheOperatorSegment() {
         IUserRepository repository = mock(IUserRepository.class);
-        UserService service = new UserService(repository, mock(PasswordEncoder.class));
+        UserService service = new UserService(repository, mock(PasswordEncoder.class), new UserMapper());
         AuthenticatedUserPrincipal operator =
                 new AuthenticatedUserPrincipal(UUID.randomUUID(), "operator@example.com", UserRole.OPERATOR);
 
@@ -92,7 +93,7 @@ class UserAdminServiceTest {
     @Test
     void wholesalerRoleRequiresAnElevenDigitCuit() {
         IUserRepository repository = mock(IUserRepository.class);
-        UserService service = new UserService(repository, mock(PasswordEncoder.class));
+        UserService service = new UserService(repository, mock(PasswordEncoder.class), new UserMapper());
         UUID userId = UUID.randomUUID();
         Users customer = user(userId, UserRole.CUSTOMER);
         when(repository.findById(userId)).thenReturn(Optional.of(customer));
@@ -113,7 +114,7 @@ class UserAdminServiceTest {
     @Test
     void operatorCannotDeleteCustomerAccounts() {
         IUserRepository repository = mock(IUserRepository.class);
-        UserService service = new UserService(repository, mock(PasswordEncoder.class));
+        UserService service = new UserService(repository, mock(PasswordEncoder.class), new UserMapper());
         UUID userId = UUID.randomUUID();
         Users customer = user(userId, UserRole.CUSTOMER);
         when(repository.findById(userId)).thenReturn(Optional.of(customer));
@@ -134,7 +135,7 @@ class UserAdminServiceTest {
     @Test
     void administratorDeletionAnonymizesTheAccount() {
         IUserRepository repository = mock(IUserRepository.class);
-        UserService service = new UserService(repository, mock(PasswordEncoder.class));
+        UserService service = new UserService(repository, mock(PasswordEncoder.class), new UserMapper());
         UUID userId = UUID.randomUUID();
         Users customer = user(userId, UserRole.CUSTOMER);
         when(repository.findById(userId)).thenReturn(Optional.of(customer));

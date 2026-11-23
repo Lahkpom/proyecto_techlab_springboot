@@ -21,8 +21,8 @@ public class MockWsaaTokenService implements IWsaaTokenClient {
 
         log.info("[ARCA MOCK - DEV] Generando Ticket de Acceso simulado.");
         this.cachedTicket = AccessTicket.builder()
-                .token("MOCK_TOKEN_ARCA_" + UUID.randomUUID())
-                .sign("MOCK_SIGN_ARCA_" + UUID.randomUUID())
+                .token("MOCK_TOKEN_ARCA_%s".formatted(UUID.randomUUID()))
+                .sign("MOCK_SIGN_ARCA_%s".formatted(UUID.randomUUID()))
                 .expiration(Instant.now().plus(12, ChronoUnit.HOURS))
                 .build();
         

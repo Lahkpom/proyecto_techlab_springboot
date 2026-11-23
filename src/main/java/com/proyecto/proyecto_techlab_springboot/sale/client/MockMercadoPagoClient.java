@@ -47,7 +47,7 @@ public class MockMercadoPagoClient implements IMercadoPagoClient {
 
     @Override
     public MercadoPagoPreferenceResult createPreference(Sale sale) {
-        String mockPrefId = "MOCK-PREF-" + UUID.randomUUID();
+        String mockPrefId = "MOCK-PREF-%s".formatted(UUID.randomUUID());
         String mockInitUrl = UriComponentsBuilder.fromUriString(sandboxUrl)
                 .queryParam("saleId", sale.getSaleId())
                 .queryParam("preferenceId", mockPrefId)
@@ -62,7 +62,7 @@ public class MockMercadoPagoClient implements IMercadoPagoClient {
 
     public Long registerSimulatedPayment(UUID saleId, String outcome, BigDecimal amount) {
         if (!"approved".equals(outcome) && !"pending".equals(outcome) && !"rejected".equals(outcome)) {
-            throw new IllegalArgumentException("Resultado de pago simulado no admitido: " + outcome);
+            throw new IllegalArgumentException("Resultado de pago simulado no admitido: %s".formatted(outcome));
         }
 
         long paymentId = paymentIdSequence.incrementAndGet();
@@ -92,7 +92,7 @@ public class MockMercadoPagoClient implements IMercadoPagoClient {
         SimulatedPaymentData payment = simulatedPayments.get(paymentId);
         if (payment == null) {
             throw new PaymentNotFoundException(
-                    "[MP MOCK - DEV] No existe un pago simulado para Payment ID: " + paymentId
+                    "[MP MOCK - DEV] No existe un pago simulado para Payment ID: %s".formatted(paymentId)
             );
         }
 
@@ -145,7 +145,7 @@ public class MockMercadoPagoClient implements IMercadoPagoClient {
             throw exception;
         } catch (Exception exception) {
             throw new InvalidWebhookSignatureException(
-                    "Fallo en el cálculo de validación de firma: " + exception.getMessage()
+                    "Fallo en el cálculo de validación de firma: %s".formatted(exception.getMessage())
             );
         }
     }

@@ -1,5 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.sale.service;
 
+import com.proyecto.proyecto_techlab_springboot.sale.util.SaleInternalNoteFormatter;
 import org.junit.jupiter.api.Test;
 
 import java.util.regex.Pattern;

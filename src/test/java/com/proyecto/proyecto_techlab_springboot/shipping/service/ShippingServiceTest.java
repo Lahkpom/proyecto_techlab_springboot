@@ -5,6 +5,7 @@ import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingQuoteRespon
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
 import com.proyecto.proyecto_techlab_springboot.shipping.model.ShippingMethod;
 import com.proyecto.proyecto_techlab_springboot.shipping.model.ShippingZone;
+import com.proyecto.proyecto_techlab_springboot.shipping.mapper.ShippingMapper;
 import com.proyecto.proyecto_techlab_springboot.shipping.repository.IShippingZoneRepository;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +32,7 @@ class ShippingServiceTest {
         ))
                 .thenReturn(Optional.of(pickupZone));
 
-        ShippingQuoteResponse result = new ShippingService(repository)
+        ShippingQuoteResponse result = new ShippingService(repository, new ShippingMapper())
                 .quoteShipping(true, null, null, null);
 
         assertEquals(ShippingMethod.RETIRO_LLAVALLOL, result.shippingMethod());
@@ -48,7 +49,7 @@ class ShippingServiceTest {
         ShippingZone zone = shippingZone(ShippingMethod.ENVIO_GBA_ZONA_SUR, "Zona Sur", "1 a 2 días");
         when(repository.findActiveZoneByPostalCode("[\"1836\"]")).thenReturn(Optional.of(zone));
 
-        ShippingQuoteResponse result = new ShippingService(repository)
+        ShippingQuoteResponse result = new ShippingService(repository, new ShippingMapper())
                 .quoteShipping(false, "Buenos Aires", "Llavallol", " 1836 ");
 
         assertEquals(ShippingMethod.ENVIO_GBA_ZONA_SUR, result.shippingMethod());
@@ -71,7 +72,7 @@ class ShippingServiceTest {
                 RowStatus.ACTIVE
         )).thenReturn(Optional.of(nationalZone));
 
-        ShippingQuoteResponse result = new ShippingService(repository)
+        ShippingQuoteResponse result = new ShippingService(repository, new ShippingMapper())
                 .quoteShipping(false, "Córdoba", "Córdoba", "5000");
 
         assertEquals(ShippingMethod.ENVIO_CORREO_NACIONAL, result.shippingMethod());
@@ -82,7 +83,7 @@ class ShippingServiceTest {
     @Test
     void rejectsInvalidDestinationBeforeLookingUpZones() {
         IShippingZoneRepository repository = mock(IShippingZoneRepository.class);
-        ShippingService service = new ShippingService(repository);
+        ShippingService service = new ShippingService(repository, new ShippingMapper());
 
         assertThrows(
                 InvalidShippingDestinationException.class,

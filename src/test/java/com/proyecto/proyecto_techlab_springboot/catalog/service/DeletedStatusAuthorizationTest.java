@@ -1,16 +1,18 @@
 package com.proyecto.proyecto_techlab_springboot.catalog.service;
 
-import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.color.repository.IColorRepository;
+import com.proyecto.proyecto_techlab_springboot.color.mapper.ColorMapper;
 import com.proyecto.proyecto_techlab_springboot.color.service.ColorService;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
+import com.proyecto.proyecto_techlab_springboot.product.mapper.ProductMapper;
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepository;
+import com.proyecto.proyecto_techlab_springboot.variant.mapper.VariantMapper;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,7 +32,7 @@ class DeletedStatusAuthorizationTest {
     @Test
     void operatorCannotDeleteColors() {
         IColorRepository repository = mock(IColorRepository.class);
-        ColorService service = new ColorService(repository);
+        ColorService service = new ColorService(repository, new ColorMapper());
 
         assertThrows(AccessDeniedException.class, () -> service.updateColorStatus(1L, deleteRequest, operator));
         verifyNoInteractions(repository);
@@ -40,7 +42,11 @@ class DeletedStatusAuthorizationTest {
     void operatorCannotDeleteProductsOrPublishEvents() {
         IProductRepository repository = mock(IProductRepository.class);
         ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
-        ProductService service = new ProductService(repository, eventPublisher, new ObjectMapper());
+        ProductService service = new ProductService(
+                repository,
+                eventPublisher,
+                new ProductMapper(mock(tools.jackson.databind.ObjectMapper.class))
+        );
 
         assertThrows(
                 AccessDeniedException.class,
@@ -56,7 +62,7 @@ class DeletedStatusAuthorizationTest {
                 repository,
                 mock(ProductService.class),
                 mock(ColorService.class),
-                new ObjectMapper()
+                new VariantMapper(mock(tools.jackson.databind.ObjectMapper.class))
         );
 
         assertThrows(AccessDeniedException.class, () -> service.updateVariantStatus(1L, deleteRequest, operator));

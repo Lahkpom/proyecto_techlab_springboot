@@ -140,9 +140,11 @@ public class MercadoPagoClient implements IMercadoPagoClient {
             );
         } catch (MPApiException apiEx) {
             if (apiEx.getStatusCode() == 404)
-                throw new PaymentNotFoundException("No se encontró el pago en Mercado Pago ID: " + paymentId);
+                throw new PaymentNotFoundException("No se encontró el pago en Mercado Pago ID: %s".formatted(paymentId));
             
-            throw new MercadoPagoIntegrationException("Error al consultar pago en Mercado Pago: " + apiEx.getMessage(), apiEx);
+            throw new MercadoPagoIntegrationException(
+                    "Error al consultar pago en Mercado Pago: %s".formatted(apiEx.getMessage()), apiEx
+            );
         } catch (MPException ex) {
             throw new MercadoPagoIntegrationException("Error SDK al recuperar detalle del pago.", ex);
         }
@@ -192,7 +194,9 @@ public class MercadoPagoClient implements IMercadoPagoClient {
         } catch (InvalidWebhookSignatureException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new InvalidWebhookSignatureException("Fallo en el cálculo de validación de firma: " + ex.getMessage());
+            throw new InvalidWebhookSignatureException(
+                    "Fallo en el cálculo de validación de firma: %s".formatted(ex.getMessage())
+            );
         }
     }
 
@@ -210,7 +214,7 @@ public class MercadoPagoClient implements IMercadoPagoClient {
             PaymentRefundClient refundClient = new PaymentRefundClient();
             
             MPRequestOptions requestOptions = MPRequestOptions.builder()
-                    .customHeaders(Map.of("X-Idempotency-Key", "refund-" + returnId))
+                    .customHeaders(Map.of("X-Idempotency-Key", "refund-%s".formatted(returnId)))
                     .build();
 
             PaymentRefund refund = (amountToRefund != null)

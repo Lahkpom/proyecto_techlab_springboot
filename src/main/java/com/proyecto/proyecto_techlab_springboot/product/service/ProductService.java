@@ -1,13 +1,8 @@
 package com.proyecto.proyecto_techlab_springboot.product.service;
 
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
-import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCatalogDataException;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
-import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogImageResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCreateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductOptionResponse;
@@ -23,6 +18,7 @@ import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.model.Category;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
+import com.proyecto.proyecto_techlab_springboot.product.mapper.ProductMapper;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -45,8 +41,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private static final TypeReference<List<ProductCatalogImageResponse>> CATALOG_IMAGES_TYPE = new TypeReference<>() {};
-
     private static final Map<String, String> CATALOG_SORT_COLUMNS = Map.of(
             "id", "product_id",
             "category", "product_category",
@@ -60,7 +54,7 @@ public class ProductService {
 
     private final IProductRepository    iProductRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper;
+    private final ProductMapper productMapper;
 
     @Transactional
     public ProductResponse createProduct(ProductCreateRequest request) {
@@ -80,14 +74,14 @@ public class ProductService {
 
         log.info("Producto creado exitosamente { ID: {}, categoría: {}, nombre: {} }", saved.getProductId(), saved.getProductCategory(), saved.getProductName());
 
-        return mapToResponse(saved);
+        return this.productMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public Page<ProductCatalogResponse> getAllPublicProducts(TargetGender targetGender, Pageable pageable) {
         Pageable catalogPageable = toCatalogPageable(pageable);
         return this.iProductRepository.findPublicCatalog(targetGender.name(), catalogPageable)
-                .map(this::mapToCatalogResponse);
+                .map(this.productMapper::toCatalogResponse);
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +93,7 @@ public class ProductService {
     ) {
         String normalizedSearch = search == null || search.isBlank()
                 ? "%%"
-                : "%" + search.trim() + "%";
+                : "%%%s%%".formatted(search.trim());
         Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
 
         return this.iProductRepository.searchAdminProducts(
@@ -111,18 +105,13 @@ public class ProductService {
                 RowStatus.ACTIVE,
                 unsortedPageable
         )
-                .map(this::mapToResponse);
+                .map(this.productMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
     public List<ProductOptionResponse> getProductOptions() {
         return this.iProductRepository.findAllOptionsForSelect(RowStatus.ACTIVE).stream()
-                .map(product -> new ProductOptionResponse(
-                        product.getProductId(),
-                        product.getProductName(),
-                        product.getTargetGender(),
-                        product.getRowStatus()
-                ))
+                .map(this.productMapper::toOptionResponse)
                 .toList();
     }
 
@@ -133,12 +122,12 @@ public class ProductService {
         if (p.getRowStatus() != RowStatus.ACTIVE) 
             throw new ProductNoLongerAvailableException("{ ID: %s }".formatted(id));
 
-        return mapToResponse(p);
+        return this.productMapper.toResponse(p);
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getAdminProductById(UUID id) {
-        return mapToResponse(this.findProductByIdOrThrow(id));
+        return this.productMapper.toResponse(this.findProductByIdOrThrow(id));
     }
 
     @Transactional
@@ -156,7 +145,7 @@ public class ProductService {
 
         log.info("Producto modificado exitosamente { ID: {} }", product.getProductId());
 
-        return mapToResponse(product);
+        return this.productMapper.toResponse(product);
     }
 
     @Transactional
@@ -186,55 +175,7 @@ public class ProductService {
 
         log.info("Estado del Producto modificado exitosamente { ID: {}, Estado Anterior: {}, Nuevo Estado: {} }", product.getProductId(), lastStatus, product.getRowStatus());
 
-        return mapToResponse(product);
-    }
-
-    private ProductResponse mapToResponse(Product entity) {
-        return new ProductResponse(
-                entity.getProductId(),
-                entity.getProductCategory(),
-                entity.getTargetGender(),
-                entity.getProductName(),
-                entity.getProductShortDesc(),
-                entity.getProductLongDesc(),
-                entity.getRowStatus(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
-    }
-
-    private ProductCatalogResponse mapToCatalogResponse(
-            IProductRepository.PublicProductCatalogProjection projection
-    ) {
-        String imagesJson = projection.getMainImagesUrl();
-        if (imagesJson == null)
-            return mapToCatalogResponse(projection, List.of());
-
-        List<ProductCatalogImageResponse> images;
-        try {
-            images = objectMapper.readValue(imagesJson, CATALOG_IMAGES_TYPE);
-        } catch (JacksonException ex) {
-            throw new InvalidCatalogDataException("No se pudieron interpretar las imágenes de la vista del catálogo.", ex);
-        }
-
-        return mapToCatalogResponse(projection, images);
-    }
-
-    private ProductCatalogResponse mapToCatalogResponse(
-            IProductRepository.PublicProductCatalogProjection projection,
-            List<ProductCatalogImageResponse> images
-    ) {
-        return new ProductCatalogResponse(
-                projection.getProductId(),
-                Category.valueOf(projection.getProductCategory()),
-                TargetGender.valueOf(projection.getTargetGender()),
-                projection.getProductName(),
-                projection.getShortDesc(),
-                projection.getMinPrice(),
-                projection.getSizeCount(),
-                projection.getColorCount(),
-                images
-        );
+        return this.productMapper.toResponse(product);
     }
 
     private Pageable toCatalogPageable(Pageable pageable) {

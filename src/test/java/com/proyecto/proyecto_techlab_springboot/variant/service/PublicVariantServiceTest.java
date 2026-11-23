@@ -6,6 +6,7 @@ import com.proyecto.proyecto_techlab_springboot.product.exception.ProductNoLonge
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicProductVariantResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.model.NumericSize;
+import com.proyecto.proyecto_techlab_springboot.variant.mapper.VariantMapper;
 import com.proyecto.proyecto_techlab_springboot.variant.repository.IVariantRepository;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +51,7 @@ class PublicVariantServiceTest {
                 repository,
                 productService,
                 mock(ColorService.class),
-                new ObjectMapper()
+                new VariantMapper(new ObjectMapper())
         );
 
         PublicProductVariantResponse result = service.getPublicVariantsByProduct(productId).getFirst();
@@ -80,7 +81,7 @@ class PublicVariantServiceTest {
                 repository,
                 productService,
                 mock(ColorService.class),
-                new ObjectMapper()
+                new VariantMapper(new ObjectMapper())
         );
 
         assertEquals(List.of(), service.getPublicVariantsByProduct(productId));
@@ -113,7 +114,7 @@ class PublicVariantServiceTest {
                 repository,
                 productService,
                 mock(ColorService.class),
-                new ObjectMapper()
+                new VariantMapper(new ObjectMapper())
         );
 
         PublicProductVariantResponse result = service.getPublicVariantsByProduct(productId).getFirst();
@@ -135,7 +136,7 @@ class PublicVariantServiceTest {
                 repository,
                 productService,
                 mock(ColorService.class),
-                new ObjectMapper()
+                new VariantMapper(new ObjectMapper())
         );
 
         assertThrows(

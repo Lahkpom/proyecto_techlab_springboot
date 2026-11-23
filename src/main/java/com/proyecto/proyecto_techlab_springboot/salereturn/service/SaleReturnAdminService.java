@@ -78,7 +78,7 @@ public class SaleReturnAdminService {
     ) {
         String customerEmailPattern = (customerEmail == null || customerEmail.isBlank())
                 ? "%%"
-                : "%" + customerEmail.trim() + "%";
+                : "%%%s%%".formatted(customerEmail.trim());
         return this.iSaleReturnRepository.searchReturnsAdmin(
                 returnStatus != null,
                 returnStatus,

@@ -52,7 +52,9 @@ public class WsfeSoapService implements IWsfeSoapClient {
             throw ex;
         } catch (Exception ex) {
             log.error("Fallo al consultar FECompUltimoAutorizado en ARCA: {}", ex.getMessage(), ex);
-            throw new ArcaUnavailableException("Error de comunicación/infraestructura en ARCA: " + ex.getMessage(), ex);
+            throw new ArcaUnavailableException(
+                    "Error de comunicación/infraestructura en ARCA: %s".formatted(ex.getMessage()), ex
+            );
         }
     }
 
@@ -83,7 +85,9 @@ public class WsfeSoapService implements IWsfeSoapClient {
             throw ex;
         } catch (Exception ex) {
             log.error("Fallo al autorizar comprobante en ARCA WSFE: {}", ex.getMessage(), ex);
-            throw new ArcaUnavailableException("Error en comunicación con ARCA WSFE: " + ex.getMessage(), ex);
+            throw new ArcaUnavailableException(
+                    "Error en comunicación con ARCA WSFE: %s".formatted(ex.getMessage()), ex
+            );
         }
     }
 
@@ -214,7 +218,9 @@ public class WsfeSoapService implements IWsfeSoapClient {
         NodeList errors = doc.getElementsByTagName("Err");
         if (errors.getLength() > 0) {
             String errMsg = errors.item(0).getTextContent();
-            throw new ArcaBusinessRejectionException("ARCA reportó error en FECompUltimoAutorizado: " + errMsg);
+            throw new ArcaBusinessRejectionException(
+                    "ARCA reportó error en FECompUltimoAutorizado: %s".formatted(errMsg)
+            );
         }
 
         String cbteNro = doc.getElementsByTagName("CbteNro").item(0).getTextContent();
@@ -230,14 +236,18 @@ public class WsfeSoapService implements IWsfeSoapClient {
         NodeList errors = doc.getElementsByTagName("Err");
         if (errors.getLength() > 0) {
             String msg = errors.item(0).getTextContent();
-            throw new ArcaBusinessRejectionException("ARCA rechazó el comprobante por error de validación: " + msg);
+            throw new ArcaBusinessRejectionException(
+                    "ARCA rechazó el comprobante por error de validación: %s".formatted(msg)
+            );
         }
 
         String resultado = doc.getElementsByTagName("Resultado").item(0).getTextContent();
         if (resultado.equalsIgnoreCase("R")) {
             NodeList obs = doc.getElementsByTagName("Obs");
             String obsMsg = (obs.getLength() > 0) ? obs.item(0).getTextContent() : "Sin observaciones devueltas";
-            throw new ArcaBusinessRejectionException("Comprobante RECHAZADO por ARCA. Motivo: " + obsMsg);
+            throw new ArcaBusinessRejectionException(
+                    "Comprobante RECHAZADO por ARCA. Motivo: %s".formatted(obsMsg)
+            );
         }
 
         String cae       = doc.getElementsByTagName("CAE").item(0).getTextContent();

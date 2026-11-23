@@ -60,7 +60,7 @@ public class ApiWebConfiguration implements WebMvcConfigurer {
 
     private String resolveCorsPath() {
         return apiPrefix.endsWith("/")
-                ? apiPrefix.substring(0, apiPrefix.length() - 1) + "/**"
-                : apiPrefix + "/**";
+                ? "%s/**".formatted(apiPrefix.substring(0, apiPrefix.length() - 1))
+                : "%s/**".formatted(apiPrefix);
     }
 }

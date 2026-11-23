@@ -5,13 +5,13 @@ import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleAmount
 import com.proyecto.proyecto_techlab_springboot.sale.exception.MinimumWholesalerQuantityException;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-@Component 
+@Service
 public class SalePolicyService {
 
     private static final int WHOLESALER_MINIMUM_QUANTITY    = 10;

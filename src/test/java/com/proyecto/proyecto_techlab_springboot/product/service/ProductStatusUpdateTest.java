@@ -9,6 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivated
 import com.proyecto.proyecto_techlab_springboot.product.model.Category;
 import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.model.TargetGender;
+import com.proyecto.proyecto_techlab_springboot.product.mapper.ProductMapper;
 import com.proyecto.proyecto_techlab_springboot.product.repository.IProductRepository;
 import com.proyecto.proyecto_techlab_springboot.user.model.UserRole;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,11 @@ class ProductStatusUpdateTest {
 
     private final IProductRepository repository = mock(IProductRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
-    private final ProductService service = new ProductService(repository, eventPublisher, new ObjectMapper());
+    private final ProductService service = new ProductService(
+            repository,
+            eventPublisher,
+            new ProductMapper(new ObjectMapper())
+    );
     private final AuthenticatedUserPrincipal admin =
             new AuthenticatedUserPrincipal(UUID.randomUUID(), "admin@example.com", UserRole.ADMIN);
 
