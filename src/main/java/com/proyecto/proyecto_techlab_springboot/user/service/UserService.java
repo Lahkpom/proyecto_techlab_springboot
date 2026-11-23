@@ -75,7 +75,7 @@ public class UserService {
         user.setTaxIdType(request.taxIdType());
         user.setTaxIdNumber(normalizedTaxIdNumber);
 
-        log.info("Usuario modificado exitosamente { ID: {}, email: {}, name: {}, phone: {} }", user.getUserId(), user.getUserEmail(), user.getUserName(), user.getUserPhone());
+        log.info("Usuario modificado exitosamente: userId={}", user.getUserId());
 
         return mapToResponse(user);
     }

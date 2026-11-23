@@ -6,6 +6,7 @@ import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCatalogDataException;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.color.model.Color;
 import com.proyecto.proyecto_techlab_springboot.color.service.ColorService;
@@ -312,7 +313,7 @@ public class VariantService {
                     images
             );
         } catch (JacksonException | IllegalArgumentException ex) {
-            throw new IllegalStateException(
+            throw new InvalidCatalogDataException(
                     "La vista pública de variantes contiene datos inválidos.",
                     ex
             );

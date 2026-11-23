@@ -5,6 +5,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import com.proyecto.proyecto_techlab_springboot.auth.security.AuthenticatedUserPrincipal;
 import com.proyecto.proyecto_techlab_springboot.common.exception.AccessDeniedException;
+import com.proyecto.proyecto_techlab_springboot.common.exception.InvalidCatalogDataException;
 import com.proyecto.proyecto_techlab_springboot.common.dto.StatusUpdateRequest;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogImageResponse;
 import com.proyecto.proyecto_techlab_springboot.product.dto.ProductCatalogResponse;
@@ -213,7 +214,7 @@ public class ProductService {
         try {
             images = objectMapper.readValue(imagesJson, CATALOG_IMAGES_TYPE);
         } catch (JacksonException ex) {
-            throw new IllegalStateException("No se pudo interpretar las imágenes de la view del catálogo.", ex);
+            throw new InvalidCatalogDataException("No se pudieron interpretar las imágenes de la vista del catálogo.", ex);
         }
 
         return mapToCatalogResponse(projection, images);

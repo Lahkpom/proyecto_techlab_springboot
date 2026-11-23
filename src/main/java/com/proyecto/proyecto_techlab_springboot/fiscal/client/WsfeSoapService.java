@@ -11,8 +11,11 @@ import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -182,7 +185,7 @@ public class WsfeSoapService implements IWsfeSoapClient {
         );
     }
 
-    private String callSoapHttp(String soapEnvelope, String soapAction) throws Exception {
+    private String callSoapHttp(String soapEnvelope, String soapAction) throws IOException, InterruptedException {
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -203,7 +206,8 @@ public class WsfeSoapService implements IWsfeSoapClient {
         return response.body();
     }
 
-    private long parseLastNumberResponse(String soapXml) throws Exception {
+    private long parseLastNumberResponse(String soapXml)
+            throws ParserConfigurationException, SAXException, IOException {
         DocumentBuilderFactory factory = createSecureDocumentBuilderFactory();
         Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(soapXml)));
 
@@ -217,7 +221,8 @@ public class WsfeSoapService implements IWsfeSoapClient {
         return Long.parseLong(cbteNro.trim());
     }
 
-    private CaeAuthorizationResult parseAuthorizeResponse(String soapXml) throws Exception {
+    private CaeAuthorizationResult parseAuthorizeResponse(String soapXml)
+            throws ParserConfigurationException, SAXException, IOException {
         DocumentBuilderFactory factory = createSecureDocumentBuilderFactory();
         Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(soapXml)));
 
@@ -247,7 +252,7 @@ public class WsfeSoapService implements IWsfeSoapClient {
                 .build();
     }
 
-    private DocumentBuilderFactory createSecureDocumentBuilderFactory() throws Exception {
+    private DocumentBuilderFactory createSecureDocumentBuilderFactory() throws ParserConfigurationException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
         factory.setFeature("http://xml.org/sax/features/external-general-entities", false);

@@ -145,8 +145,7 @@ public class AuthService {
 
         Users saved = this.userService.createAccount(user);
 
-        log.info("Usuario {} creado exitosamente { ID: {}, email: {}, compañía: {} }", 
-                    role, saved.getUserId(), saved.getUserEmail(), saved.getCompanyName());
+        log.info("Usuario {} creado exitosamente: userId={}", role, saved.getUserId());
 
         return mapToResponse(saved);
     }
@@ -217,15 +216,14 @@ public class AuthService {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
 
-            log.warn("Intento de login fallido #{} para email: {} (userId: {})", attempts, user.getUserEmail(), user.getUserId());
+            log.warn("Intento de login fallido #{} para userId={}", attempts, user.getUserId());
 
             if (attempts >= MAX_FAILED_ATTEMPTS) { // Bloquear por 15 minutos
                 user.setLockedUntil(Instant.now().plus(15, ChronoUnit.MINUTES));
 
                 log.warn(
-                        "Se impone bloqueo de cuenta al email {} hasta {} por {} intentos fallidos de login (userId: {})",
-                        user.getUserEmail(),
-                        user.getFailedLoginAttempts(),
+                        "Se impone bloqueo de cuenta hasta {} por {} intentos fallidos de login para userId={}",
+                        user.getLockedUntil(),
                         attempts,
                         user.getUserId()
                 );
@@ -280,7 +278,7 @@ public class AuthService {
         );
 
         // El trigger Postgres actualiza last_login_at y limpia failed_login_attempts.
-        log.info("Usuario inició sesión exitosamente { email: {}, ID: {} }", user.getUserEmail(), user.getUserId());
+        log.info("Usuario inició sesión exitosamente: userId={}", user.getUserId());
         return authResponse;
     }
 

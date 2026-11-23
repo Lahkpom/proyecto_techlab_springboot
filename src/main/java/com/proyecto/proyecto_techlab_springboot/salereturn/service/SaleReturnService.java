@@ -127,7 +127,7 @@ public class SaleReturnService {
         for (SaleReturnItemRequest itemReq : request.items()) {
             SaleItem saleItem = saleItemMap.get(itemReq.saleItemId());
             if (saleItem == null)
-                throw new IllegalArgumentException(
+                throw new InvalidReturnItemException(
                         "El ítem { ID: %d } no pertenece a la orden { ID: %s }".formatted(itemReq.saleItemId(), sale.getSaleId())
                 );
 

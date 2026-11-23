@@ -52,7 +52,7 @@ public class LoginAuditService {
                     .update();
         } catch (Exception ex) {
             // El fallo de auditoría no debe tirar abajo el backend, solo advertir
-            log.error("No se pudo registrar el intento de login para {}: {}", attemptedEmail, ex.getMessage());
+            log.error("No se pudo registrar el intento de login para userId={}: ", userId, ex);
         }
     }
 }

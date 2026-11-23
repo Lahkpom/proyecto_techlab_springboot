@@ -168,7 +168,8 @@ public class FiscalReceiptService {
                 .build();
 
         FiscalReceipt saved = this.iFiscalReceiptRepository.save(receipt);
-        log.info("Factura C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", arcaProperties.puntoVenta(), saved.getReceiptNumber(), saved.getCae());
+        log.info("Factura C emitida exitosamente: saleId={}, puntoVenta={}, comprobanteNro={}",
+                saleId, arcaProperties.puntoVenta(), saved.getReceiptNumber());
         return saved;
     }
 
@@ -262,7 +263,8 @@ public class FiscalReceiptService {
                 .build();
 
         FiscalReceipt saved = this.iFiscalReceiptRepository.save(creditNote);
-        log.info("Nota de Crédito C emitida exitosamente: PtoVta {}, Nro {}, CAE {}", arcaProperties.puntoVenta(), saved.getReceiptNumber(), saved.getCae());
+        log.info("Nota de Crédito C emitida exitosamente: saleId={}, puntoVenta={}, comprobanteNro={}",
+                sale.getSaleId(), arcaProperties.puntoVenta(), saved.getReceiptNumber());
         return saved;
     }
 

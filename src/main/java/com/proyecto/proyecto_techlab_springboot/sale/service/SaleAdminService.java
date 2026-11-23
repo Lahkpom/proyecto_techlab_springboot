@@ -15,6 +15,7 @@ import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
 import com.proyecto.proyecto_techlab_springboot.user.service.UserService;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SaleAdminService {
 
     private final ISaleRepository       iSaleRepository;
@@ -155,6 +157,8 @@ public class SaleAdminService {
         sale.setUpdatedBy(operatorId);
         sale.setUpdatedAt(now);
 
+        log.info("Transición manual de venta: saleId={}, estadoAnterior={}, estadoNuevo={}, operatorId={}",
+                saleId, currentStatus, targetStatus, operatorId);
         return mapToSaleResponse(sale);
     }
 
@@ -166,6 +170,7 @@ public class SaleAdminService {
         Sale            sale                    = this.findSaleByIdOrThrow(saleId);
         PaymentStatus   currentPaymentStatus    = sale.getPaymentStatus();
         PaymentStatus   targetPaymentStatus     = request.newPaymentStatus();
+        SaleStatus      currentSaleStatus       = sale.getSaleStatus();
 
         if (currentPaymentStatus == targetPaymentStatus) return mapToSaleResponse(sale);
 
@@ -202,6 +207,10 @@ public class SaleAdminService {
             sale.setInternalNotes(currentNotes + "[Pago " + targetPaymentStatus + "]: " + request.paymentNotes().trim());
         }
 
+        log.info(
+                "Conciliación manual de pago: saleId={}, estadoPagoAnterior={}, estadoPagoNuevo={}, estadoVentaAnterior={}, estadoVentaNuevo={}, operatorId={}",
+                saleId, currentPaymentStatus, targetPaymentStatus, currentSaleStatus, sale.getSaleStatus(), operatorId
+        );
         return mapToSaleResponse(sale);
     }
 

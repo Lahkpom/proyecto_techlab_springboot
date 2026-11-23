@@ -382,6 +382,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidReturnItemException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidReturnItem(
+            InvalidReturnItemException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "INVALID_RETURN_ITEM",
+                ex.getMessage(),
+                request
+        );
+    }
+
     // Maneja 422: No coincide el cód postal con la localidad ingresada
     @ExceptionHandler(InvalidShippingDestinationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidShippingDestination(
@@ -407,22 +420,29 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidCatalogDataException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCatalogData(
+            InvalidCatalogDataException ex,
+            HttpServletRequest request
+    ) {
+        log.error("Datos inválidos en una vista del catálogo al procesar {} {}: ",
+                request.getMethod(), request.getRequestURI(), ex);
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "INVALID_CATALOG_DATA",
+                "No fue posible procesar los datos del catálogo.",
+                request
+        );
+    }
+
     // Maneja 500 (Ataja cualquier error inesperado)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
         log.error("Error no controlado al procesar {} {}: ", request.getMethod(), request.getRequestURI(), ex);
-
-//        return buildResponse(
-//                HttpStatus.INTERNAL_SERVER_ERROR,
-//                "INTERNAL_SERVER_ERROR",
-//                "Ocurrió un error inesperado. Contacte al administrador si el problema persiste.",
-//                request
-//        );
-//        TODO - CAMBIAR ESTO CUANDO ESTÉ EN PRODUCCIÓN
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",
-                ex.getMessage(),
+                "Ocurrió un error interno inesperado. Por favor, intentá nuevamente más tarde.",
                 request
         );
     }
@@ -442,10 +462,16 @@ public class GlobalExceptionHandler {
     // Maneja 502: El gateway upstream falló
     @ExceptionHandler(MercadoPagoIntegrationException.class)
     public ResponseEntity<ErrorResponse> handleMercadoPagoIntegration(MercadoPagoIntegrationException ex, HttpServletRequest request) {
+        log.error(
+                "Fallo de integración con Mercado Pago: método={} ruta={} tipoExcepcion={}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getClass().getSimpleName()
+        );
         return buildResponse(
                 HttpStatus.BAD_GATEWAY, 
                 "MERCADO_PAGO_INTEGRATION_ERROR",
-                ex.getMessage(),
+                "No fue posible completar la operación con Mercado Pago.",
                 request
         );
     }

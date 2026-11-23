@@ -73,38 +73,53 @@ public class SaleExpirationScheduler {
             return;
         }
 
-        cancelExpiredSales(
+        CancellationBatchResult pendingResult = cancelExpiredSales(
                 expiredPendingSales,
                 "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas sin confirmación de pago."
                         .formatted(ttlHours)
         );
-        cancelExpiredSales(
+        CancellationBatchResult cashResult = cancelExpiredSales(
                 expiredCashPreparationSales,
                 "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas en preparación sin coordinar/entregar el pedido en efectivo."
                         .formatted(cashTtlHours)
         );
+        log.info(
+                "Purga nocturna TTL finalizada: encontradas={}, canceladas={}, fallidas={}",
+                expiredPendingSales.size() + expiredCashPreparationSales.size(),
+                pendingResult.canceled() + cashResult.canceled(),
+                pendingResult.failed() + cashResult.failed()
+        );
     }
 
-    private void cancelExpiredSales(List<Sale> expiredSales, String auditMessage) {
+    private CancellationBatchResult cancelExpiredSales(List<Sale> expiredSales, String auditMessage) {
+        int canceled = 0;
+        int failed = 0;
         for (Sale sale : expiredSales) {
-            Map<Long, Integer> stockMap = sale.getItems().stream()
-                    .filter(item -> item.getVariant() != null)
-                    .collect(Collectors.toMap(
-                            item -> item.getVariant().getVariantId(),
-                            SaleItem::getQuantity,
-                            Integer::sum
-                    ));
+            try {
+                Map<Long, Integer> stockMap = sale.getItems().stream()
+                        .filter(item -> item.getVariant() != null)
+                        .collect(Collectors.toMap(
+                                item -> item.getVariant().getVariantId(),
+                                SaleItem::getQuantity,
+                                Integer::sum
+                        ));
 
-            this.variantService.restoreStock(stockMap);
+                this.variantService.restoreStock(stockMap);
 
-            sale.setSaleStatus(SaleStatus.CANCELADO);
-            sale.setPaymentStatus(PaymentStatus.RECHAZADO);
-            sale.setUpdatedAt(Instant.now());
+                sale.setSaleStatus(SaleStatus.CANCELADO);
+                sale.setPaymentStatus(PaymentStatus.RECHAZADO);
+                sale.setUpdatedAt(Instant.now());
 
-            String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
-            sale.setInternalNotes(currentNotes + auditMessage);
-
-            log.info("Orden ID: {} cancelada y stock devuelto al inventario con éxito.", sale.getSaleId());
+                String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
+                sale.setInternalNotes(currentNotes + auditMessage);
+                canceled++;
+            } catch (Exception ex) {
+                log.warn("No se pudo cancelar la venta vencida: saleId={}", sale.getSaleId(), ex);
+                failed++;
+            }
         }
+        return new CancellationBatchResult(canceled, failed);
     }
+
+    private record CancellationBatchResult(int canceled, int failed) {}
 }

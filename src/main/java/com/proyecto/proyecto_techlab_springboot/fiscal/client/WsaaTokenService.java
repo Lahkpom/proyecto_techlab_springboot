@@ -10,17 +10,22 @@ import org.bouncycastle.cert.jcajce.JcaCertStore;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,10 +35,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -92,7 +101,9 @@ public class WsaaTokenService implements IWsaaTokenClient {
                 + "</loginTicketRequest>";
     }
 
-    private byte[] signCms(byte[] contentToSign) throws Exception {
+    private byte[] signCms(byte[] contentToSign)
+            throws OperatorCreationException, CertificateEncodingException, CMSException, IOException,
+            CertificateException, NoSuchAlgorithmException, InvalidKeySpecException {
         X509Certificate certificate = loadCertificate(arcaProperties.certPath());
         PrivateKey      privateKey  = loadPrivateKey(arcaProperties.keyPath());
 
@@ -115,14 +126,15 @@ public class WsaaTokenService implements IWsaaTokenClient {
         return signedData.getEncoded();
     }
 
-    private X509Certificate loadCertificate(String path) throws Exception {
+    private X509Certificate loadCertificate(String path) throws IOException, CertificateException {
         try (InputStream is = Files.newInputStream(Path.of(path))) {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             return (X509Certificate) cf.generateCertificate(is);
         }
     }
 
-    private PrivateKey loadPrivateKey(String path) throws Exception {
+    private PrivateKey loadPrivateKey(String path)
+            throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
         String keyContent = Files.readString(Path.of(path), StandardCharsets.UTF_8)
                 .replaceAll("-----(BEGIN|END)( RSA)? PRIVATE KEY-----", "")
                 .replaceAll("\\s+", "");
@@ -146,7 +158,7 @@ public class WsaaTokenService implements IWsaaTokenClient {
         """.formatted(cmsBase64);
     }
 
-    private String callWsaaHttp(String soapEnvelope) throws Exception {
+    private String callWsaaHttp(String soapEnvelope) throws IOException, InterruptedException {
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -167,7 +179,8 @@ public class WsaaTokenService implements IWsaaTokenClient {
         return response.body();
     }
 
-    private AccessTicket parseWsaaResponse(String soapXml) throws Exception {
+    private AccessTicket parseWsaaResponse(String soapXml)
+            throws ParserConfigurationException, SAXException, IOException {
         DocumentBuilderFactory factory = createSecureDocumentBuilderFactory();
         Document               doc     = factory.newDocumentBuilder().parse(new InputSource(new StringReader(soapXml)));
 
@@ -185,7 +198,7 @@ public class WsaaTokenService implements IWsaaTokenClient {
                 .build();
     }
 
-    private DocumentBuilderFactory createSecureDocumentBuilderFactory() throws Exception {
+    private DocumentBuilderFactory createSecureDocumentBuilderFactory() throws ParserConfigurationException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
