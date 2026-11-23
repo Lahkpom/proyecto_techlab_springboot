@@ -14,7 +14,10 @@ import java.util.Optional;
 @Repository
 public interface IShippingZoneRepository extends JpaRepository<ShippingZone, Long> {
 
-    Optional<ShippingZone> findByShippingMethodAndRowStatus(ShippingMethod method, RowStatus status);
+    Optional<ShippingZone> findFirstByShippingMethodAndRowStatus(
+            ShippingMethod method,
+            RowStatus status
+    );
 
     List<ShippingZone> findAllByRowStatusOrderByBaseCostAsc(RowStatus status);
 
@@ -24,6 +27,7 @@ public interface IShippingZoneRepository extends JpaRepository<ShippingZone, Lon
         SELECT * FROM shipping_zone
         WHERE row_status = 'ACTIVE'
           AND postal_codes @> CAST(:postalCodeJson AS jsonb)
+        ORDER BY shipping_zone_id ASC
         LIMIT 1
     """, nativeQuery = true)
     Optional<ShippingZone> findActiveZoneByPostalCode(@Param("postalCodeJson") String postalCodeJson);

@@ -127,7 +127,7 @@ public class ShippingService {
     }
 
     private ShippingZone findActiveZoneByMethod(ShippingMethod method) {
-        return shippingZoneRepository.findByShippingMethodAndRowStatus(method, RowStatus.ACTIVE)
+        return shippingZoneRepository.findFirstByShippingMethodAndRowStatus(method, RowStatus.ACTIVE)
                 .orElseThrow(() -> new ShippingZoneNotFoundException("{ shippingMethod: %s }".formatted(method)));
     }
 

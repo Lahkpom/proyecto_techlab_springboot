@@ -26,7 +26,9 @@ class ShippingServiceTest {
     void quotesPickupWithoutDestinationAndAllowsCashPayment() {
         IShippingZoneRepository repository = mock(IShippingZoneRepository.class);
         ShippingZone pickupZone = shippingZone(ShippingMethod.RETIRO_LLAVALLOL, "Retiro", "En el día");
-        when(repository.findByShippingMethodAndRowStatus(ShippingMethod.RETIRO_LLAVALLOL, RowStatus.ACTIVE))
+        when(repository.findFirstByShippingMethodAndRowStatus(
+                ShippingMethod.RETIRO_LLAVALLOL, RowStatus.ACTIVE
+        ))
                 .thenReturn(Optional.of(pickupZone));
 
         ShippingQuoteResponse result = new ShippingService(repository)
@@ -35,7 +37,9 @@ class ShippingServiceTest {
         assertEquals(ShippingMethod.RETIRO_LLAVALLOL, result.shippingMethod());
         assertEquals(new BigDecimal("0.00"), result.shippingCost());
         assertTrue(result.cashPaymentAllowed());
-        verify(repository).findByShippingMethodAndRowStatus(ShippingMethod.RETIRO_LLAVALLOL, RowStatus.ACTIVE);
+        verify(repository).findFirstByShippingMethodAndRowStatus(
+                ShippingMethod.RETIRO_LLAVALLOL, RowStatus.ACTIVE
+        );
     }
 
     @Test
@@ -62,7 +66,7 @@ class ShippingServiceTest {
                 "3 a 7 días"
         );
         when(repository.findActiveZoneByPostalCode("[\"5000\"]")).thenReturn(Optional.empty());
-        when(repository.findByShippingMethodAndRowStatus(
+        when(repository.findFirstByShippingMethodAndRowStatus(
                 ShippingMethod.ENVIO_CORREO_NACIONAL,
                 RowStatus.ACTIVE
         )).thenReturn(Optional.of(nationalZone));

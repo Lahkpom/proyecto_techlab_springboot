@@ -4,6 +4,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.salereturn.dto.*;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.*;
+import com.proyecto.proyecto_techlab_springboot.salereturn.mapper.SaleReturnMapper;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.SaleReturn;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.SaleReturnItem;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnReason;
@@ -25,6 +26,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Este servicio gestiona el Botón de Arrepentimiento tanto para usuarios registrados como para invitados por token:
@@ -53,6 +55,7 @@ public class SaleReturnService {
     private final ISaleReturnRepository     iSaleReturnRepository;
     private final ISaleReturnItemRepository iSaleReturnItemRepository;
     private final SaleService saleService;
+    private final SaleReturnMapper saleReturnMapper;
 
     /**
      * Inicia una devolución para un usuario registrado autenticado.
@@ -80,7 +83,7 @@ public class SaleReturnService {
         SaleReturn saleReturn = this.iSaleReturnRepository.findByTrackingToken(returnTrackingToken)
                 .orElseThrow(() -> new SaleReturnNotFoundException("{ Token de seguimiento: %s }".formatted(returnTrackingToken)));
 
-        return mapToReturnResponse(saleReturn);
+        return saleReturnMapper.toResponse(saleReturn);
     }
 
     /**
@@ -89,10 +92,11 @@ public class SaleReturnService {
     @Transactional(readOnly = true)
     public Page<SaleReturnSummaryResponse> getMyReturns(UUID userId, Pageable pageable) {
         return this.iSaleReturnRepository
-                .findAllBySale_User_UserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(this::mapToReturnSummaryResponse);
+                .findAllBySale_User_UserIdOrderByCreatedAtDescReturnIdAsc(userId, pageable)
+                .map(saleReturnMapper::toSummaryResponse);
     }
 
+    @Transactional(readOnly = true)
     public SaleReturn getSaleReturnByIdOrThrow(UUID returnId) {
         return this.iSaleReturnRepository.findById(returnId)
                 .orElseThrow(() -> new SaleReturnNotFoundException("{ ID: %s }".formatted(returnId)));
@@ -118,6 +122,20 @@ public class SaleReturnService {
             saleItemMap.put(si.getSaleItemId(), si);
         }
 
+        List<Long> saleItemIds = request.items().stream()
+                .map(SaleReturnItemRequest::saleItemId)
+                .distinct()
+                .toList();
+        Map<Long, Integer> claimedQuantities = saleItemIds.isEmpty()
+                ? Map.of()
+                : this.iSaleReturnItemRepository
+                        .findClaimedQuantitiesBySaleItemIds(saleItemIds, TERMINAL_EXCLUDED_STATUSES)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                ISaleReturnItemRepository.ClaimedQuantityProjection::getSaleItemId,
+                                projection -> Math.toIntExact(projection.getClaimedQuantity())
+                        ));
+
         // Validar unidades solicitadas contra historial de reclamos previos
         // Este cálculo permite devoluciones parciales escalonadas sin permitir jamás que devuelva 3 habiendo comprado 2.
         int                     requestedTotalItems     = 0;
@@ -132,8 +150,7 @@ public class SaleReturnService {
                 );
 
             // Unidades previamente reclamadas en trámites activos o aprobados
-            int alreadyClaimed = this.iSaleReturnItemRepository
-                    .countClaimedQuantityBySaleItemId(saleItem.getSaleItemId(), TERMINAL_EXCLUDED_STATUSES);
+            int alreadyClaimed = claimedQuantities.getOrDefault(saleItem.getSaleItemId(), 0);
 
             int availableToReturn = saleItem.getQuantity() - alreadyClaimed;
 
@@ -194,7 +211,7 @@ public class SaleReturnService {
                 savedReturn.getReturnId(), sale.getSaleId(), savedReturn.getReturnReason(), savedReturn.getRefundAmount()
         );
 
-        return mapToReturnResponse(savedReturn);
+        return saleReturnMapper.toResponse(savedReturn);
     }
 
     private void validateSaleEligibility(Sale sale) {
@@ -240,65 +257,4 @@ public class SaleReturnService {
         return claimedItemsSubtotal.subtract(proportionalDiscount).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private SaleReturnResponse mapToReturnResponse(SaleReturn sr) {
-        List<SaleReturnItemResponse> itemResponses = sr.getItems().stream()
-                .map(item -> {
-                    SaleItem si = item.getSaleItem();
-                    return SaleReturnItemResponse.builder()
-                            .returnItemId(item.getReturnItemId())
-                            .saleItemId(si.getSaleItemId())
-                            .variantId(si.getVariant() != null ? si.getVariant().getVariantId() : null)
-                            .productName(si.getProductName())
-                            .variantDesc(si.getVariantDesc())
-                            .variantSku(si.getVariantSku())
-                            .variantSize(si.getVariantSize())
-                            .colorName(si.getColorName())
-                            .imageUrl(si.getImageUrl())
-                            .unitPrice(si.getUnitPrice())
-                            .quantity(item.getQuantity())
-                            .subtotal(si.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                            .restockApproved(item.getRestockApproved())
-                            .rejectionReason(item.getRejectionReason())
-                            .createdAt(item.getCreatedAt())
-                            .build();
-                })
-                .toList();
-
-        return SaleReturnResponse.builder()
-                .returnId(sr.getReturnId())
-                .saleId(sr.getSale().getSaleId())
-                .trackingToken(sr.getTrackingToken())
-                .returnReason(sr.getReturnReason())
-                .returnResolution(sr.getReturnResolution())
-                .returnStatus(sr.getReturnStatus())
-                .shippingCoveredByStore(sr.getShippingCoveredByStore())
-                .returnShippingGuide(sr.getReturnShippingGuide())
-                .refundAmount(sr.getRefundAmount())
-                .customerNotes(sr.getCustomerNotes())
-                .inspectionNotes(sr.getInspectionNotes())
-                .inspectionEvidencePath(sr.getInspectionEvidencePath())
-                .inspectedBy(sr.getInspectedBy() != null ? sr.getInspectedBy().getUserId() : null)
-                .inspectedAt(sr.getInspectedAt())
-                .createdAt(sr.getCreatedAt())
-                .updatedAt(sr.getUpdatedAt())
-                .closedAt(sr.getClosedAt())
-                .items(itemResponses)
-                .build();
-    }
-
-    private SaleReturnSummaryResponse mapToReturnSummaryResponse(SaleReturn sr) {
-        return SaleReturnSummaryResponse.builder()
-                .returnId(sr.getReturnId())
-                .saleId(sr.getSale().getSaleId())
-                .trackingToken(sr.getTrackingToken())
-                .customerName(sr.getSale().getCustomerName())
-                .customerEmail(sr.getSale().getCustomerEmail())
-                .returnReason(sr.getReturnReason())
-                .returnResolution(sr.getReturnResolution())
-                .returnStatus(sr.getReturnStatus())
-                .refundAmount(sr.getRefundAmount())
-                .createdAt(sr.getCreatedAt())
-                .closedAt(sr.getClosedAt())
-                .build();
-    }
 }

@@ -71,8 +71,8 @@ public interface ISaleRepository extends JpaRepository<Sale, UUID> {
     );
 
     // Reconciliación con Mercado Pago (Webhooks y Redirecciones)
-    Optional<Sale> findByMpPreferenceId(String mpPreferenceId);
-    Optional<Sale> findByMpPaymentId(String mpPaymentId);
+    Optional<Sale> findFirstByMpPreferenceIdOrderByCreatedAtDesc(String mpPreferenceId);
+    Optional<Sale> findFirstByMpPaymentIdOrderByCreatedAtDesc(String mpPaymentId);
 
     // Para Panel Administrativo: Búsqueda dinámica multicriterio
     @Query("""

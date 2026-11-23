@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -32,7 +33,8 @@ public interface ISaleReturnRepository extends JpaRepository<SaleReturn, UUID> {
     /**
      * Historial de devoluciones de un usuario registrado.
      */
-    Page<SaleReturn> findAllBySale_User_UserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+    @EntityGraph(attributePaths = "sale")
+    Page<SaleReturn> findAllBySale_User_UserIdOrderByCreatedAtDescReturnIdAsc(UUID userId, Pageable pageable);
 
     /**
      * Valida si existe un trámite de devolución activo sobre la venta para evitar solicitudes concurrentes duplicadas.
@@ -54,7 +56,8 @@ public interface ISaleReturnRepository extends JpaRepository<SaleReturn, UUID> {
     /**
      * Búsqueda dinámica multicriterio para el panel administrativo.
      */
-    @Query("""
+    @EntityGraph(attributePaths = "sale")
+    @Query(value = """
         SELECT sr FROM SaleReturn sr
         JOIN sr.sale s
         WHERE (:filterReturnStatus = false OR sr.returnStatus = :returnStatus)
@@ -62,7 +65,15 @@ public interface ISaleReturnRepository extends JpaRepository<SaleReturn, UUID> {
           AND LOWER(s.customerEmail) LIKE LOWER(:customerEmailPattern)
           AND (:filterStartDate = false OR sr.createdAt >= :startDate)
           AND (:filterEndDate = false OR sr.createdAt <= :endDate)
-        ORDER BY sr.createdAt DESC
+        ORDER BY sr.createdAt DESC, sr.returnId ASC
+    """, countQuery = """
+        SELECT COUNT(sr) FROM SaleReturn sr
+        JOIN sr.sale s
+        WHERE (:filterReturnStatus = false OR sr.returnStatus = :returnStatus)
+          AND (:filterReturnReason = false OR sr.returnReason = :returnReason)
+          AND LOWER(s.customerEmail) LIKE LOWER(:customerEmailPattern)
+          AND (:filterStartDate = false OR sr.createdAt >= :startDate)
+          AND (:filterEndDate = false OR sr.createdAt <= :endDate)
     """)
     Page<SaleReturn> searchReturnsAdmin(
             @Param("filterReturnStatus") boolean filterReturnStatus,

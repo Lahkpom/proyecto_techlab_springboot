@@ -21,14 +21,20 @@ public interface ISaleReturnItemRepository extends JpaRepository<SaleReturnItem,
      * Esencial para evitar devoluciones acumuladas que superen la cantidad comprada.
      */
     @Query("""
-        SELECT COALESCE(SUM(sri.quantity), 0)
+        SELECT sri.saleItem.saleItemId AS saleItemId, SUM(sri.quantity) AS claimedQuantity
         FROM SaleReturnItem sri
         JOIN sri.saleReturn sr
-        WHERE sri.saleItem.saleItemId = :saleItemId
+        WHERE sri.saleItem.saleItemId IN :saleItemIds
           AND sr.returnStatus NOT IN :excludedStatuses
+        GROUP BY sri.saleItem.saleItemId
     """)
-    int countClaimedQuantityBySaleItemId(
-            @Param("saleItemId") Long saleItemId,
+    List<ClaimedQuantityProjection> findClaimedQuantitiesBySaleItemIds(
+            @Param("saleItemIds") Collection<Long> saleItemIds,
             @Param("excludedStatuses") Collection<ReturnStatus> excludedStatuses
     );
+
+    interface ClaimedQuantityProjection {
+        Long getSaleItemId();
+        Long getClaimedQuantity();
+    }
 }

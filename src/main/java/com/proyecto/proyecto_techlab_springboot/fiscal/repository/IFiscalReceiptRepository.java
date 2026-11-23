@@ -18,7 +18,10 @@ public interface IFiscalReceiptRepository extends JpaRepository<FiscalReceipt, U
     /**
      * Recupera la Factura C original de una venta para asociarla obligatoriamente en la Nota de Crédito C.
      */
-    Optional<FiscalReceipt> findBySale_SaleIdAndReceiptType(UUID saleId, FiscalReceiptType receiptType);
+    Optional<FiscalReceipt> findFirstBySale_SaleIdAndReceiptType(
+            UUID saleId,
+            FiscalReceiptType receiptType
+    );
 
     /**
      * Previene dobles emisiones sobre la misma venta.
@@ -28,7 +31,7 @@ public interface IFiscalReceiptRepository extends JpaRepository<FiscalReceipt, U
     /**
      * Recupera el comprobante vinculado a una devolución particular.
      */
-    Optional<FiscalReceipt> findBySaleReturn_ReturnId(UUID returnId);
+    Optional<FiscalReceipt> findFirstBySaleReturn_ReturnId(UUID returnId);
 
     List<FiscalReceipt> findAllBySale_SaleId(UUID saleId);
 

@@ -1,7 +1,6 @@
 package com.proyecto.proyecto_techlab_springboot.sale.scheduler;
 
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
-import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
@@ -16,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Busca órdenes vencidas en PENDIENTE y órdenes en preparación pagadas en efectivo.
@@ -96,15 +93,7 @@ public class SaleExpirationScheduler {
         int failed = 0;
         for (Sale sale : expiredSales) {
             try {
-                Map<Long, Integer> stockMap = sale.getItems().stream()
-                        .filter(item -> item.getVariant() != null)
-                        .collect(Collectors.toMap(
-                                item -> item.getVariant().getVariantId(),
-                                SaleItem::getQuantity,
-                                Integer::sum
-                        ));
-
-                this.variantService.restoreStock(stockMap);
+                this.variantService.restoreStockForSaleItems(sale.getItems());
 
                 sale.setSaleStatus(SaleStatus.CANCELADO);
                 sale.setPaymentStatus(PaymentStatus.RECHAZADO);

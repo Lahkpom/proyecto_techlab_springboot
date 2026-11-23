@@ -16,6 +16,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.client.IMercadoPagoClient;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.SaleCalculationResult;
+import com.proyecto.proyecto_techlab_springboot.sale.mapper.SaleMapper;
 import com.proyecto.proyecto_techlab_springboot.fiscal.config.ArcaProperties;
 import com.proyecto.proyecto_techlab_springboot.shipping.dto.ShippingQuoteResponse;
 import com.proyecto.proyecto_techlab_springboot.shipping.exception.InvalidShippingDestinationException;
@@ -37,7 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Servicio que atiende al cliente final:
@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 public class SaleService {
 
     private final ISaleRepository iSaleRepository;
+    private final SaleMapper saleMapper;
 
     private final IMercadoPagoClient    iMercadoPagoClient;
     private final SalePolicyService     salePolicyService;
@@ -239,8 +240,8 @@ public class SaleService {
             mpInitPoint = prefResult.initPoint();
         }
 
-        // return mapToSaleResponse(savedSale, null);
-        return mapToSaleResponse(savedSale, mpInitPoint);
+        // return saleMapper.toResponse(savedSale, null);
+        return saleMapper.toResponse(savedSale, mpInitPoint);
     }
 
     private ResolvedTaxData resolveAndValidateTaxData(
@@ -313,7 +314,7 @@ public class SaleService {
         MercadoPagoPreferenceResult prefResult = this.iMercadoPagoClient.createPreference(sale);
         sale.setMpPreferenceId(prefResult.preferenceId());
 
-        return mapToSaleResponse(sale, prefResult.initPoint());
+        return saleMapper.toResponse(sale, prefResult.initPoint());
     }
 
     /**
@@ -323,7 +324,7 @@ public class SaleService {
     public SaleResponse getSaleByTrackingToken(UUID trackingToken) {
         Sale sale = this.internalGetSaleByTrackingTokenEntityOrThrow(trackingToken);
 
-        return mapToSaleResponse(sale, null);
+        return saleMapper.toResponse(sale, null);
     }
 
     /**
@@ -333,7 +334,7 @@ public class SaleService {
     public SaleResponse getSaleByIdForUser(UUID saleId, UUID userId) {
         Sale sale = this.getSaleByIdAndCheckBelongingOrThrow(saleId, userId);
 
-        return mapToSaleResponse(sale, null);
+        return saleMapper.toResponse(sale, null);
     }
 
     /**
@@ -345,7 +346,7 @@ public class SaleService {
         List<SaleStatus> effectiveStatuses = filterStatuses ? statuses : List.of(SaleStatus.values());
         return this.iSaleRepository
                 .findMyOrdersByStatuses(userId, filterStatuses, effectiveStatuses, pageable)
-                .map(this::mapToSaleSummaryResponse);
+                .map(saleMapper::toSummaryResponse);
     }
 
     /**
@@ -365,20 +366,21 @@ public class SaleService {
             );
 
         // Restituir el stock de las variantes
-        this.restoreVariantStock(sale.getItems());
+        this.variantService.restoreStockForSaleItems(sale.getItems());
 
         // Actualizar estado
         sale.setSaleStatus(SaleStatus.CANCELADO);
         sale.setUpdatedAt(Instant.now());
         sale.setUpdatedBy(userId);
 
-        return mapToSaleResponse(sale, null);
+        return saleMapper.toResponse(sale, null);
     }
 
     // =========================================================================
     // Métodos Auxiliares
     // =========================================================================
 
+    @Transactional(readOnly = true)
     public Sale getSaleByIdAndCheckBelongingOrThrow(UUID saleId, UUID userId) {
         Sale sale = this.getSaleByIdOrElseThrow(saleId);
 
@@ -489,6 +491,7 @@ public class SaleService {
         log.warn("Venta ID {} marcada con fiscalRejection = true. Motivo: {}", saleId, rejectionReason);
     }
 
+    @Transactional(readOnly = true)
     public Sale getSaleByIdOrElseThrow(UUID saleId) {
         return this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
@@ -499,99 +502,9 @@ public class SaleService {
                 .orElseThrow(() -> new SaleNotFoundException("{ Token de seguimiento: %s }".formatted(trackingToken)));
     }
 
-    private void restoreVariantStock(List<SaleItem> items) {
-        Map<Long, Integer> stockMap = items.stream()
-                .filter(item -> item.getVariant() != null)
-                .collect(
-                    Collectors.toMap(
-                        item -> item.getVariant().getVariantId(),
-                        SaleItem::getQuantity,
-                        Integer::sum // Si la misma variante estuviera repetida, acumula las cantidades
-                    )
-                );
-
-        this.variantService.restoreStock(stockMap);
-    }
-
+    @Transactional(readOnly = true)
     public List<Sale> findUnbilledSales(PaymentStatus paymentStatus, FiscalReceiptType receiptType, Pageable pageable) {
         return this.iSaleRepository.findUnbilledSalesByPaymentStatus(paymentStatus, receiptType, pageable);
     }
 
-    private SaleResponse mapToSaleResponse(Sale sale, String mpInitPoint) {
-        List<SaleItemResponse> itemResponses = sale.getItems().stream()
-                .map(item -> SaleItemResponse.builder()
-                        .saleItemId(item.getSaleItemId())
-                        .variantId(item.getVariant() != null ? item.getVariant().getVariantId() : null)
-                        .productName(item.getProductName())
-                        .productDesc(item.getProductDesc())
-                        .variantDesc(item.getVariantDesc())
-                        .variantSku(item.getVariantSku())
-                        .variantSize(item.getVariantSize())
-                        .colorName(item.getColorName())
-                        .imageUrl(item.getImageUrl())
-                        .unitPrice(item.getUnitPrice())
-                        .quantity(item.getQuantity())
-                        .subtotal(item.getSubtotal())
-                        .createdAt(item.getCreatedAt())
-                        .build())
-                .toList();
-
-        return SaleResponse.builder()
-                .saleId(sale.getSaleId())
-                .userId(sale.getUser() != null ? sale.getUser().getUserId() : null)
-                .trackingToken(sale.getTrackingToken())
-                .customerName(sale.getCustomerName())
-                .customerEmail(sale.getCustomerEmail())
-                .customerTaxIdType(sale.getCustomerTaxIdType())
-                .customerTaxIdNumber(sale.getCustomerTaxIdNumber())
-                .customerPhone(sale.getCustomerPhone())
-                .customerNotes(sale.getCustomerNotes())
-                .shippingMethod(sale.getShippingMethod())
-                .shippingProvince(sale.getShippingProvince())
-                .shippingLocality(sale.getShippingLocality())
-                .shippingPostalCode(sale.getShippingPostalCode())
-                .shippingAddress(sale.getShippingAddress())
-                .saleQuantity(sale.getSaleQuantity())
-                .saleSubtotal(sale.getSaleSubtotal())
-                .saleDiscountAmount(sale.getSaleDiscountAmount())
-                .shippingCost(sale.getShippingCost())
-                .saleTotal(sale.getSaleTotal())
-                .saleShippedAt(sale.getSaleShippedAt())
-                .saleDeliveredAt(sale.getSaleDeliveredAt())
-                .saleStatus(sale.getSaleStatus())
-                .paymentMethod(sale.getPaymentMethod())
-                .paymentStatus(sale.getPaymentStatus())
-                .fiscalRejection(sale.isFiscalRejection())
-                .internalNotes(sale.getInternalNotes())
-                .mpPreferenceId(sale.getMpPreferenceId())
-                .mpInitPoint(mpInitPoint)
-                .createdAt(sale.getCreatedAt())
-                .updatedAt(sale.getUpdatedAt())
-                .items(itemResponses)
-                .build();
-    }
-
-    private SaleSummaryResponse mapToSaleSummaryResponse(Sale sale) {
-        return SaleSummaryResponse.builder()
-                .saleId(sale.getSaleId())
-                .userId(sale.getUser() != null ? sale.getUser().getUserId() : null)
-                .trackingToken(sale.getTrackingToken())
-                .customerName(sale.getCustomerName())
-                .customerEmail(sale.getCustomerEmail())
-                .customerTaxIdType(sale.getCustomerTaxIdType())
-                .customerTaxIdNumber(sale.getCustomerTaxIdNumber())
-                .shippingMethod(sale.getShippingMethod())
-                .shippingProvince(sale.getShippingProvince())
-                .shippingLocality(sale.getShippingLocality())
-                .shippingPostalCode(sale.getShippingPostalCode())
-                .saleQuantity(sale.getSaleQuantity())
-                .saleTotal(sale.getSaleTotal())
-                .saleStatus(sale.getSaleStatus())
-                .paymentMethod(sale.getPaymentMethod())
-                .paymentStatus(sale.getPaymentStatus())
-                .fiscalRejection(sale.isFiscalRejection())
-                .saleDeliveredAt(sale.getSaleDeliveredAt())
-                .createdAt(sale.getCreatedAt())
-                .build();
-    }
 }

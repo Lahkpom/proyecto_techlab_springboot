@@ -5,6 +5,7 @@ import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidRetu
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.InvalidReturnStatusTransitionException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.exception.SaleReturnNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.salereturn.dto.*;
+import com.proyecto.proyecto_techlab_springboot.salereturn.mapper.SaleReturnMapper;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnReason;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnResolution;
 import com.proyecto.proyecto_techlab_springboot.salereturn.model.ReturnStatus;
@@ -50,6 +51,7 @@ public class SaleReturnAdminService {
     private final VariantService        variantService;
     private final UserService           userService;
     private final FiscalReceiptService  fiscalReceiptService;
+    private final SaleReturnMapper      saleReturnMapper;
 
 
     // Matriz de transiciones permitidas para la gestión del expediente
@@ -88,7 +90,7 @@ public class SaleReturnAdminService {
                 endDate != null,
                 endDate,
                 pageable
-        ).map(this::mapToSummaryResponse);
+        ).map(saleReturnMapper::toSummaryResponse);
     }
 
     /**
@@ -97,7 +99,7 @@ public class SaleReturnAdminService {
     @Transactional(readOnly = true)
     public SaleReturnResponse getReturnDetail(UUID returnId) {
         SaleReturn saleReturn = this.findReturnWithDetailsOrThrow(returnId);
-        return mapToResponse(saleReturn);
+        return saleReturnMapper.toResponse(saleReturn);
     }
 
     /**
@@ -109,7 +111,7 @@ public class SaleReturnAdminService {
         ReturnStatus    currentStatus   = saleReturn.getReturnStatus();
         ReturnStatus    targetStatus    = request.newStatus();
 
-        if (currentStatus == targetStatus) return mapToResponse(saleReturn);
+        if (currentStatus == targetStatus) return saleReturnMapper.toResponse(saleReturn);
 
         // Validar que la transición de estados esté permitida
         validateStatusTransition(currentStatus, targetStatus);
@@ -138,7 +140,7 @@ public class SaleReturnAdminService {
         log.info("Estado de devolución actualizado exitosamente { returnId: {}, anterior: {}, nuevo: {}, operador: {} }",
                 returnId, currentStatus, targetStatus, operatorId);
 
-        return mapToResponse(saleReturn);
+        return saleReturnMapper.toResponse(saleReturn);
     }
 
     /**
@@ -233,7 +235,7 @@ public class SaleReturnAdminService {
                     returnId, approvedItemsCount, finalRefund);
         }
 
-        return mapToResponse(saleReturn);
+        return saleReturnMapper.toResponse(saleReturn);
     }
 
     /**
@@ -322,7 +324,7 @@ public class SaleReturnAdminService {
         log.info("Reembolso de devolución { returnId: {} } liquidado exitosamente por el operador {}. Detalle: {}",
                 returnId, operatorId, auditDetail);
 
-        return mapToResponse(saleReturn);
+        return saleReturnMapper.toResponse(saleReturn);
     }
 
     // =========================================================================
@@ -361,65 +363,4 @@ public class SaleReturnAdminService {
                 .orElseThrow(() -> new SaleReturnNotFoundException("{ ID: %s }".formatted(returnId)));
     }
 
-    private SaleReturnSummaryResponse mapToSummaryResponse(SaleReturn sr) {
-        return SaleReturnSummaryResponse.builder()
-                .returnId(sr.getReturnId())
-                .saleId(sr.getSale().getSaleId())
-                .trackingToken(sr.getTrackingToken())
-                .customerName(sr.getSale().getCustomerName())
-                .customerEmail(sr.getSale().getCustomerEmail())
-                .returnReason(sr.getReturnReason())
-                .returnResolution(sr.getReturnResolution())
-                .returnStatus(sr.getReturnStatus())
-                .refundAmount(sr.getRefundAmount())
-                .createdAt(sr.getCreatedAt())
-                .closedAt(sr.getClosedAt())
-                .build();
-    }
-
-    private SaleReturnResponse mapToResponse(SaleReturn sr) {
-        List<SaleReturnItemResponse> itemResponses = sr.getItems().stream()
-                .map(item -> {
-                    SaleItem si = item.getSaleItem();
-                    return SaleReturnItemResponse.builder()
-                            .returnItemId(item.getReturnItemId())
-                            .saleItemId(si.getSaleItemId())
-                            .variantId(si.getVariant() != null ? si.getVariant().getVariantId() : null)
-                            .productName(si.getProductName())
-                            .variantDesc(si.getVariantDesc())
-                            .variantSku(si.getVariantSku())
-                            .variantSize(si.getVariantSize())
-                            .colorName(si.getColorName())
-                            .imageUrl(si.getImageUrl())
-                            .unitPrice(si.getUnitPrice())
-                            .quantity(item.getQuantity())
-                            .subtotal(si.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                            .restockApproved(item.getRestockApproved())
-                            .rejectionReason(item.getRejectionReason())
-                            .createdAt(item.getCreatedAt())
-                            .build();
-                })
-                .toList();
-
-        return SaleReturnResponse.builder()
-                .returnId(sr.getReturnId())
-                .saleId(sr.getSale().getSaleId())
-                .trackingToken(sr.getTrackingToken())
-                .returnReason(sr.getReturnReason())
-                .returnResolution(sr.getReturnResolution())
-                .returnStatus(sr.getReturnStatus())
-                .shippingCoveredByStore(sr.getShippingCoveredByStore())
-                .returnShippingGuide(sr.getReturnShippingGuide())
-                .refundAmount(sr.getRefundAmount())
-                .customerNotes(sr.getCustomerNotes())
-                .inspectionNotes(sr.getInspectionNotes())
-                .inspectionEvidencePath(sr.getInspectionEvidencePath())
-                .inspectedBy(sr.getInspectedBy() != null ? sr.getInspectedBy().getUserId() : null)
-                .inspectedAt(sr.getInspectedAt())
-                .createdAt(sr.getCreatedAt())
-                .updatedAt(sr.getUpdatedAt())
-                .closedAt(sr.getClosedAt())
-                .items(itemResponses)
-                .build();
-    }
 }

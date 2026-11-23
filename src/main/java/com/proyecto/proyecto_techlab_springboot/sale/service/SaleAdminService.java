@@ -9,6 +9,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
 import com.proyecto.proyecto_techlab_springboot.sale.dto.*;
+import com.proyecto.proyecto_techlab_springboot.sale.mapper.SaleMapper;
 import com.proyecto.proyecto_techlab_springboot.fiscal.service.FiscalReceiptService;
 import com.proyecto.proyecto_techlab_springboot.user.exception.InvalidUserDataException;
 import com.proyecto.proyecto_techlab_springboot.user.model.TaxIdType;
@@ -27,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Este servicio centraliza la gestión operativa y logística para los administradores y operadores del sistema:
@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 public class SaleAdminService {
 
     private final ISaleRepository       iSaleRepository;
+    private final SaleMapper            saleMapper;
     private final VariantService variantService;
     private final FiscalReceiptService  fiscalReceiptService;
     private final UserService userService;
@@ -101,7 +102,7 @@ public class SaleAdminService {
                 endDate != null,
                 endDate,
                 pageable
-        ).map(this::mapToSaleSummaryResponse);
+        ).map(saleMapper::toSummaryResponse);
     }
 
     /**
@@ -109,7 +110,7 @@ public class SaleAdminService {
      */
     @Transactional(readOnly = true)
     public SaleResponse getSaleDetail(UUID saleId) {
-        return mapToSaleResponse(this.findSaleByIdOrThrow(saleId));
+        return saleMapper.toResponse(this.findSaleByIdOrThrow(saleId), null);
     }
 
     /**
@@ -123,7 +124,7 @@ public class SaleAdminService {
         SaleStatus  currentStatus   = sale.getSaleStatus();
         SaleStatus  targetStatus    = request.newStatus();
 
-        if (currentStatus == targetStatus) return mapToSaleResponse(sale);
+        if (currentStatus == targetStatus) return saleMapper.toResponse(sale, null);
 
         // Validar máquina de estados logísticos
         this.validateTransition(currentStatus, targetStatus);
@@ -133,7 +134,7 @@ public class SaleAdminService {
 
         // Manejo de stock ante cancelación
         if (targetStatus == SaleStatus.CANCELADO && currentStatus != SaleStatus.ENTREGADO)
-            this.restoreVariantStock(sale.getItems());
+            this.variantService.restoreStockForSaleItems(sale.getItems());
 
         // Efectivo entregado aprueba el cobro y dispara Factura C
         if (targetStatus == SaleStatus.ENTREGADO && sale.getPaymentMethod() == PaymentMethod.EFECTIVO) {
@@ -159,7 +160,7 @@ public class SaleAdminService {
 
         log.info("Transición manual de venta: saleId={}, estadoAnterior={}, estadoNuevo={}, operatorId={}",
                 saleId, currentStatus, targetStatus, operatorId);
-        return mapToSaleResponse(sale);
+        return saleMapper.toResponse(sale, null);
     }
 
     /**
@@ -172,7 +173,7 @@ public class SaleAdminService {
         PaymentStatus   targetPaymentStatus     = request.newPaymentStatus();
         SaleStatus      currentSaleStatus       = sale.getSaleStatus();
 
-        if (currentPaymentStatus == targetPaymentStatus) return mapToSaleResponse(sale);
+        if (currentPaymentStatus == targetPaymentStatus) return saleMapper.toResponse(sale, null);
 
         // Validar reglas de transición de pagos
         validatePaymentTransition(sale, currentPaymentStatus, targetPaymentStatus);
@@ -195,7 +196,7 @@ public class SaleAdminService {
             sale.getSaleStatus() == SaleStatus.PENDIENTE
         ) {
             // Si el pago de una orden pendiente es rechazado, se cancela la orden y libera stock
-            this.restoreVariantStock(sale.getItems());
+            this.variantService.restoreStockForSaleItems(sale.getItems());
             sale.setSaleStatus(SaleStatus.CANCELADO);
         } else if (targetPaymentStatus == PaymentStatus.REEMBOLSADO) {
             sale.setSaleStatus(SaleStatus.REEMBOLSADO);
@@ -211,7 +212,7 @@ public class SaleAdminService {
                 "Conciliación manual de pago: saleId={}, estadoPagoAnterior={}, estadoPagoNuevo={}, estadoVentaAnterior={}, estadoVentaNuevo={}, operatorId={}",
                 saleId, currentPaymentStatus, targetPaymentStatus, currentSaleStatus, sale.getSaleStatus(), operatorId
         );
-        return mapToSaleResponse(sale);
+        return saleMapper.toResponse(sale, null);
     }
 
     /**
@@ -225,7 +226,7 @@ public class SaleAdminService {
         sale.setUpdatedBy(operatorId);
         sale.setUpdatedAt(Instant.now());
 
-        return mapToSaleResponse(sale);
+        return saleMapper.toResponse(sale, null);
     }
 
     @Transactional
@@ -264,7 +265,7 @@ public class SaleAdminService {
             this.userService.updateUserTaxData(sale.getUser().getUserId(), normalizedType, normalizedNumber);
         }
 
-        return mapToSaleResponse(sale);
+        return saleMapper.toResponse(sale, null);
     }
 
     private String normalizeTaxIdNumber(TaxIdType taxIdType, String taxIdNumber) {
@@ -348,101 +349,9 @@ public class SaleAdminService {
             throw new InvalidSaleStatusTransitionException(current.name(), target.name());
     }
 
-    /**
-     * Restituye atómicamente el stock de las variantes correspondientes a una venta cancelada.
-     */
-    private void restoreVariantStock(List<SaleItem> items) {
-        Map<Long, Integer> stockMap = items.stream()
-                .filter(item -> item.getVariant() != null)
-                .collect(
-                    Collectors.toMap(
-                        item -> item.getVariant().getVariantId(),
-                        SaleItem::getQuantity,
-                        Integer::sum // Si la misma variante estuviera repetida, acumula las cantidades
-                    )
-                );
-
-        this.variantService.restoreStock(stockMap);
-    }
-
     private Sale findSaleByIdOrThrow(UUID saleId) {
         return this.iSaleRepository.findById(saleId)
                 .orElseThrow(() -> new SaleNotFoundException("{ ID: %s }".formatted(saleId)));
     }
 
-    private SaleSummaryResponse mapToSaleSummaryResponse(Sale sale) {
-        return SaleSummaryResponse.builder()
-                .saleId(sale.getSaleId())
-                .userId(sale.getUser() != null ? sale.getUser().getUserId() : null)
-                .trackingToken(sale.getTrackingToken())
-                .customerName(sale.getCustomerName())
-                .customerEmail(sale.getCustomerEmail())
-                .customerTaxIdType(sale.getCustomerTaxIdType())
-                .customerTaxIdNumber(sale.getCustomerTaxIdNumber())
-                .shippingMethod(sale.getShippingMethod())
-                .shippingProvince(sale.getShippingProvince())
-                .shippingLocality(sale.getShippingLocality())
-                .shippingPostalCode(sale.getShippingPostalCode())
-                .saleQuantity(sale.getSaleQuantity())
-                .saleTotal(sale.getSaleTotal())
-                .saleStatus(sale.getSaleStatus())
-                .paymentMethod(sale.getPaymentMethod())
-                .paymentStatus(sale.getPaymentStatus())
-                .fiscalRejection(sale.isFiscalRejection())
-                .createdAt(sale.getCreatedAt())
-                .build();
-    }
-
-    private SaleResponse mapToSaleResponse(Sale sale) {
-        List<SaleItemResponse> itemResponses = sale.getItems().stream()
-                .map(item -> SaleItemResponse.builder()
-                        .saleItemId(item.getSaleItemId())
-                        .variantId(item.getVariant() != null ? item.getVariant().getVariantId() : null)
-                        .productName(item.getProductName())
-                        .productDesc(item.getProductDesc())
-                        .variantDesc(item.getVariantDesc())
-                        .variantSku(item.getVariantSku())
-                        .variantSize(item.getVariantSize())
-                        .colorName(item.getColorName())
-                        .imageUrl(item.getImageUrl())
-                        .unitPrice(item.getUnitPrice())
-                        .quantity(item.getQuantity())
-                        .subtotal(item.getSubtotal())
-                        .createdAt(item.getCreatedAt())
-                        .build())
-                .toList();
-
-        return SaleResponse.builder()
-                .saleId(sale.getSaleId())
-                .userId(sale.getUser() != null ? sale.getUser().getUserId() : null)
-                .trackingToken(sale.getTrackingToken())
-                .customerName(sale.getCustomerName())
-                .customerEmail(sale.getCustomerEmail())
-                .customerPhone(sale.getCustomerPhone())
-                .customerTaxIdType(sale.getCustomerTaxIdType())
-                .customerTaxIdNumber(sale.getCustomerTaxIdNumber())
-                .customerNotes(sale.getCustomerNotes())
-                .shippingMethod(sale.getShippingMethod())
-                .shippingProvince(sale.getShippingProvince())
-                .shippingLocality(sale.getShippingLocality())
-                .shippingPostalCode(sale.getShippingPostalCode())
-                .shippingAddress(sale.getShippingAddress())
-                .saleQuantity(sale.getSaleQuantity())
-                .saleSubtotal(sale.getSaleSubtotal())
-                .saleDiscountAmount(sale.getSaleDiscountAmount())
-                .shippingCost(sale.getShippingCost())
-                .saleTotal(sale.getSaleTotal())
-                .saleShippedAt(sale.getSaleShippedAt())
-                .saleDeliveredAt(sale.getSaleDeliveredAt())
-                .saleStatus(sale.getSaleStatus())
-                .paymentMethod(sale.getPaymentMethod())
-                .paymentStatus(sale.getPaymentStatus())
-                .fiscalRejection(sale.isFiscalRejection())
-                .internalNotes(sale.getInternalNotes())
-                .mpPreferenceId(sale.getMpPreferenceId())
-                .createdAt(sale.getCreatedAt())
-                .updatedAt(sale.getUpdatedAt())
-                .items(itemResponses)
-                .build();
-    }
 }

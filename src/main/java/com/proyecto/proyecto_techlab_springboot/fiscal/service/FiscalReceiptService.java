@@ -192,14 +192,16 @@ public class FiscalReceiptService {
         if (saleReturn.getReturnResolution() != ReturnResolution.REEMBOLSO_DINERO)
             throw new InvalidFiscalOperationException("La devolución no tiene resolución monetaria (REEMBOLSO_DINERO). Resolución actual: " + saleReturn.getReturnResolution());
 
-        if (this.iFiscalReceiptRepository.findBySaleReturn_ReturnId(returnId).isPresent())
+        if (this.iFiscalReceiptRepository.findFirstBySaleReturn_ReturnId(returnId).isPresent())
             throw new FiscalReceiptAlreadyExistsException("{ Devolución ID: %s, Tipo: %s }".formatted(returnId, FiscalReceiptType.NOTA_CREDITO_C));
 
         Sale sale = saleReturn.getSale();
 
         // Recuperar la Factura C original para asociarla ante ARCA
         FiscalReceipt originalInvoice = this.iFiscalReceiptRepository
-                .findBySale_SaleIdAndReceiptType(sale.getSaleId(), FiscalReceiptType.FACTURA_C)
+                .findFirstBySale_SaleIdAndReceiptType(
+                        sale.getSaleId(), FiscalReceiptType.FACTURA_C
+                )
                 .orElseThrow(() -> new InvalidFiscalOperationException(
                         "No se encontró la Factura C original para la venta %s. No se puede asociar la Nota de Crédito en ARCA.".formatted(sale.getSaleId())
                 ));

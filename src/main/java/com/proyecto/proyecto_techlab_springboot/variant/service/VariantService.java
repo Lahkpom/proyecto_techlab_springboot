@@ -14,6 +14,7 @@ import com.proyecto.proyecto_techlab_springboot.product.event.ProductDeletedEven
 import com.proyecto.proyecto_techlab_springboot.product.event.ProductInactivatedEvent;
 import com.proyecto.proyecto_techlab_springboot.product.model.Product;
 import com.proyecto.proyecto_techlab_springboot.product.service.ProductService;
+import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicProductVariantResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.PublicVariantImageResponse;
 import com.proyecto.proyecto_techlab_springboot.variant.dto.VariantCreateRequest;
@@ -39,6 +40,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -224,6 +226,18 @@ public class VariantService {
             if (quantity != null && quantity > 0)
                 variant.setVariantStock(variant.getVariantStock() + quantity);
         }
+    }
+
+    @Transactional
+    public void restoreStockForSaleItems(Collection<SaleItem> saleItems) {
+        Map<Long, Integer> quantitiesByVariant = saleItems.stream()
+                .filter(item -> item.getVariant() != null)
+                .collect(Collectors.toMap(
+                        item -> item.getVariant().getVariantId(),
+                        SaleItem::getQuantity,
+                        Integer::sum
+                ));
+        restoreStock(quantitiesByVariant);
     }
 
     @EventListener
