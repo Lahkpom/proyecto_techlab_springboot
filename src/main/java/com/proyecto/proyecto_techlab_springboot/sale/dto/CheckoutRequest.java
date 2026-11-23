@@ -47,6 +47,5 @@ public record CheckoutRequest(
         TaxIdType       customerTaxIdType,
         String          customerTaxIdNumber,
 
-        @Valid
-        List<CheckoutItemRequest> items
+        List<@Valid CheckoutItemRequest> items
 ) {}

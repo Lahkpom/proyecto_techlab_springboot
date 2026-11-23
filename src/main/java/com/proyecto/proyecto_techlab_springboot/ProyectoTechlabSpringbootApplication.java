@@ -12,7 +12,13 @@ public class ProyectoTechlabSpringbootApplication {
 
     /**
      * TODO
-     *  - Agregar a las internal notes de las sale la hora del comentario y también quién lo hizo.
+     *  - Hacer que el internal notes no pueda modificarse lo que ya se escribió, que solo puedan agregarse más notas
+     *  - Al guardar cada nota, siempre debe empezar con '[userName dd/mm/yyyy 00:00] nota' donde
+     *      - userName es el nombre del usuario que generó la nota
+     *      - fecha y hora en la que se hizo
+     *      - nota es la nota escrita por el usuario para guardar
+     *  - Las notas deben guardarse de modo que las nuevas notas vayan quedando arriba de las viejas notas
+     *  - Después ver en el front que cuando se habre una sale, en la parte de las internalNotes, que abajo del campo para agregar nuevas notas se imprima el estado actual (Donde estará ordenado cronológicamente)
      * TODO
      *   - Hacer un /model para user_security_tokens cuando implemente verificación de email o reseteo de clave
      *   - Ver también la lógica para que el usuario pueda modificar su correo

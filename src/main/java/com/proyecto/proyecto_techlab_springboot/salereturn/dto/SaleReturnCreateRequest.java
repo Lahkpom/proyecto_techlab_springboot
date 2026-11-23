@@ -22,6 +22,5 @@ public record SaleReturnCreateRequest(
         String customerNotes,
 
         @NotEmpty(message = "Debe seleccionar al menos un producto para la devolución")
-        @Valid
-        List<SaleReturnItemRequest> items
+        List<@Valid SaleReturnItemRequest> items
 ) {}

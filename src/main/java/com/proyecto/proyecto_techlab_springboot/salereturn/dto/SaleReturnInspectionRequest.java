@@ -16,6 +16,5 @@ public record SaleReturnInspectionRequest(
         String inspectionEvidencePath,
 
         @NotEmpty(message = "Debe incluir el dictamen de cada una de las prendas recibidas")
-        @Valid
-        List<SaleReturnItemInspectionRequest> inspectedItems
+        List<@Valid SaleReturnItemInspectionRequest> inspectedItems
 ) {}

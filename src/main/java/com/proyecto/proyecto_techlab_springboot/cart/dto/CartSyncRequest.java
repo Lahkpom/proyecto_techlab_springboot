@@ -6,5 +6,5 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record CartSyncRequest(
-        @NotNull @Valid List<CartItemRequest> items
+        @NotNull List<@Valid CartItemRequest> items
 ) {}
