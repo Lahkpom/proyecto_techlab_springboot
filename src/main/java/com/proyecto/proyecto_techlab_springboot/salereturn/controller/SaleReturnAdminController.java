@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -49,6 +50,11 @@ public class SaleReturnAdminController {
         return ResponseEntity.ok(this.saleReturnAdminService.searchReturns(
                 returnStatus, returnReason, customerEmail, startDate, endDate, pageable
         ));
+    }
+
+    @GetMapping("/sales/{saleId}")
+    public ResponseEntity<List<SaleReturnResponse>> getReturnsForSale(@PathVariable UUID saleId) {
+        return ResponseEntity.ok(this.saleReturnAdminService.getReturnsForSale(saleId));
     }
 
     /**

@@ -97,6 +97,15 @@ public class SaleReturnService {
     }
 
     @Transactional(readOnly = true)
+    public List<SaleReturnResponse> getReturnsForUserSale(UUID saleId, UUID userId) {
+        this.saleService.getSaleByIdAndCheckBelongingOrThrow(saleId, userId);
+        return this.iSaleReturnRepository.findAllBySale_SaleIdOrderByCreatedAtDesc(saleId)
+                .stream()
+                .map(saleReturnMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public SaleReturn getSaleReturnByIdOrThrow(UUID returnId) {
         return this.iSaleReturnRepository.findById(returnId)
                 .orElseThrow(() -> new SaleReturnNotFoundException("{ ID: %s }".formatted(returnId)));

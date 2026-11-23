@@ -93,6 +93,15 @@ public class SaleReturnAdminService {
         ).map(saleReturnMapper::toSummaryResponse);
     }
 
+    @Transactional(readOnly = true)
+    public List<SaleReturnResponse> getReturnsForSale(UUID saleId) {
+        this.saleService.getSaleByIdOrElseThrow(saleId);
+        return this.iSaleReturnRepository.findAllBySale_SaleIdOrderByCreatedAtDesc(saleId)
+                .stream()
+                .map(saleReturnMapper::toResponse)
+                .toList();
+    }
+
     /**
      * Consulta el expediente completo de una devolución por su identificador único.
      */

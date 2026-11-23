@@ -16,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -75,5 +76,14 @@ public class SaleReturnController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         return ResponseEntity.ok(this.saleReturnService.getMyReturns(principal.userId(), pageable));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/orders/{saleId}")
+    public ResponseEntity<List<SaleReturnResponse>> getReturnsForCustomerSale(
+            @PathVariable UUID saleId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
+    ) {
+        return ResponseEntity.ok(this.saleReturnService.getReturnsForUserSale(saleId, principal.userId()));
     }
 }

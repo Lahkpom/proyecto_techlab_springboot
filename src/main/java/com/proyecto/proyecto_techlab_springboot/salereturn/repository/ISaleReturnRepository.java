@@ -26,9 +26,17 @@ public interface ISaleReturnRepository extends JpaRepository<SaleReturn, UUID> {
     Optional<SaleReturn> findByTrackingToken(UUID trackingToken);
 
     /**
-     * Historial de solicitudes de posventa asociadas a una orden de compra.
+     * Historial de solicitudes de posventa asociadas a una orden de compra con sus ítems precargados.
      */
-    List<SaleReturn> findAllBySale_SaleIdOrderByCreatedAtDesc(UUID saleId);
+    @Query("""
+        SELECT DISTINCT sr FROM SaleReturn sr
+        JOIN FETCH sr.sale s
+        LEFT JOIN FETCH sr.items sri
+        LEFT JOIN FETCH sri.saleItem si
+        WHERE s.saleId = :saleId
+        ORDER BY sr.createdAt DESC
+    """)
+    List<SaleReturn> findAllBySale_SaleIdOrderByCreatedAtDesc(@Param("saleId") UUID saleId);
 
     /**
      * Historial de devoluciones de un usuario registrado.
