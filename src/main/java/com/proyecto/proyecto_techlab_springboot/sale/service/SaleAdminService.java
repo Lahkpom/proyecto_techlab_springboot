@@ -204,8 +204,12 @@ public class SaleAdminService {
 
         // Notas de auditoría interna
         if (request.paymentNotes() != null && !request.paymentNotes().isBlank()) {
-            String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
-            sale.setInternalNotes(currentNotes + "[Pago " + targetPaymentStatus + "]: " + request.paymentNotes().trim());
+            String operatorName = this.userService.getUserById(operatorId).userName();
+            sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                    sale.getInternalNotes(),
+                    operatorName + " - Pago " + targetPaymentStatus,
+                    request.paymentNotes().trim()
+            ));
         }
 
         log.info(
@@ -222,7 +226,12 @@ public class SaleAdminService {
     public SaleResponse updateInternalNotes(UUID saleId, SaleInternalNoteRequest request, UUID operatorId) {
         Sale sale = this.findSaleByIdOrThrow(saleId);
 
-        sale.setInternalNotes(request.internalNotes().trim());
+        String operatorName = this.userService.getUserById(operatorId).userName();
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                operatorName,
+                request.internalNotes().trim()
+        ));
         sale.setUpdatedBy(operatorId);
         sale.setUpdatedAt(Instant.now());
 
@@ -254,10 +263,12 @@ public class SaleAdminService {
         sale.setCustomerTaxIdType(normalizedType);
         sale.setCustomerTaxIdNumber(normalizedNumber);
 
-        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
-        sale.setInternalNotes(currentNotes + (currentNotes.isEmpty() ? "" : "\n")
-                + "[ACTUALIZACIÓN DE DATOS FISCALES]: Operador " + operatorId
-                + " actualizó los datos fiscales del receptor.");
+        String operatorName = this.userService.getUserById(operatorId).userName();
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                operatorName + " - Datos Fiscales",
+                "Actualizó los datos fiscales del receptor."
+        ));
         sale.setUpdatedBy(operatorId);
         sale.setUpdatedAt(Instant.now());
 

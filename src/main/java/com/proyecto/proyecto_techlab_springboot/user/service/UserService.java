@@ -57,18 +57,11 @@ public class UserService {
 
         String normalizedName = request.name().trim();
         String normalizedPhone = normalizeOptionalValue(request.phone());
-        String normalizedTaxIdNumber = normalizeOptionalValue(request.taxIdNumber());
-
-        if ((request.taxIdType() != null && normalizedTaxIdNumber == null)
-                || (request.taxIdType() == null && normalizedTaxIdNumber != null)) {
-            throw new InvalidUserDataException("Debe completar tanto el tipo como el número de documento.");
-        }
-
-        if (request.taxIdType() != null && !isValidTaxIdNumber(request.taxIdType(), normalizedTaxIdNumber)) {
-            throw new InvalidUserDataException(
-                    "El número de documento no tiene un formato válido para " + request.taxIdType() + "."
-            );
-        }
+        String normalizedTaxIdNumber = validateTaxIdentificationForRole(
+                user.getUserRole(),
+                request.taxIdType(),
+                request.taxIdNumber()
+        );
 
         user.setUserName(normalizedName);
         user.setUserPhone(normalizedPhone);
@@ -105,6 +98,30 @@ public class UserService {
         log.info("La contraseña fue actualizada correctamente { ID: {} }",  user.getUserId());
 
         return mapToResponse(user);
+    }
+
+    public String validateTaxIdentificationForRole(UserRole role, TaxIdType taxIdType, String rawTaxIdNumber) {
+        String taxIdNumber = normalizeOptionalValue(rawTaxIdNumber);
+        if ((taxIdType != null && taxIdNumber == null)
+                || (taxIdType == null && taxIdNumber != null)) {
+            throw new InvalidUserDataException("Debe completar tanto el tipo como el número de documento.");
+        }
+
+        if (role == UserRole.WHOLESALER
+                && (taxIdType != TaxIdType.CUIT
+                || taxIdNumber == null
+                || !taxIdNumber.matches("^\\d{11}$"))) {
+            throw new InvalidUserDataException(
+                    "Para registrar un mayorista se requiere un CUIT válido de 11 dígitos."
+            );
+        }
+
+        if (taxIdType != null && !isValidTaxIdNumber(taxIdType, taxIdNumber)) {
+            throw new InvalidUserDataException(
+                    "El número de documento no tiene un formato válido para " + taxIdType + "."
+            );
+        }
+        return taxIdNumber;
     }
 
     private String normalizeOptionalValue(String value) {
@@ -238,15 +255,11 @@ public class UserService {
             );
         }
 
-        String taxIdNumber = normalizeOptionalValue(request.taxIdNumber());
-        if (targetRole == UserRole.WHOLESALER
-                && (request.taxIdType() != TaxIdType.CUIT
-                || taxIdNumber == null
-                || !taxIdNumber.matches("^\\d{11}$"))) {
-            throw new InvalidUserDataException(
-                    "Para registrar un mayorista se requiere un CUIT válido de 11 dígitos."
-            );
-        }
+        String taxIdNumber = validateTaxIdentificationForRole(
+                targetRole,
+                request.taxIdType(),
+                request.taxIdNumber()
+        );
 
         user.setUserRole(targetRole);
         user.setCompanyName(normalizeOptionalValue(request.companyName()));

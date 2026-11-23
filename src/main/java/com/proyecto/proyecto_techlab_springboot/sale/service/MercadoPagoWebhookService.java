@@ -79,8 +79,11 @@ public class MercadoPagoWebhookService {
                 sale.setMpPaymentId(stringPaymentId);
                 sale.setUpdatedAt(Instant.now());
 
-                String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
-                sale.setInternalNotes(currentNotes + warningMessage);
+                sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                        sale.getInternalNotes(),
+                        "SISTEMA - Mercado Pago",
+                        warningMessage
+                ));
                 
                 // Finalizamos la ejecución del webhook con éxito hacia MP, dejando la orden retenida en la BD
                 return;

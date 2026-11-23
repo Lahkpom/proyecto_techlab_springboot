@@ -409,9 +409,12 @@ public class SaleService {
         sale.setSaleStatus(SaleStatus.RECLAMO_ABIERTO);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote = "\n[POSVENTA]: Solicitud de devolución ingresada. Orden retenida en RECLAMO_ABIERTO.";
-        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
-        sale.setInternalNotes(currentNotes + auditNote);
+        String auditNote = "Solicitud de devolución ingresada. Orden retenida en RECLAMO_ABIERTO.";
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                "SISTEMA - Posventa",
+                auditNote
+        ));
     }
 
     /**
@@ -436,9 +439,12 @@ public class SaleService {
         sale.setSaleStatus(SaleStatus.ENTREGADO);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote = "\n[POSVENTA - REVERSIÓN]: Orden reincorporada a ENTREGADO. Motivo: " + reason;
-        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
-        sale.setInternalNotes(currentNotes + auditNote);
+        String auditNote = "Orden reincorporada a ENTREGADO. Motivo: " + reason;
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                "SISTEMA - Posventa",
+                auditNote
+        ));
     }
 
     /**
@@ -451,9 +457,12 @@ public class SaleService {
         sale.setPaymentStatus(PaymentStatus.REEMBOLSO_PENDIENTE);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote = "\n[POSVENTA - REEMBOLSO]: Inspección aprobada. Pago en REEMBOLSO_PENDIENTE por un monto de $" + amountToRefund;
-        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
-        sale.setInternalNotes(currentNotes + auditNote);
+        String auditNote = "Inspección aprobada. Pago en REEMBOLSO_PENDIENTE por un monto de $" + amountToRefund;
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                "SISTEMA - Posventa",
+                auditNote
+        ));
     }
 
     /**
@@ -469,10 +478,13 @@ public class SaleService {
         sale.setUpdatedAt(Instant.now());
         sale.setUpdatedBy(operatorId);
 
-        String auditNote = "%n[POSVENTA - REEMBOLSO LIQUIDADO]: Reintegro completado por $%s. Detalle: %s"
+        String auditNote = "Reintegro completado por $%s. Detalle: %s"
                 .formatted(refundedAmount, auditDetail);
-        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
-        sale.setInternalNotes(currentNotes + auditNote);
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                "SISTEMA - Posventa",
+                auditNote
+        ));
 
         log.info("Venta { ID: {} } liquidada financieramente: PaymentStatus=REEMBOLSADO, SaleStatus=CERRADO_CON_DEVOLUCION", saleId);
     }
@@ -484,9 +496,12 @@ public class SaleService {
         sale.setFiscalRejection(true);
         sale.setUpdatedAt(Instant.now());
 
-        String auditNote    = "\n[ALERTA FISCAL - RECHAZO ARCA]: El comprobante fue rechazado formalmente: " + rejectionReason;
-        String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() : "";
-        sale.setInternalNotes(currentNotes + auditNote);
+        String auditNote = "El comprobante fue rechazado formalmente: " + rejectionReason;
+        sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                sale.getInternalNotes(),
+                "SISTEMA - Facturación ARCA",
+                auditNote
+        ));
 
         log.warn("Venta ID {} marcada con fiscalRejection = true. Motivo: {}", saleId, rejectionReason);
     }

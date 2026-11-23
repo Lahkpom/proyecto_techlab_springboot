@@ -5,6 +5,7 @@ import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.repository.ISaleRepository;
+import com.proyecto.proyecto_techlab_springboot.sale.service.SaleInternalNoteFormatter;
 import com.proyecto.proyecto_techlab_springboot.variant.service.VariantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -72,12 +73,12 @@ public class SaleExpirationScheduler {
 
         CancellationBatchResult pendingResult = cancelExpiredSales(
                 expiredPendingSales,
-                "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas sin confirmación de pago."
+                "Cancelada por superar el límite de %d horas sin confirmación de pago."
                         .formatted(ttlHours)
         );
         CancellationBatchResult cashResult = cancelExpiredSales(
                 expiredCashPreparationSales,
-                "[SISTEMA - PURGA NOCTURNA]: Cancelada por superar el límite de %d horas en preparación sin coordinar/entregar el pedido en efectivo."
+                "Cancelada por superar el límite de %d horas en preparación sin coordinar/entregar el pedido en efectivo."
                         .formatted(cashTtlHours)
         );
         log.info(
@@ -99,8 +100,11 @@ public class SaleExpirationScheduler {
                 sale.setPaymentStatus(PaymentStatus.RECHAZADO);
                 sale.setUpdatedAt(Instant.now());
 
-                String currentNotes = sale.getInternalNotes() != null ? sale.getInternalNotes() + "\n" : "";
-                sale.setInternalNotes(currentNotes + auditMessage);
+                sale.setInternalNotes(SaleInternalNoteFormatter.prepend(
+                        sale.getInternalNotes(),
+                        "SISTEMA - Purga TTL",
+                        auditMessage
+                ));
                 canceled++;
             } catch (Exception ex) {
                 log.warn("No se pudo cancelar la venta vencida: saleId={}", sale.getSaleId(), ex);

@@ -108,7 +108,6 @@ public class AuthService {
         );
     }
 
-    // TODO - Hacer las validaciones correspondientes al tipo y número de identificación fiscal acorde al tipo de usuario registrado
     private UserResponse registerUser(
             UserRole    role,
             String      rawName,
@@ -120,11 +119,11 @@ public class AuthService {
             String      rawCompanyName,
             boolean     mustChangePassword
     ) {
+        String taxIdNumber = this.userService.validateTaxIdentificationForRole(role, taxIdType, rawTaxIdNumber);
         String name        = rawName != null ? rawName.trim() : null;
         String email       = rawEmail.trim().toLowerCase();
         String password    = passwordEncoder.encode(rawPassword);
         String phone       = rawPhone != null ? rawPhone.trim() : null;
-        String taxIdNumber = rawTaxIdNumber != null ? rawTaxIdNumber.trim() : null;
         String company     = rawCompanyName != null ? rawCompanyName.trim() : null;
 
         Users user = Users.builder()

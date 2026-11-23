@@ -29,7 +29,6 @@ public class FiscalInvoiceRetryScheduler {
     /**
      * Reintento de emisión cada 15 minutos en horario operativo.
      */
-    // TODO - Poner estas variable en el .env y en el .properties
     @Scheduled(
             cron = "${arca.retry.cron:0 */15 * * * *}",
             zone = "${arca.retry.zone:America/Argentina/Buenos_Aires}"
