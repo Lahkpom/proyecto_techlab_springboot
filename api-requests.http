@@ -1,0 +1,424 @@
+@host = http://localhost:8080
+
+# Ejecute primero los logins. REST Client guarda el accessToken y refreshToken
+# de cada respuesta y las variables siguientes permiten reutilizarlos sin copiar manualmente.
+
+# @name loginAdmin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin_1@gmail.com",
+  "password": "admin_1"
+}
+
+# @name loginOperator
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "operator_1@gmail.com",
+  "password": "operator_1"
+}
+
+# @name loginWholesaler
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "wholesaler_1@gmail.com",
+  "password": "wholesaler_1"
+}
+
+# @name loginCustomer
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "customer_1@gmail.com",
+  "password": "customer_1"
+}
+
+@adminToken = {{loginAdmin.response.body.accessToken}}
+@adminRefreshToken = {{loginAdmin.response.body.refreshToken}}
+@operatorToken = {{loginOperator.response.body.accessToken}}
+@wholesalerToken = {{loginWholesaler.response.body.accessToken}}
+@customerToken = {{loginCustomer.response.body.accessToken}}
+
+### Auth: perfil administrativo
+GET {{host}}/api/auth/me
+Authorization: Bearer {{adminToken}}
+
+### Auth: renovar sesión administrativa
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+### Auth: logout administrativo
+# Incluir refreshToken revoca esta sesión; puede enviarse un cuerpo vacío si no corresponde.
+POST {{host}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+### Colores: listar activos
+GET {{host}}/api/colors?includeInactive=false
+
+### Colores: crear
+# Sustituya los datos antes de ejecutar.
+POST {{host}}/api/admin/colors
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Negro",
+  "desc": "Negro clásico",
+  "code": "#000000"
+}
+
+### Colores: obtener por ID
+GET {{host}}/api/colors/1
+
+### Productos públicos paginados
+# TargetGender real; ajuste al enum disponible en el frontend/entidad.
+GET {{host}}/api/products?targetGender=UNISEX&page=0&size=20&sort=name,asc
+
+### Productos: detalle público
+# Sustituir por UUID real.
+GET {{host}}/api/products/00000000-0000-0000-0000-000000000000
+
+### Productos administrativos paginados
+GET {{host}}/api/admin/products?page=0&size=20&sort=name,asc
+Authorization: Bearer {{operatorToken}}
+
+### Productos: crear
+# Sustituya targetGender por un valor real del enum.
+POST {{host}}/api/admin/products
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "targetGender": "UNISEX",
+  "name": "Remera básica",
+  "shortDesc": "Remera de algodón",
+  "longDesc": "Remera básica disponible en múltiples talles y colores."
+}
+
+### Variantes: listar paginado
+GET {{host}}/api/variants?page=0&size=20&sort=id,asc
+Authorization: Bearer {{operatorToken}}
+
+### Variantes públicas por producto
+GET {{host}}/api/variants/public/by-product/00000000-0000-0000-0000-000000000000
+
+### Variantes: crear
+# Sustituir productId y colorId por valores reales.
+POST {{host}}/api/variants
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "productId": "00000000-0000-0000-0000-000000000000",
+  "colorId": 1,
+  "size": "T_38",
+  "desc": "Negro talle 38",
+  "sku": "REM-T38-NEG",
+  "price": 10000.00,
+  "stock": 20
+}
+
+### Imágenes: solicitar URL presignada
+# Sustituir IDs reales.
+POST {{host}}/api/products/00000000-0000-0000-0000-000000000000/colors/1/images/presigned-url
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "originalFileName": "remera-negra.jpg",
+  "contentType": "image/jpeg"
+}
+
+### Imágenes: registrar URL pública
+POST {{host}}/api/products/00000000-0000-0000-0000-000000000000/colors/1/images
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://dummy-project.example.invalid/storage/remera-negra.jpg",
+  "isPrimary": true
+}
+
+### Carrito autenticado: obtener
+GET {{host}}/api/cart
+Authorization: Bearer {{customerToken}}
+
+### Carrito autenticado: agregar variante
+POST {{host}}/api/cart/item
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "variantId": 1,
+  "quantity": 1
+}
+
+### Carrito anónimo: sincronizar
+POST {{host}}/api/cart/sync
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "variantId": 1,
+      "quantity": 2
+    }
+  ]
+}
+
+### Carrito autenticado: actualizar cantidad
+PATCH {{host}}/api/cart/item/1
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+### Carrito autenticado: quitar variante
+DELETE {{host}}/api/cart/item/1
+Authorization: Bearer {{customerToken}}
+
+### Envíos: opciones públicas
+GET {{host}}/api/shipping/options
+
+### Envíos: cotización con retiro
+GET {{host}}/api/shipping/quote?isPickup=true
+
+### Envíos: cotización domiciliaria
+GET {{host}}/api/shipping/quote?isPickup=false&province=Buenos%20Aires&locality=Llavallol&postalCode=1836
+
+### Checkout invitado con efectivo
+POST {{host}}/api/sales/checkout
+Content-Type: application/json
+
+{
+  "customerName": "Cliente Invitado",
+  "customerEmail": "guest@example.com",
+  "customerPhone": "1112345678",
+  "shippingAddress": "Calle 1 123",
+  "customerNotes": "",
+  "isPickup": true,
+  "shippingProvince": null,
+  "shippingLocality": null,
+  "shippingPostalCode": null,
+  "paymentMethod": "EFECTIVO",
+  "customerTaxIdType": null,
+  "customerTaxIdNumber": null,
+  "items": [
+    {
+      "variantId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### Checkout autenticado usando carrito
+POST {{host}}/api/sales/checkout
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "customerName": "Cliente Registrado",
+  "customerEmail": "customer_1@gmail.com",
+  "customerPhone": "1112345678",
+  "shippingAddress": "Calle 1 123",
+  "customerNotes": "Entregar por la mañana",
+  "isPickup": true,
+  "shippingProvince": null,
+  "shippingLocality": null,
+  "shippingPostalCode": null,
+  "paymentMethod": "MERCADO_PAGO",
+  "customerTaxIdType": null,
+  "customerTaxIdNumber": null,
+  "items": null
+}
+
+### Checkout mayorista
+# Requiere 10 unidades como mínimo.
+POST {{host}}/api/sales/checkout
+Authorization: Bearer {{wholesalerToken}}
+Content-Type: application/json
+
+{
+  "customerName": "Mayorista",
+  "customerEmail": "wholesaler_1@gmail.com",
+  "customerPhone": "1112345678",
+  "shippingAddress": "Av. Mayorista 100",
+  "customerNotes": "",
+  "isPickup": false,
+  "shippingProvince": "Buenos Aires",
+  "shippingLocality": "Llavallol",
+  "shippingPostalCode": "1836",
+  "paymentMethod": "TRANSFERENCIA",
+  "customerTaxIdType": "CUIT",
+  "customerTaxIdNumber": "20000000001",
+  "items": [
+    {
+      "variantId": 1,
+      "quantity": 10
+    }
+  ]
+}
+
+### Ventas propias paginadas
+GET {{host}}/api/sales/me?page=0&size=15&sort=createdAt,desc
+Authorization: Bearer {{customerToken}}
+
+### Ventas: detalle propio
+GET {{host}}/api/sales/me/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{customerToken}}
+
+### Ventas: seguimiento público por tracking token
+GET {{host}}/api/sales/track/00000000-0000-0000-0000-000000000000
+
+### Simulador Mercado Pago dev
+# Solo disponible con perfil dev. Outcomes: approved | pending | rejected.
+POST {{host}}/api/dev/payments/mercadopago/simulate
+Content-Type: application/json
+
+{
+  "saleId": "00000000-0000-0000-0000-000000000000",
+  "outcome": "approved"
+}
+
+### Administración de ventas: listar
+GET {{host}}/api/admin/sales?auditOnly=false&page=0&size=20&sort=createdAt,desc
+Authorization: Bearer {{operatorToken}}
+
+### Administración de ventas: detalle
+GET {{host}}/api/admin/sales/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{operatorToken}}
+
+### Administración de ventas: cambiar estado
+PATCH {{host}}/api/admin/sales/00000000-0000-0000-0000-000000000000/status
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "PREPARACION",
+  "changeReason": "Pedido confirmado y listo para preparación"
+}
+
+### Administración de ventas: conciliar pago
+PATCH {{host}}/api/admin/sales/00000000-0000-0000-0000-000000000000/payment-status
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "newPaymentStatus": "APROBADO",
+  "paymentNotes": "Transferencia confirmada"
+}
+
+### Administración de ventas: agregar nota interna
+PATCH {{host}}/api/admin/sales/00000000-0000-0000-0000-000000000000/internal-notes
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "internalNotes": "Verificar datos de envío"
+}
+
+### Facturación: consultar comprobantes por venta
+GET {{host}}/api/admin/fiscal/sales/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{operatorToken}}
+
+### Facturación: reintentar factura
+POST {{host}}/api/admin/fiscal/sales/00000000-0000-0000-0000-000000000000/retry-invoice
+Authorization: Bearer {{operatorToken}}
+
+### Devoluciones: crear como cliente
+POST {{host}}/api/returns/orders/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "returnReason": "ARREPENTIMIENTO_LEGAL",
+  "returnResolution": "REEMBOLSO_DINERO",
+  "customerNotes": "Solicito devolución dentro de la ventana legal",
+  "items": [
+    {
+      "saleItemId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### Devoluciones: crear como invitado
+POST {{host}}/api/returns/guest/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "returnReason": "CAMBIO_TALLE",
+  "returnResolution": "CAMBIO_PRODUCTO",
+  "customerNotes": "Necesito cambiar el talle",
+  "items": [
+    {
+      "saleItemId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### Devoluciones propias paginadas
+GET {{host}}/api/returns/me?page=0&size=10&sort=createdAt,desc
+Authorization: Bearer {{customerToken}}
+
+### Devoluciones: seguimiento público
+GET {{host}}/api/returns/track/00000000-0000-0000-0000-000000000000
+
+### Administración: listar devoluciones
+GET {{host}}/api/admin/returns?page=0&size=15&sort=createdAt,desc
+Authorization: Bearer {{operatorToken}}
+
+### Administración: cambiar estado de devolución
+PATCH {{host}}/api/admin/returns/00000000-0000-0000-0000-000000000000/status
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "RECIBIDO_EN_CONTROL",
+  "returnShippingGuide": "GUIA-001",
+  "statusNotes": "Paquete recibido en taller"
+}
+
+### Administración: peritar devolución
+POST {{host}}/api/admin/returns/00000000-0000-0000-0000-000000000000/inspect
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "inspectionNotes": "Prenda recibida en estado apto",
+  "inspectionEvidencePath": "/evidence/return-001",
+  "inspectedItems": [
+    {
+      "returnItemId": 1,
+      "restockApproved": true,
+      "rejectionReason": null
+    }
+  ]
+}
+
+### Administración: aprobar/reembolsar devolución
+POST {{host}}/api/admin/returns/00000000-0000-0000-0000-000000000000/process-refund
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "transactionReference": "REF-001",
+  "notes": "Reembolso conciliado manualmente"
+}
