@@ -33,11 +33,9 @@ Supabase PostgreSQL
 
 | Proyecto | Repositorio |
 |---|---|
-| Frontend React + TypeScript + Vite | https://github.com/TU_USUARIO/e_commerce_front |
-| Base de datos PostgreSQL / Supabase DDL | https://github.com/TU_USUARIO/e_commerce_db |
-| Backend Spring Boot | https://github.com/TU_USUARIO/e_commerce_back |
-
-> Los enlaces son placeholders listos para reemplazar.
+| Frontend React + TypeScript + Vite | [e_commerce_front](https://github.com/Lahkpom/e_commerce_front) |
+| Base de datos PostgreSQL / Supabase DDL | [e_commerce_db](https://github.com/Lahkpom/e_commerce_db) |
+| Backend Spring Boot | [e_commerce_back](https://github.com/Lahkpom/e_commerce_back) |
 
 ## Stack tecnológico
 
@@ -99,14 +97,14 @@ Variables declaradas por `application.properties`:
 
 El proyecto no declara `spring.config.import` en `application.properties` ni incluye una dependencia dotenv explícita en el POM. Por ello, las variables deben exportarse al proceso de la terminal o cargarse mediante el plugin/configuración EnvFile de su IDE antes de ejecutar.
 
-Linux/macOS — desde la raíz de `proyecto_techlab_springboot`:
+Linux/macOS — desde la raíz de `e_commerce_back`:
 
 ```bash
 set -a; source .env; set +a
 ./mvnw spring-boot:run
 ```
 
-Windows PowerShell — desde la raíz de `proyecto_techlab_springboot`:
+Windows PowerShell — desde la raíz de `e_commerce_back`:
 
 ```powershell
 Get-Content .env | ForEach-Object { if ($_ -match '^([^#][^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process') } }
@@ -116,7 +114,7 @@ Get-Content .env | ForEach-Object { if ($_ -match '^([^#][^=]+)=(.*)$') { [Syste
 ### Terminal Linux/macOS
 
 ```bash
-cd proyecto_techlab_springboot
+cd e_commerce_back
 chmod +x mvnw
 ./mvnw clean spring-boot:run
 ```
@@ -126,14 +124,14 @@ chmod +x mvnw
 PowerShell o CMD:
 
 ```powershell
-cd proyecto_techlab_springboot
+cd e_commerce_back
 .\mvnw.cmd clean spring-boot:run
 ```
 
 Git Bash:
 
 ```bash
-cd proyecto_techlab_springboot
+cd e_commerce_back
 ./mvnw.cmd clean spring-boot:run
 ```
 
@@ -149,7 +147,7 @@ cd proyecto_techlab_springboot
 
 1. Instale **Extension Pack for Java** y **Spring Boot Extension Pack**.
 2. Instale **REST Client** (`humao.rest-client`) si va a usar `api-requests.http`.
-3. Abra la carpeta `proyecto_techlab_springboot`.
+3. Abra la carpeta `e_commerce_back`.
 4. Lance la aplicación desde **Spring Boot Dashboard**.
 
 El servidor no declara `server.port` activo; Spring Boot usa su puerto predeterminado.
@@ -609,7 +607,7 @@ Content-Type: application/json
 }
 ```
 
-El catálogo usa el enum real `TargetGender`; consulte el controlador para los valores disponibles del enum.
+El catálogo usa el enum real `TargetGender`, cuyos valores son `NINIAS`, `NINIOS`, `HOMBRES`, `MUJERES` y `UNISEX`.
 
 ### Crear variante
 
