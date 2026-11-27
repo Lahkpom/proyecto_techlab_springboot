@@ -14,7 +14,6 @@ import com.proyecto.proyecto_techlab_springboot.user.mapper.UserMapper;
 import com.proyecto.proyecto_techlab_springboot.user.repository.IUserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 

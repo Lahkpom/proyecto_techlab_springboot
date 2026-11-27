@@ -7,7 +7,6 @@ import com.proyecto.proyecto_techlab_springboot.cart.dto.CartResponse;
 import com.proyecto.proyecto_techlab_springboot.cart.mapper.CartMapper;
 import com.proyecto.proyecto_techlab_springboot.cart.exception.CartItemNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNoLongerAvailableException;
-import com.proyecto.proyecto_techlab_springboot.variant.exception.VariantNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.common.model.RowStatus;
 import com.proyecto.proyecto_techlab_springboot.common.exception.InsufficientStockException;
 import com.proyecto.proyecto_techlab_springboot.cart.model.CartItem;

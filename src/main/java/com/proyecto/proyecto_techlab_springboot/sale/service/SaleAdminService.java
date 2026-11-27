@@ -3,7 +3,6 @@ package com.proyecto.proyecto_techlab_springboot.sale.service;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.InvalidSaleStatusTransitionException;
 import com.proyecto.proyecto_techlab_springboot.sale.exception.SaleNotFoundException;
 import com.proyecto.proyecto_techlab_springboot.sale.model.Sale;
-import com.proyecto.proyecto_techlab_springboot.sale.model.SaleItem;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentStatus;
 import com.proyecto.proyecto_techlab_springboot.sale.model.PaymentMethod;
 import com.proyecto.proyecto_techlab_springboot.sale.model.SaleStatus;
