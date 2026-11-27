@@ -43,6 +43,7 @@ Supabase PostgreSQL
 |---|---|
 | Java | 21 |
 | Spring Boot | 4.1.1 |
+| Springdoc OpenAPI / Swagger UI | 3.2.0; documentación interactiva y contrato OpenAPI |
 | Maven Wrapper | 3.3.4; Apache Maven 3.9.16 |
 | Spring Web MVC | `spring-boot-starter-webmvc`, versión heredada del BOM Spring Boot |
 | Spring Security | `spring-boot-starter-security`, versión heredada del BOM Spring Boot |
@@ -55,7 +56,7 @@ Supabase PostgreSQL
 | BouncyCastle | 1.78.1: `bcprov-jdk18on`, `bcpkix-jdk18on` |
 | ARCA / SOAP | Cliente nativo `java.net.http.HttpClient` y XML DOM; no Apache CXF |
 
-No existen Springdoc/OpenAPI, Testcontainers, Spring Actuator activo ni Apache CXF como dependencias del POM.
+No existen Testcontainers, Spring Actuator activo ni Apache CXF como dependencias del POM.
 
 ## Instalación y ejecución
 
@@ -90,6 +91,7 @@ Variables declaradas por `application.properties`:
 | Base de datos | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_JPA_SHOW_SQL`, `SPRING_JPA_FORMAT_SQL` |
 | JWT | `SPRING_SECRET_SHA256_KEY`, `SPRING_JWT_EXPIRATION`, `SPRING_INITIAL_USER_PASSWORD` |
 | CORS | `CORS_ALLOWED_ORIGINS` |
+| Documentación API | `SPRINGDOC_SWAGGER_UI_ENABLED`, `SPRINGDOC_API_DOCS_ENABLED` (usar `false` en producción) |
 | Supabase Storage | `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET` |
 | Mercado Pago | `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `MP_NOTIFICATION_URL`, `MP_BACK_URL_SUCCESS`, `MP_BACK_URL_FAILURE`, `MP_BACK_URL_PENDING`, `MP_SANDBOX_URL` |
 | Ventas vencidas | `SALES_EXPIRATION_CRON`, `SALES_EXPIRATION_ZONE`, `SALES_EXPIRATION_TTL_HOURS`, `SALES_EXPIRATION_CASH_TTL_HOURS` |
@@ -157,6 +159,8 @@ El servidor no declara `server.port` activo; Spring Boot usa su puerto predeterm
 - Levantar `e_commerce_front` para operar visualmente.
 - Ejecutar `api-requests.http` con VS Code REST Client.
 - Importar las rutas en Postman o invocarlas con cURL.
+- Abrir Swagger UI en [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) o consultar el esquema JSON en [http://localhost:8080/api/v3/api-docs](http://localhost:8080/api/v3/api-docs).
+- Para probar rutas protegidas, ejecutar `POST /api/auth/login`, copiar el valor `accessToken` de la respuesta y pegarlo en **Authorize** de Swagger UI (sin anteponer `Bearer `; Swagger lo agrega automáticamente).
 
 ## Prefijo API y paginación
 

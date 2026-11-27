@@ -48,8 +48,14 @@ public class SecurityConfig {
                                 "/api/auth/change-expired-password"
                         ).anonymous()
                         .requestMatchers("/api/auth/refresh", "/api/auth/logout").permitAll()
-                                .requestMatchers("/api/dev/**").permitAll()
-                                .requestMatchers(HttpMethod.GET,
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/api/v3/api-docs",
+                                "/api/v3/api-docs/**"
+                        ).permitAll()
+                        .requestMatchers("/api/dev/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/products/**",
                                 "/api/variants/**",
                                 "/api/colors/**",
